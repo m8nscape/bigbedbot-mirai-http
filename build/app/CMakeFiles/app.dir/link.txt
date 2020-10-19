@@ -1,0 +1,2 @@
+/usr/bin/ar qc libapp.a CMakeFiles/app.dir/private/qqid.cpp.o CMakeFiles/app.dir/common/dbconn.cpp.o CMakeFiles/app.dir/data/group.cpp.o CMakeFiles/app.dir/data/user.cpp.o CMakeFiles/app.dir/case_def.cpp.o CMakeFiles/app.dir/case.cpp.o
+/usr/bin/ranlib libapp.a

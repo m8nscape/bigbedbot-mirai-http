@@ -1,0 +1,20 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/router/bigbedbot-mirai-http/thirdparty/cpp-base64/base64.cpp
+base64.h
+/home/router/bigbedbot-mirai-http/thirdparty/cpp-base64/base64.h
+iostream
+-
+cstring
+-
+
+/home/router/bigbedbot-mirai-http/thirdparty/cpp-base64/base64.h
+string
+-
+

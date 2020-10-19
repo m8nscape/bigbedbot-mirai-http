@@ -1,0 +1,14 @@
+add_library(app STATIC 
+    private/qqid.cpp
+    common/dbconn.cpp common/dbconn.h
+    data/group.cpp data/group.h data/user.cpp data/user.h
+    case_def.cpp case.cpp case.h
+)
+target_include_directories(app 
+    PRIVATE ../
+    PRIVATE ../thirdparty
+)
+set_target_properties(app PROPERTIES
+    CXX_STANDARD 20)
+target_link_libraries(app PRIVATE mirai-api)
+target_link_libraries(bbb PUBLIC app)
