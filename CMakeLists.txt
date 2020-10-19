@@ -24,4 +24,5 @@ target_link_libraries(bbb
     PRIVATE -lsqlite3
     PRIVATE -lcurl
     PRIVATE -lpthread
+    PUBLIC yaml-cpp
 )
