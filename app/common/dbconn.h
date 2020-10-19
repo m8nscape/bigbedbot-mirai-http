@@ -2,6 +2,7 @@
 #include <any>
 #include <vector>
 #include <exception>
+#include <future>
 
 struct sqlite3;
 
@@ -25,7 +26,4 @@ public:
     void transactionStop();
     void commit(bool restart_transaction = false);
     const char* errmsg();
-public:
-	void timedCommit();
-	void startTimedCommit();
 };

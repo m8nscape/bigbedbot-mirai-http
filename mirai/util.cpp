@@ -7,9 +7,7 @@
 #include "http_conn.h"
 
 
-extern char miraiSession[64];
-bool gBotEnabled = false;
-int64_t QQME;
+int64_t botLoginQQId = 0;
 
 namespace mirai
 {

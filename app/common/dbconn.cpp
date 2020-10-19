@@ -189,27 +189,3 @@ void SQLite::commit(bool restart_transaction)
     transactionStop();
     if (restart_transaction) transactionStart();
 }
-
-extern bool gBotEnabled;
-void SQLite::timedCommit()
-{
-	while (gBotEnabled)
-	{
-		if (inTransaction)
-		{
-			transactionStop();
-			commit(true);
-			transactionStart();
-		}
-		else
-		{
-			commit(false);
-		}
-		sqlite3_sleep(1000 * 60);	// 1min
-	}
-}
-
-void SQLite::startTimedCommit()
-{
-	std::thread(&SQLite::timedCommit, this).detach();
-}

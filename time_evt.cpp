@@ -5,6 +5,7 @@
 #include "time_evt.h"
 
 std::vector<std::function<void()>> timedEventQueue[24][60];
+std::vector<std::function<void()>> timedEventQueueEveryMin;
 
 bool timedThreadRunning = false;
 void timedEventLoop()
@@ -15,13 +16,20 @@ void timedEventLoop()
 	{
 		auto t = std::time(nullptr);
 		auto tm = *std::localtime(&t);
+		/*
 		if (prev_min == tm.tm_min)
 		{
 			std::this_thread::sleep_for(30s);
 			continue;
 		}
+		*/
 
 		for (auto& f : timedEventQueue[tm.tm_hour][tm.tm_min])
+		{
+			if (f) f();
+		}
+
+		for (auto& f : timedEventQueueEveryMin)
 		{
 			if (f) f();
 		}
@@ -46,6 +54,10 @@ void stopTimedEvent()
 	timedThreadRunning = false;
 }
 
+void addTimedEventEveryMin(std::function<void()> f)
+{
+	timedEventQueueEveryMin.push_back(f);
+}
 
 void addTimedEvent(std::function<void()> f, int hour, int min)
 {
@@ -61,4 +73,5 @@ void clearTimedEvent()
 		{
 			timedEventQueue[h][m].clear();
 		}
+	timedEventQueueEveryMin.clear();
 }

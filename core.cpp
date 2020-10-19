@@ -1,6 +1,8 @@
 #include <thread>
 
 #include <curl/curl.h>
+#include <yaml-cpp/yaml.h>
+#include <filesystem>
 
 #include "core.h"
 
@@ -26,33 +28,56 @@
 #include "time_evt.h"
 #include "logger.h"
 
-using namespace std;
-char miraiAuthKey[64]{0};
-char miraiSession[64]{0};
-
 namespace core
 {
+
+std::string authKey;
+bool botStarted = false;
 
 int initialize()
 {
 	addLog(LOG_INFO, "core", "Initializing...");
 
-	if (mirai::auth() != 0)
+	if (config() != 0)
 	{
+		addLog(LOG_ERROR, "core", "Load config failed!");
+		return -255;
+	}
 
+	if (mirai::auth(authKey.c_str()) != 0)
+	{
+		addLog(LOG_ERROR, "core", "Auth failed!");
 		return -1;
 	}
 
 	if (mirai::verify() != 0)
 	{
-
+		addLog(LOG_ERROR, "core", "Verify failed!");
 		return -2;
 	}
-	
-	gBotEnabled = true;
-	startup();
+
 	curl_global_init(CURL_GLOBAL_ALL);
 
+	addLog(LOG_INFO, "core", "Initialization succeeded.");
+	
+	startup();
+
+	return 0;
+}
+
+int config()
+{
+	const char* cfgFile = "./config.yaml";
+	std::filesystem::path cfgPath(cfgFile);
+	if (!std::filesystem::is_regular_file(cfgPath))
+	{
+		addLog(LOG_ERROR, "core", "Config file %s not found", std::filesystem::absolute(cfgPath));
+		return -1;
+	}
+	addLog(LOG_INFO, "core", "Loading config from %s", std::filesystem::absolute(cfgPath));
+	YAML::Node cfg = YAML::LoadFile(cfgPath);
+	authKey = cfg["authkey"].as<std::string>();
+	botLoginQQId = cfg["qq"].as<int64_t>();
 	return 0;
 }
 
@@ -61,8 +86,15 @@ void addMsgCallbacks();
 
 int startup()
 {
+	if (!botStarted) return -1;
+
+	addLog(LOG_INFO, "core", "Starting");
+
+	botStarted = true;
+
     user::peeCreateTable();
     user::peeLoadFromDb();
+
 	grp::CreateTable();
 	grp::LoadListFromDb();
 
@@ -74,13 +106,14 @@ int startup()
     for (auto& [groupid, groupObj] : grp::groups)
 		groupObj.updateMembers();
 
-	user::db.startTimedCommit();
-	grp::db.startTimedCommit();
+	//grp::db.startTimedCommit();
 	//eat::db.startTimedCommit();
 
     //mnp::calc_event_max();
 
 	addTimedEvents();
+	addTimedEventEveryMin(std::bind(&SQLite::commit, &user::db, true));
+	addTimedEventEveryMin(std::bind(&SQLite::commit, &grp::db, true));
 	startTimedEvent();
 
 	addMsgCallbacks();
@@ -95,7 +128,7 @@ int startup()
 
 int shutdown()
 {
-    if (gBotEnabled)
+    if (botStarted)
     {
         // for (auto& [group, cfg] : gambol::groupMap)
         // {
@@ -107,10 +140,11 @@ int shutdown()
         user::db.transactionStop();
 		grp::db.transactionStop();
 		//eat::db.transactionStop();
-        gBotEnabled = false;
+        botStarted = false;
 		mirai::stopMsgPoll();
 		stopTimedEvent();
     }
+
     curl_global_cleanup();
 	return 0;
 }

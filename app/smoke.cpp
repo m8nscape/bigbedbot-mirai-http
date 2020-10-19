@@ -44,7 +44,7 @@ command msgDispatcher(const json& body)
 	case commands::禁烟:
 		c.func = [](::int64_t group, ::int64_t qq, std::vector<std::string> args, std::string raw) -> std::string
 		{
-			if (!isGroupManager(group, QQME)) return "";
+			if (!isGroupManager(group, botLoginQQId)) return "";
 
 			if (plist.find(qq) == plist.end()) return std::string(CQ_At(qq)) + "，你还没有开通菠菜";
 
@@ -76,7 +76,7 @@ command msgDispatcher(const json& body)
 	case commands::解禁:
 		c.func = [](::int64_t group, ::int64_t qq, std::vector<std::string> args, std::string raw) -> std::string
 		{
-			if (!isGroupManager(group, QQME)) return "";
+			if (!isGroupManager(group, botLoginQQId)) return "";
 
 			if (args[0].substr(4).empty()) return "";
 

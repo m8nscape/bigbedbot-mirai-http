@@ -4,8 +4,7 @@
 
 #include "api.h"
 
-extern bool gBotEnabled;
-extern int64_t QQME;
+extern int64_t botLoginQQId;
 
 namespace mirai
 {

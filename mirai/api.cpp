@@ -11,18 +11,18 @@
 #include "util.h"
 #include "logger.h"
 
-extern char miraiAuthKey[64];
-extern char miraiSession[64];
 
 namespace mirai
 {
+char sessionKey[64]{0};
+
 using nlohmann::json;
 
-int auth()
+int auth(const char* auth_key)
 {
-	addLog(LOG_INFO, "api", "Authenciating with auth key [%s]...", miraiAuthKey);
+	addLog(LOG_INFO, "api", "Authenciating with auth key [%s]...", auth_key);
     json body;
-    body["authKey"] = std::string(miraiAuthKey);
+    body["authKey"] = std::string(auth_key);
 
     std::promise<int> p;
     std::future<int> f = p.get_future();
@@ -35,8 +35,8 @@ int auth()
                 if ((resp = v.at("code").get<int>()) == 0)
                 {
                     // save sessionKey
-                    strncpy(miraiSession, std::any_cast<std::string>(v.at("session")).c_str(), sizeof(miraiSession));
-                    addLog(LOG_INFO, "api", "Got session key [%s]", miraiSession);
+                    strncpy(sessionKey, std::any_cast<std::string>(v.at("session")).c_str(), sizeof(sessionKey));
+                    addLog(LOG_INFO, "api", "Got session key [%s]", sessionKey);
                 }
                 else
                 {
@@ -60,10 +60,10 @@ int auth()
 
 int verify()
 {
-	addLog(LOG_INFO, "api", "Verifying with session key [%s]...", miraiSession);
+	addLog(LOG_INFO, "api", "Verifying with session key [%s]...", sessionKey);
     json body;
-    body["sessionKey"] = std::string(miraiSession);
-    body["qq"] = QQME;
+    body["sessionKey"] = std::string(sessionKey);
+    body["qq"] = botLoginQQId;
 
     std::promise<int> p;
     std::future<int> f = p.get_future();
@@ -155,7 +155,7 @@ int sendPrivateMsg(int64_t qqid, int64_t groupid, const json& messageChain, int6
     // TODO check if target is friend
 
     json obj;
-    obj["sessionKey"] = std::string(miraiSession);
+    obj["sessionKey"] = std::string(sessionKey);
     obj["qq"] = qqid;
     obj["group"] = groupid;
     if (quotemsgid) obj["quote"] = quotemsgid;
@@ -184,7 +184,7 @@ int sendGroupMsg(int64_t groupid, const json& messageChain, int64_t quotemsgid)
 {
     addLog(LOG_DEBUG, "api", "Send private msg to %lld: (messagechain)", groupid);
     json obj;
-    obj["sessionKey"] = std::string(miraiSession);
+    obj["sessionKey"] = std::string(sessionKey);
     obj["target"] = groupid;
     if (quotemsgid) obj["quote"] = quotemsgid;
     obj["messageChain"] = messageChain.at("messageChain");
@@ -196,7 +196,7 @@ int recallMsg(int64_t msgid)
 {
     addLog(LOG_DEBUG, "api", "Recall msg %lld", msgid);
     json obj;
-    obj["sessionKey"] = std::string(miraiSession);
+    obj["sessionKey"] = std::string(sessionKey);
     obj["target"] = msgid;
     int ret = conn::POST("/recall", obj, sendMsgCallback);
     return ret;
@@ -206,7 +206,7 @@ int mute(int64_t qqid, int64_t groupid, int time_sec)
 {
     addLog(LOG_DEBUG, "api", "Mute %lld @ %lld for %ds", qqid, groupid, time_sec);
     json obj;
-    obj["sessionKey"] = std::string(miraiSession);
+    obj["sessionKey"] = std::string(sessionKey);
     obj["target"] = groupid;
     obj["memberId"] = qqid;
     int ret;
@@ -228,7 +228,7 @@ int getGroupMemberInfo(int64_t groupid, int64_t qqid, group_member_info& g)
     addLog(LOG_DEBUG, "api", "Get member info for %lld @ %lld", qqid, groupid);
     g = group_member_info();
     std::stringstream path;
-    path << "/memberInfo?sessionKey=" << miraiSession << "&target=" << groupid << "&memberId=" << qqid;
+    path << "/memberInfo?sessionKey=" << sessionKey << "&target=" << groupid << "&memberId=" << qqid;
 
     std::promise<int> p;
     std::future<int> f = p.get_future();
@@ -261,7 +261,7 @@ std::vector<group_member_info> getGroupMemberList(int64_t groupid)
 {
     addLog(LOG_DEBUG, "api", "Get member list for group %lld", groupid);
     std::stringstream path;
-    path << "/memberList?sessionKey=" << miraiSession << "&target=" << groupid;
+    path << "/memberList?sessionKey=" << sessionKey << "&target=" << groupid;
 
     std::vector<group_member_info> l;
     std::promise<int> p;
@@ -361,42 +361,47 @@ bool pollingRunning = false;
 std::promise<int> pollingPromise;
 std::future<int> pollingFuture;
 
+bool isPollingRunning() {return pollingRunning;}
 
 void startMsgPoll()
 {
-    if (gBotEnabled)
+    if (pollingRunning) return;
+    
+    addLog(LOG_INFO, "mirai", "Start polling message");
+    pollingRunning = true;
+    pollingFuture = pollingPromise.get_future();
+    msg_poll_thread = std::make_shared<std::thread>([]
     {
-        pollingRunning = true;
-        pollingFuture = pollingPromise.get_future();
-        msg_poll_thread = std::make_shared<std::thread>([]
+        while (pollingRunning)
         {
-            while (pollingRunning)
-            {
-                std::stringstream path;
-                path << "/fetchMessage?sessionKey=" << miraiSession << "&count=" << POLLING_QUANTITY;
-                std::promise<int> p;
-                std::future<int> f = p.get_future();
-                conn::GET(path.str(), 
-                    [&p](const json& v) -> int
+            std::stringstream path;
+            path << "/fetchMessage?sessionKey=" << sessionKey << "&count=" << POLLING_QUANTITY;
+            std::promise<int> p;
+            std::future<int> f = p.get_future();
+            conn::GET(path.str(), 
+                [&p](const json& v) -> int
+                {
+                    if (!v.empty())
                     {
-                        if (!v.empty())
-                        {
-                            procRecvMsgEntry(v);
-                        }
-                        p.set_value_at_thread_exit(0); 
-                        return 0; 
-                    });
-                f.wait();
-                std::this_thread::sleep_for(std::chrono::milliseconds(POLLING_INTERVAL_MS));
-            }
-            pollingPromise.set_value_at_thread_exit(0);
-        });
-        msg_poll_thread->detach();
-    }
+                        procRecvMsgEntry(v);
+                    }
+                    p.set_value_at_thread_exit(0); 
+                    return 0; 
+                });
+            f.wait();
+            std::this_thread::sleep_for(std::chrono::milliseconds(POLLING_INTERVAL_MS));
+        }
+        pollingPromise.set_value_at_thread_exit(0);
+    });
+    msg_poll_thread->detach();
+
 }
 
 void stopMsgPoll()
 {
+    if (!pollingRunning) return;
+
+    addLog(LOG_INFO, "mirai", "Stop polling message");
     pollingRunning = false;
     if (msg_poll_thread)
     {

@@ -8,6 +8,9 @@
 namespace core
 {
 int initialize();
+int config();
 int startup();
 int exit();
+
+bool isBotStarted();
 }

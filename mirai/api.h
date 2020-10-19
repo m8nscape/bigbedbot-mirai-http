@@ -7,7 +7,7 @@
 
 namespace mirai
 {
-int auth();
+int auth(const char* auth_key);
 int verify();
 
 using nlohmann::json;
