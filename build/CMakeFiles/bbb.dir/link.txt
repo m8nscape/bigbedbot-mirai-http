@@ -1,1 +1,0 @@
-/usr/bin/c++ -g CMakeFiles/bbb.dir/logger.cpp.o CMakeFiles/bbb.dir/time_evt.cpp.o CMakeFiles/bbb.dir/core.cpp.o CMakeFiles/bbb.dir/main.cpp.o -o bbb  thirdparty/cpp-base64/libbase64.a mirai/libmirai-api.a app/libapp.a -lsqlite3 -lcurl -lpthread mirai/libmirai-api.a 

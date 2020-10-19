@@ -1,2 +1,0 @@
-/usr/bin/ar qc libmirai-api.a CMakeFiles/mirai-api.dir/util.cpp.o CMakeFiles/mirai-api.dir/msg.cpp.o CMakeFiles/mirai-api.dir/http_conn.cpp.o CMakeFiles/mirai-api.dir/api.cpp.o
-/usr/bin/ranlib libmirai-api.a
