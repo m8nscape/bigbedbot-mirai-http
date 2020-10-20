@@ -10,7 +10,7 @@ namespace core
 int initialize();
 int config();
 int init_app_and_start();
-int exit();
+int shutdown();
 
 bool isBotStarted();
 }

@@ -23,8 +23,7 @@ class session : public std::enable_shared_from_this<session>
     tcp::resolver resolver_;
     tcp::socket socket_;
     boost::beast::flat_buffer buffer_; // (Must persist between reads)
-    json reqbody_;
-    http::request<http::empty_body> req_;
+    http::request<http::string_body> req_;
     http::response<http::string_body> res_;
 
     std::function<int(const json&)> callback;
@@ -88,7 +87,10 @@ public:
 
         if (!body.empty())
         {
-            req_.set(http::field::body, body.dump());
+            auto b = body.dump();
+            req_.set(http::field::content_type, "application/json;charset=UTF-8");
+            req_.set(http::field::content_length, std::to_string(b.length()));
+            req_.body() = b;
         }
 
         // Look up the domain name
@@ -205,7 +207,7 @@ int GET(const std::string& target, std::function<int(const json&)> callback)
         {
             addLogDebug("http", "GET[%u] resp %s", c, j.dump().c_str());
             return callback(j);
-        });
+        }, 11);
     ioc.run();
     return 0;
 }
@@ -221,7 +223,7 @@ int POST(const std::string& target, const json& body, std::function<int(const js
         {
             addLogDebug("http", "POST[%u] resp %s", c, j.dump().c_str());
             return callback(j);
-        });
+        }, 11);
     ioc.run();
     return 0;
 }

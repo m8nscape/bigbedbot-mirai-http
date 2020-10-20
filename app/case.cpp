@@ -485,10 +485,10 @@ int loadCases(const char* yaml)
 	std::filesystem::path cfgPath(yaml);
 	if (!std::filesystem::is_regular_file(cfgPath))
 	{
-		addLog(LOG_ERROR, "case", "Case config file %s not found", std::filesystem::absolute(cfgPath));
+		addLog(LOG_ERROR, "case", "Case config file %s not found", std::filesystem::absolute(cfgPath).c_str());
 		return -1;
 	}
-	addLog(LOG_INFO, "user", "Loading case config from %s", std::filesystem::absolute(cfgPath));
+	addLog(LOG_INFO, "user", "Loading case config from %s", std::filesystem::absolute(cfgPath).c_str());
 
 	YAML::Node cfg = YAML::LoadFile(cfgPath);
 

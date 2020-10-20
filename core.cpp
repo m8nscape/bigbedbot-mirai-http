@@ -34,6 +34,7 @@ namespace core
 
 std::string authKey;
 bool botStarted = false;
+bool isBotStarted() {return botStarted;}
 
 int initialize()
 {
@@ -86,7 +87,7 @@ void addMsgCallbacks();
 
 int init_app_and_start()
 {
-	if (!botStarted) return -1;
+	if (botStarted) return -1;
 
 	addLog(LOG_INFO, "core", "Starting");
 
