@@ -1,4 +1,5 @@
 #include <sstream>
+#include <filesystem>
 
 #include "user.h"
 #include "group.h"
@@ -8,6 +9,8 @@
 
 #include "mirai/api.h"
 #include "mirai/msg.h"
+
+#include "yaml-cpp/yaml.h"
 
 namespace user {
 
@@ -386,6 +389,43 @@ void msgCallback(const json& body)
 	{
 		mirai::sendGroupMsg(m.groupid, resp);
 	}
+}
+
+std::map<std::string, int64_t> USER_ALIAS;
+int loadUserAlias(const char* yaml)
+{
+	std::filesystem::path cfgPath(yaml);
+	if (!std::filesystem::is_regular_file(cfgPath))
+	{
+		addLog(LOG_ERROR, "user", "Alias config file %s not found", std::filesystem::absolute(cfgPath));
+		return -1;
+	}
+	addLog(LOG_INFO, "user", "Loading alias config from %s", std::filesystem::absolute(cfgPath));
+
+	YAML::Node cfg = YAML::LoadFile(cfgPath);
+	for (const auto& u: cfg)
+	{
+		int64_t qqid = u.first.as<int64_t>();
+		for (const auto& a: u.second)
+		{
+			USER_ALIAS[a.as<std::string>()] = qqid;
+		}
+	}
+
+	return 0;
+}
+int64_t getUser(const std::string& alias) 
+{
+	if (USER_ALIAS.find(alias) != USER_ALIAS.end())
+		return USER_ALIAS.at(alias);
+	return 0;
+}
+
+void init(const char* user_alias_yml)
+{
+	peeCreateTable();
+    peeLoadFromDb();
+	loadUserAlias(user_alias_yml);
 }
 
 }

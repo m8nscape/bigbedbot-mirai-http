@@ -1,5 +1,4 @@
 #include "event_case.h"
-using namespace event_case;
 
 #include <iostream>
 #include <sstream>
@@ -12,6 +11,9 @@ using namespace event_case;
 
 #include "data/user.h"
 #include "data/group.h"
+
+namespace event_case
+{
 
 case_pool::case_pool(const types_t& type_b, const levels_t& level_b, const std::vector<case_detail>& cases_b):
     types(type_b), levels(level_b)
@@ -106,7 +108,10 @@ std::string case_pool::caseFullName(const case_detail& c) const
 
 using user::plist;
 
-command event_case::msgDispatcher(const json& body)
+case_pool pool_draw{{"测试", 1}, {"测试级", 1.0}, {{0, 0, "测试箱子", 1}}};
+case_pool pool_drop{{"测试掉落", 1}, {"测试级", 1.0}, {{0, 0, "测试箱子", 1}}};
+
+command msgDispatcher(const json& body)
 {
     command c;
     auto query = mirai::messageChainToArgs(body);
@@ -126,7 +131,7 @@ command event_case::msgDispatcher(const json& body)
 
             std::stringstream ss;
 
-            if (type < 0 || type >= pool_event.getTypeCount())
+            if (type < 0 || type >= pool_draw.getTypeCount())
             {
                 ss << CQ_At(qq) << "，活动尚未开始，请下次再来";
                 return ss.str();
@@ -141,9 +146,9 @@ command event_case::msgDispatcher(const json& body)
             }
 
             int cost = 0;
-            if (type >= 0 && type < (int)pool_event.getTypeCount() && p.getCurrency() < pool_event.getTypeCost(type))
+            if (type >= 0 && type < (int)pool_draw.getTypeCount() && p.getCurrency() < pool_draw.getTypeCost(type))
             {
-                cost = pool_event.getTypeCost(type);
+                cost = pool_draw.getTypeCost(type);
                 if (p.getCurrency() < cost)
                 {
                     ss << CQ_At(qq) << "，你的余额不足，需要" << cost << "个批";
@@ -151,13 +156,13 @@ command event_case::msgDispatcher(const json& body)
                 }
             }
 
-            const case_detail& reward = pool_event.draw(type);
+            const case_detail& reward = pool_draw.draw(type);
             if (reward.worth > 300) ss << "歪哟，" << CQ_At(qq) << "发了，开出了";
             else ss << CQ_At(qq) << "，恭喜你开出了";
-            ss << pool_event.casePartName(reward);
+            ss << pool_draw.casePartName(reward);
 
 			p.modifyStamina(1, true);
-			p.modifyCurrency(+reward.worth - pool_event.getTypeCost(type));
+			p.modifyCurrency(+reward.worth - pool_draw.getTypeCost(type));
 
             // drop
             if (randReal() < 0.1)
@@ -184,14 +189,14 @@ command event_case::msgDispatcher(const json& body)
     return c;
 }
 
-void event_case::startEvent()
+void startEvent()
 {
     if (type == -1)
     {
-        type = randInt(0, pool_event.getTypeCount() - 1);
+        type = randInt(0, pool_draw.getTypeCount() - 1);
         event_case_tm = getLocalTime(TIMEZONE_HR, TIMEZONE_MIN);
         std::stringstream ss;
-        ss << "限时活动已开始，这次是<" << pool_event.getType(type) << ">，每次收费" << pool_event.getTypeCost(type) << "批，请群员踊跃参加";
+        ss << "限时活动已开始，这次是<" << pool_draw.getType(type) << ">，每次收费" << pool_draw.getTypeCost(type) << "批，请群员踊跃参加";
         broadcastMsg(ss.str().c_str(), grp::Group::MASK_MONOPOLY);
     }
     else
@@ -200,7 +205,7 @@ void event_case::startEvent()
     }
 }
 
-void event_case::stopEvent()
+void stopEvent()
 {
     if (type != -1)
     {
@@ -214,4 +219,66 @@ void event_case::stopEvent()
     {
         addLog(LOG_WARNING, "event", "attempt to end event during normal time");
     }
+}
+
+case_pool loadCases(const char* yaml)
+{
+	std::filesystem::path cfgPath(yaml);
+	if (!std::filesystem::is_regular_file(cfgPath))
+	{
+		addLog(LOG_ERROR, "eventcase", "Case config file %s not found", std::filesystem::absolute(cfgPath));
+		return -1;
+	}
+	addLog(LOG_INFO, "eventcase", "Loading case config from %s", std::filesystem::absolute(cfgPath));
+
+	YAML::Node cfg = YAML::LoadFile(cfgPath);
+
+    // type: {name, cost}
+    case_pool::types_t types;
+	for (const auto& it: cfg["types"])
+	{
+		if (it.size() >= 2)
+			types.push_back({it[0].as<std::string>(), it[1].as<int>()});
+	}
+
+    // levels: {name, cost}
+    case_pool::levels_t levels;
+    double p = 0;
+	for (const auto& it: cfg["levels"])
+	{
+		if (it.size() >= 2)
+        {
+            double pp = it[1].as<double>();
+			levels.push_back({it[0].as<std::string>(), pp});
+            p += pp;
+        }
+	}
+    if (p > 1.0)
+    {
+		addLog(LOG_WARNING, "eventcase", "sum of level probabilities %lf exceeds 1.0", p);
+    }
+
+    // cases: {type, level, name, worth}
+    const std::vector<case_detail> cases;
+	for (const auto& it: cfg["list"])
+	{
+        if (it.size() >= 4)
+        {
+            size_t type = it[0].as<size_t>();
+            size_t level = it[1].as<size_t>();
+            if (type < types.size() && level < levels.size())
+                cases.push_back({type, level, it[2].as<std::string>(), it[3].as<int>()});
+        }
+	}
+
+	addLog(LOG_INFO, "eventcase", "Loaded %u cases", cases.size());
+	return {types, levels, cases};
+}
+
+void init(const char* event_case_draw_yml, const char* event_case_drop_yml)
+{
+    pool_draw = loadCases(event_case_draw_yml);
+    pool_drop = loadCases(event_case_drop_yml);
+}
+
 }

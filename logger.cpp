@@ -54,7 +54,7 @@ void addLog(BashColors c, const char* tag, const char* fmt, ...)
     char logbuf[1024]{0};
     va_list args;
     va_start(args, fmt);
-    snprintf(logbuf, sizeof(logbuf), fmt, args);
+    vsnprintf(logbuf, sizeof(logbuf), fmt, args);
     va_end(args);
     os << logbuf;
     

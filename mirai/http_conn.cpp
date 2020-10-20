@@ -5,7 +5,12 @@ namespace mirai::conn
 {
 
 const char* HOST = "localhost";
-const char* PORT = "123";
+char PORT[6] = "12345";
+
+void set_port(unsigned short port)
+{
+    snprintf(PORT, sizeof(PORT), "%hu", port);
+}
 
 const json respFailBody = R"({"code": -1})"_json;
 

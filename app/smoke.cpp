@@ -213,9 +213,9 @@ int64_t getTargetFromStr(const std::string& targetName, int64_t group)
 	if (int64_t tmp; tmp = stripAt(targetName))
 		return tmp;
 
-	// qqid_str (private)
-	else if (qqid_str.find(targetName) != qqid_str.end())
-		return qqid_str.at(targetName);
+	// USER_ALIAS (private)
+	else if (USER_ALIAS.find(targetName) != USER_ALIAS.end())
+		return USER_ALIAS.at(targetName);
 
 	// nick, card
 	else if (group != 0)

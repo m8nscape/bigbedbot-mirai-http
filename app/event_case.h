@@ -10,15 +10,15 @@ namespace event_case
 
 struct case_detail
 {
-    int type;
-    int level;
+    size_t type;
+    size_t level;
     std::string name;
     int worth = 0;
 };
 
 class case_pool
 {
-public:
+public: 
     typedef std::vector<std::pair<std::string, int>> types_t;
     typedef std::vector<std::pair<std::string, double>> levels_t;
     typedef std::vector<std::vector<std::pair<double, std::vector<case_detail>>>> cases_t;   // cases[type][level][n]
@@ -78,7 +78,7 @@ extern const case_pool::levels_t levels;
 extern const std::vector<case_detail> cases;
 }
 
-extern case_pool pool_event;
+extern case_pool pool_draw;
 extern case_pool pool_drop;
 
 // »î¶¯¿ªÏä
@@ -88,4 +88,8 @@ const int EVENT_CASE_TIME_HOUR_START = 18;
 const int EVENT_CASE_TIME_MIN_START = 0;
 const int EVENT_CASE_TIME_HOUR_END = 19;
 const int EVENT_CASE_TIME_MIN_END = 0;
+
+int loadEventCaseDraw(const char* yaml);
+int loadEventCaseDrop(const char* yaml);
+
 }

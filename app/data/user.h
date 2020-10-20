@@ -11,11 +11,10 @@ namespace user {
 
 inline SQLite db("pee.db", "pee");
 
+void init(const char* user_alias_yml);
+
 ////////////////////////////////////////////////////////////////////////////////
 // p
-
-void peeCreateTable();
-void peeLoadFromDb();
 
 class pdata
 {
@@ -114,5 +113,10 @@ inline std::tm daily_refresh_tm_auto;
 inline int remain_daily_bonus;
 
 void flushDailyTimep(bool autotriggered = false);
+
+////////////////////////////////////////////////////////////////////////////////
+// 昵称
+int loadUserAlias(const char* yaml);
+int64_t getUser(const std::string& alias);
 
 }

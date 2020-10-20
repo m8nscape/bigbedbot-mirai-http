@@ -15,7 +15,7 @@ namespace grp
 using nlohmann::json;
 
 inline SQLite db("group.db", "group");
-
+void init();
 class Group
 {
 public:
@@ -46,8 +46,6 @@ public:
 };
 
 inline std::map<int64_t, Group> groups;
-void CreateTable();
-void LoadListFromDb();
 
 enum class commands : size_t {
 	激活,

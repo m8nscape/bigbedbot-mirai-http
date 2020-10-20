@@ -9,7 +9,7 @@ namespace core
 {
 int initialize();
 int config();
-int startup();
+int init_app_and_start();
 int exit();
 
 bool isBotStarted();

@@ -22,6 +22,7 @@
 #include "app/weather.h"
 */
 
+#include "mirai/http_conn.h"
 #include "mirai/api.h"
 #include "mirai/util.h"
 
@@ -60,8 +61,6 @@ int initialize()
 
 	addLog(LOG_INFO, "core", "Initialization succeeded.");
 	
-	startup();
-
 	return 0;
 }
 
@@ -74,17 +73,18 @@ int config()
 		addLog(LOG_ERROR, "core", "Config file %s not found", std::filesystem::absolute(cfgPath));
 		return -1;
 	}
-	addLog(LOG_INFO, "core", "Loading config from %s", std::filesystem::absolute(cfgPath));
+	addLog(LOG_INFO, "core", "Loading config from %s", std::filesystem::absolute(cfgPath).c_str());
 	YAML::Node cfg = YAML::LoadFile(cfgPath);
 	authKey = cfg["authkey"].as<std::string>();
 	botLoginQQId = cfg["qq"].as<int64_t>();
+	mirai::conn::set_port(cfg["port"].as<unsigned short>());
 	return 0;
 }
 
 void addTimedEvents();
 void addMsgCallbacks();
 
-int startup()
+int init_app_and_start()
 {
 	if (!botStarted) return -1;
 
@@ -92,36 +92,40 @@ int startup()
 
 	botStarted = true;
 
-    user::peeCreateTable();
-    user::peeLoadFromDb();
+	// app: user
+    user::init("./app/user.yaml");
+	addTimedEventEveryMin(std::bind(&SQLite::commit, &user::db, true));
 
-	grp::CreateTable();
-	grp::LoadListFromDb();
+	// app: group
+	grp::init();
+	addTimedEventEveryMin(std::bind(&SQLite::commit, &grp::db, true));
 
+	// app: case
+	opencase::init("./app/case.yaml");
+
+	// app: event_case
+	// event_case::init("./app/event_case_draw.yaml", "./app/eent_case_drop.yaml");
+
+	// app: eat
     // eat::foodCreateTable();
 	// eat::drinkCreateTable();
     // //eat::foodLoadListFromDb();
     // eat::updateSteamGameList();
 	
-    for (auto& [groupid, groupObj] : grp::groups)
-		groupObj.updateMembers();
-
-	//grp::db.startTimedCommit();
-	//eat::db.startTimedCommit();
-
+	// app: monopoly
     //mnp::calc_event_max();
 
 	addTimedEvents();
-	addTimedEventEveryMin(std::bind(&SQLite::commit, &user::db, true));
-	addTimedEventEveryMin(std::bind(&SQLite::commit, &grp::db, true));
-	startTimedEvent();
-
 	addMsgCallbacks();
-	mirai::startMsgPoll();
-	
+
+	// announce startup
     //std::string boot_info = help::boot_info();
     //broadcastMsg(boot_info.c_str(), grp::Group::MASK_BOOT_ANNOUNCE);
 
+	// start threads
+	startTimedEvent();
+	mirai::startMsgPoll();
+	
 	return 0;
 }
 

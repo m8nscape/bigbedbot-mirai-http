@@ -7,6 +7,34 @@
 namespace grp
 {
 
+void CreateTable()
+{
+    if (db.exec(
+        "CREATE TABLE IF NOT EXISTS grp( \
+            id    INTEGER PRIMARY KEY, \
+            flags INTEGER         NOT NULL DEFAULT 0 \
+         )") != SQLITE_OK)
+        addLog(LOG_ERROR, "grp", db.errmsg());
+}
+
+
+void LoadListFromDb()
+{
+    auto list = db.query("SELECT * FROM grp", 2);
+    for (auto& row : list)
+    {
+		Group g;
+		g.group_id = std::any_cast<int64_t>(row[0]);
+		
+		g.flags = std::any_cast<int64_t>(row[1]);
+
+		groups[g.group_id] = g;
+    }
+    char msg[128];
+    sprintf(msg, "added %u groups", groups.size());
+    addLog(LOG_DEBUG, "grp", msg);
+}
+
 void Group::setFlag(int64_t mask, bool set)
 {
 	if (set)
@@ -81,34 +109,6 @@ int64_t Group::getMember(const char* name)
 void Group::sendMsg(const char* msg)
 {
     mirai::sendGroupMsg(group_id, std::string(msg));
-}
-
-void CreateTable()
-{
-    if (db.exec(
-        "CREATE TABLE IF NOT EXISTS grp( \
-            id    INTEGER PRIMARY KEY, \
-            flags INTEGER         NOT NULL DEFAULT 0 \
-         )") != SQLITE_OK)
-        addLog(LOG_ERROR, "grp", db.errmsg());
-}
-
-
-void LoadListFromDb()
-{
-    auto list = db.query("SELECT * FROM grp", 2);
-    for (auto& row : list)
-    {
-		Group g;
-		g.group_id = std::any_cast<int64_t>(row[0]);
-		
-		g.flags = std::any_cast<int64_t>(row[1]);
-
-		groups[g.group_id] = g;
-    }
-    char msg[128];
-    sprintf(msg, "added %u groups", groups.size());
-    addLog(LOG_DEBUG, "grp", msg);
 }
 
 int newGroup(int64_t id)
@@ -279,6 +279,14 @@ void broadcastMsg(const char* msg, int64_t flag)
         if (!g.members.empty() && ((g.flags & flag) || flag == -1))
             g.sendMsg(msg);
     }
+}
+
+void init()
+{
+	CreateTable();
+	LoadListFromDb();
+    for (auto& [groupid, groupObj] : grp::groups)
+		groupObj.updateMembers();
 }
 
 }

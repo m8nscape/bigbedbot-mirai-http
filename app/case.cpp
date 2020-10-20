@@ -1,4 +1,5 @@
 #include <sstream>
+#include <filesystem>
 
 #include "case.h"
 #include "mirai/api.h"
@@ -6,10 +7,30 @@
 #include "mirai/msg.h"
 #include "data/user.h"
 #include "utils/rand.h"
+#include "logger.h"
+
+#include "yaml-cpp/yaml.h"
 
 namespace opencase
 {
 using user::plist;
+
+std::vector<case_type> CASE_POOL
+{
+	{ "黑箱", /*-255, */  0.003 },
+	//{ "彩箱", /*10000,*/  0.0006 },
+	{ "黄箱", /*1000, */  0.0045 },
+	{ "红箱", /*200,  */  0.01 },
+	{ "粉箱", /*5,    */  0.03 },
+	{ "紫箱", /*2,    */  0.17 },
+};
+case_type CASE_DEFAULT{ "蓝箱", /*1,*/ 1.0 };
+
+case_detail::case_detail() : _type_idx(CASE_POOL.size()) {}
+const case_type& case_detail::type() const { return (_type_idx < CASE_POOL.size() ? CASE_POOL[_type_idx] : CASE_DEFAULT); }
+
+std::vector<std::vector<case_detail>> CASE_DETAILS;
+
 
 json not_registered(int64_t qq)
 {
@@ -36,6 +57,7 @@ json not_enough_stamina(int64_t qq, time_t rtime)
 	resp["messageChain"].push_back(ss.str());
 	return resp;
 }
+
 
 json 开箱(::int64_t group, ::int64_t qq, std::vector<std::string> args)
 {
@@ -458,4 +480,55 @@ const case_detail& draw_case(double p)
 	return CASE_DETAILS[idx][detail_idx];
 }
 
+int loadCases(const char* yaml)
+{
+	std::filesystem::path cfgPath(yaml);
+	if (!std::filesystem::is_regular_file(cfgPath))
+	{
+		addLog(LOG_ERROR, "case", "Case config file %s not found", std::filesystem::absolute(cfgPath));
+		return -1;
+	}
+	addLog(LOG_INFO, "user", "Loading case config from %s", std::filesystem::absolute(cfgPath));
+
+	YAML::Node cfg = YAML::LoadFile(cfgPath);
+
+	CASE_POOL.clear();
+    double p = 0;
+	for (const auto& it: cfg["levels"])
+	{
+		if (it.size() >= 2)
+		{
+            double pp = it[1].as<double>();
+			CASE_POOL.push_back({it[0].as<std::string>(), pp});
+			p += pp;
+		}
+		else
+		{
+			CASE_POOL.push_back({it[0].as<std::string>(), 1.0 - p});
+		}
+	}
+	if (p > 1.0)
+	{
+		addLog(LOG_WARNING, "case", "sum of level probabilities %lf exceeds 1.0", p);
+	}
+
+	CASE_DETAILS.clear();
+	CASE_DETAILS.resize(CASE_POOL.size() + 1);
+	size_t case_count = 0;
+	for (const auto& it: cfg["list"])
+	{
+		size_t level = it[0].as<size_t>();
+		if (level < CASE_DETAILS.size())
+			CASE_DETAILS[level].push_back({level, it[1].as<std::string>(), it[2].as<int>()});
+		++case_count;
+	}
+
+	addLog(LOG_INFO, "case", "Loaded %u cases", case_count);
+	return 0;
+}
+
+void init(const char* case_list_yml)
+{
+	loadCases(case_list_yml);
+}
 }
