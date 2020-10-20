@@ -184,14 +184,14 @@ json not_registered(int64_t qq)
 {
 	json resp = R"({ "messageChain": [] })"_json;
 	resp["messageChain"].push_back(mirai::buildMessageAt(qq));
-	resp["messageChain"].push_back("，你还没有开通菠菜");
+	resp["messageChain"].push_back(mirai::buildMessagePlain("，你还没有开通菠菜"));
 	return resp;
 }
 
 json register_notify()
 {
 	json resp = R"({ "messageChain": [] })"_json;
-	resp["messageChain"].push_back("是我要开通菠菜，你会不会开通菠菜");
+	resp["messageChain"].push_back(mirai::buildMessagePlain("是我要开通菠菜，你会不会开通菠菜"));
 	return std::move(resp);
 }
 
@@ -199,7 +199,7 @@ json already_registered(int64_t qq)
 {
 	json resp = R"({ "messageChain": [] })"_json;
 	resp["messageChain"].push_back(mirai::buildMessageAt(qq));
-	resp["messageChain"].push_back("，你已经开通过了");
+	resp["messageChain"].push_back(mirai::buildMessagePlain("，你已经开通过了"));
 	return std::move(resp);
 }
 
@@ -209,7 +209,7 @@ json registered(int64_t qq)
 	resp["messageChain"].push_back(mirai::buildMessageAt(qq));
     std::stringstream ss;
     ss << "，你可以开始开箱了，送给你" << INITIAL_BALANCE << "个批";
-	resp["messageChain"].push_back(ss.str());
+	resp["messageChain"].push_back(mirai::buildMessagePlain(ss.str()));
 	return std::move(resp);
 }
 

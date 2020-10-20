@@ -381,9 +381,10 @@ void startMsgPoll()
             conn::GET(path.str(), 
                 [&p](const json& v) -> int
                 {
-                    if (!v.empty())
+                    if (v.contains("data"))
                     {
-                        procRecvMsgEntry(v);
+                        for (const auto& m: v.at("data"))
+                            procRecvMsgEntry(m);
                     }
                     p.set_value(0); 
                     return 0; 

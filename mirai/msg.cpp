@@ -50,7 +50,7 @@ std::vector<std::string> messageChainToArgs(const json& v, unsigned max_count)
     for (const auto& e: m)
     {
         if (e.contains("text"))
-            ss << e.at("text");
+            ss << e.at("text").get<std::string>();
     }
 
     std::vector<std::string> args;
