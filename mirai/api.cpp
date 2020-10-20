@@ -101,7 +101,7 @@ int sendMsgCallback(const json& v)
 {
     if (!v.contains("code"))
     {
-        addLog(LOG_DEBUG, "api", "msg failed with unknown reason");
+        addLogDebug("api", "msg failed with unknown reason");
         return 1;
     }
     int code = v.at("code");
@@ -115,7 +115,7 @@ int sendMsgCallback(const json& v)
     if (code != 0)
     {
         // TODO msg
-        addLog(LOG_DEBUG, "api", "msg failed with code %d: %s", code, msg.c_str());
+        addLogDebug("api", "msg failed with code %d: %s", code, msg.c_str());
         return code;
     }
 
@@ -123,11 +123,11 @@ int sendMsgCallback(const json& v)
     {
         int64_t msgId = v.at("messageId");
         // TODO msgId
-        addLog(LOG_DEBUG, "api", "msg succeeded (id:%lld)", msgId);
+        addLogDebug("api", "msg succeeded (id:%lld)", msgId);
     }
     else
     {
-        addLog(LOG_DEBUG, "api", "msg succeeded");
+        addLogDebug("api", "msg succeeded");
     }
 
     return 0;
@@ -135,7 +135,7 @@ int sendMsgCallback(const json& v)
 
 int sendPrivateMsg(int64_t qqid, int64_t groupid, const std::string& msg, int64_t quotemsgid)
 {
-    addLog(LOG_DEBUG, "api", "Send private msg to %lld: %s", qqid, msg.c_str());
+    addLogDebug("api", "Send private msg to %lld: %s", qqid, msg.c_str());
 	json req = R"({ "messageChain": [] })"_json;
     json &messageChain = req["messageChain"];
     std::stringstream ss(msg);
@@ -151,7 +151,7 @@ int sendPrivateMsg(int64_t qqid, int64_t groupid, const std::string& msg, int64_
 
 int sendPrivateMsg(int64_t qqid, int64_t groupid, const json& messageChain, int64_t quotemsgid)
 {
-    addLog(LOG_DEBUG, "api", "Send private msg to %lld: (messagechain)", qqid);
+    addLogDebug("api", "Send private msg to %lld: (messagechain)", qqid);
     // TODO check if target is friend
 
     json obj;
@@ -166,7 +166,7 @@ int sendPrivateMsg(int64_t qqid, int64_t groupid, const json& messageChain, int6
 
 int sendGroupMsg(int64_t groupid, const std::string& msg, int64_t quotemsgid)
 {
-    addLog(LOG_DEBUG, "api", "Send group msg to %lld: %s", groupid, msg.c_str());
+    addLogDebug("api", "Send group msg to %lld: %s", groupid, msg.c_str());
 	json resp = R"({ "messageChain": [] })"_json;
     json &messageChain = resp["messageChain"];
     std::stringstream ss(msg);
@@ -182,7 +182,7 @@ int sendGroupMsg(int64_t groupid, const std::string& msg, int64_t quotemsgid)
 
 int sendGroupMsg(int64_t groupid, const json& messageChain, int64_t quotemsgid)
 {
-    addLog(LOG_DEBUG, "api", "Send private msg to %lld: (messagechain)", groupid);
+    addLogDebug("api", "Send private msg to %lld: (messagechain)", groupid);
     json obj;
     obj["sessionKey"] = std::string(sessionKey);
     obj["target"] = groupid;
@@ -194,7 +194,7 @@ int sendGroupMsg(int64_t groupid, const json& messageChain, int64_t quotemsgid)
 
 int recallMsg(int64_t msgid)
 {
-    addLog(LOG_DEBUG, "api", "Recall msg %lld", msgid);
+    addLogDebug("api", "Recall msg %lld", msgid);
     json obj;
     obj["sessionKey"] = std::string(sessionKey);
     obj["target"] = msgid;
@@ -204,7 +204,7 @@ int recallMsg(int64_t msgid)
 
 int mute(int64_t qqid, int64_t groupid, int time_sec)
 {
-    addLog(LOG_DEBUG, "api", "Mute %lld @ %lld for %ds", qqid, groupid, time_sec);
+    addLogDebug("api", "Mute %lld @ %lld for %ds", qqid, groupid, time_sec);
     json obj;
     obj["sessionKey"] = std::string(sessionKey);
     obj["target"] = groupid;
@@ -225,7 +225,7 @@ int mute(int64_t qqid, int64_t groupid, int time_sec)
 
 int getGroupMemberInfo(int64_t groupid, int64_t qqid, group_member_info& g)
 {
-    addLog(LOG_DEBUG, "api", "Get member info for %lld @ %lld", qqid, groupid);
+    addLogDebug("api", "Get member info for %lld @ %lld", qqid, groupid);
     g = group_member_info();
     std::stringstream path;
     path << "/memberInfo?sessionKey=" << sessionKey << "&target=" << groupid << "&memberId=" << qqid;
@@ -259,7 +259,7 @@ int getGroupMemberInfo(int64_t groupid, int64_t qqid, group_member_info& g)
 
 std::vector<group_member_info> getGroupMemberList(int64_t groupid)
 {
-    addLog(LOG_DEBUG, "api", "Get member list for group %lld", groupid);
+    addLogDebug("api", "Get member list for group %lld", groupid);
     std::stringstream path;
     path << "/memberList?sessionKey=" << sessionKey << "&target=" << groupid;
 
@@ -302,7 +302,7 @@ int procRecvMsgEntry(const json& v)
     if (!v.contains("type")) return -2;
 
     std::string type = v.at("type");
-    addLog(LOG_DEBUG, "api", "Recv event %s", type.c_str());
+    addLogDebug("api", "Recv event %s", type.c_str());
 
     auto evt = magic_enum::enum_cast<RecvMsgType>(type);
     if (evt.has_value())

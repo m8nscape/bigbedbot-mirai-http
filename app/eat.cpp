@@ -70,7 +70,7 @@ void updateSteamGameList()
 			games = std::move(gamestmp);
 			char msg[128];
 			sprintf_s(msg, "added %u games", games.games.size());
-			addLog(LOG_DEBUG, "play", msg);
+			addLogDebug("play", msg);
 			break;
 
 		case 2:
@@ -121,7 +121,7 @@ std::string food::to_string(int64_t group)
             const char* cqinfo = CQ_getGroupMemberInfoV2(ac, group, offerer.qq, FALSE);
             if (cqinfo && strlen(cqinfo) > 0)
             {
-                //addLog(LOG_DEBUG, "eat", cqinfo);
+                //addLogDebug("eat", cqinfo);
                 std::string decoded = base64_decode(std::string(cqinfo));
                 if (!decoded.empty())
                 {
@@ -144,7 +144,7 @@ std::string food::to_string(int64_t group)
 
     //std::stringstream ssd;
     //ssd << offererType << ": " << name << " | " << offerer.name << " | " << offerer.qq;
-    //addLog(LOG_DEBUG, "eat", ssd.str().c_str());
+    //addLogDebug("eat", ssd.str().c_str());
     return ss.str();
 }
 
@@ -619,7 +619,7 @@ void foodLoadListFromDb()
     }
     char msg[128];
     sprintf(msg, "added %u foods", foodList.size());
-    addLog(LOG_DEBUG, "eat", msg);
+    addLogDebug("eat", msg);
 }
 */
 

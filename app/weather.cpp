@@ -67,7 +67,7 @@ command weather::msgDispatcher(const json& body)
                 PCRE2_SIZE strlen;
                 if (pcre2_substring_get_bynumber(mdata, i, &str, &strlen) == 0)
                 {
-                    addLog(LOG_DEBUG, "weather", (char*)str);
+                    addLogDebug("weather", (char*)str);
                     args.push_back((char*)str);
                     pcre2_substring_free(str);
                 }

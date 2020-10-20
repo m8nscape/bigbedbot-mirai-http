@@ -488,7 +488,7 @@ void roundEnd(int64_t group)
         if (b_3rd && bet.amount[P3rd]) reward_tmp += bet.amount[P3rd] * 3;
         if (reward_tmp)
         {
-            addLog(LOG_DEBUG, "duel", ("reward: "s + std::to_string(qq) + " " + std::to_string(reward_tmp)).c_str());
+            addLogDebug("duel", ("reward: "s + std::to_string(qq) + " " + std::to_string(reward_tmp)).c_str());
 			plist[qq].modifyCurrency(reward_tmp);
             reward[qq] = reward_tmp;
         }

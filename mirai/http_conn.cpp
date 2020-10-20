@@ -1,5 +1,8 @@
-#include "http_conn.h"
 #include <vector>
+
+#include "http_conn.h"
+
+#include "logger.h"
 
 namespace mirai::conn
 {
@@ -191,17 +194,33 @@ public:
     }
 };
 
+static unsigned get_count = 0;
 int GET(const std::string& target, std::function<int(const json&)> callback)
 {
+    unsigned c = ++get_count;
     net::io_context ioc;
-    std::make_shared<session>(ioc)->GET(HOST, PORT, target.c_str(), callback);
+    addLogDebug("http", "GET[%u] %s", c, target.c_str());
+    std::make_shared<session>(ioc)->GET(HOST, PORT, target.c_str(), 
+        [c, &callback](const json& j)
+        {
+            addLogDebug("http", "GET[%u] resp %s", c, j.dump().c_str());
+            return callback(j);
+        });
     return 0;
 }
 
+static int post_count = 0;
 int POST(const std::string& target, const json& body, std::function<int(const json&)> callback)
 {
+    unsigned c = ++post_count;
     net::io_context ioc;
-    std::make_shared<session>(ioc)->POST(HOST, PORT, target.c_str(), body, callback);
+    addLogDebug("http", "POST[%u] %s %s", c, target.c_str(), body.dump());
+    std::make_shared<session>(ioc)->POST(HOST, PORT, target.c_str(), body, 
+        [c, &callback](const json& j)
+        {
+            addLogDebug("http", "POST[%u] resp %s", c, j.dump().c_str());
+            return callback(j);
+        });
     return 0;
 }
 

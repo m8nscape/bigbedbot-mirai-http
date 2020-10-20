@@ -44,7 +44,7 @@ void peeLoadFromDb()
 	}
 	char msg[128];
 	sprintf(msg, "added %u users", plist.size());
-	addLog(LOG_DEBUG, "pee", msg);
+	addLogDebug("pee", msg);
 }
 
 pdata::resultStamina pdata::getStamina(bool extra)

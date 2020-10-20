@@ -32,7 +32,7 @@ void LoadListFromDb()
     }
     char msg[128];
     sprintf(msg, "added %u groups", groups.size());
-    addLog(LOG_DEBUG, "grp", msg);
+    addLogDebug("grp", msg);
 }
 
 void Group::setFlag(int64_t mask, bool set)
