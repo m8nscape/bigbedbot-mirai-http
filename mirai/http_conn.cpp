@@ -178,7 +178,7 @@ public:
         }
 
         // callback
-        callback(json::parse(static_cast<const char*>(buffer_.cdata().data())));
+        callback(json::parse(res_.body()));
 
         // Gracefully close the socket
         socket_.shutdown(tcp::socket::shutdown_both, ec);
@@ -206,6 +206,7 @@ int GET(const std::string& target, std::function<int(const json&)> callback)
             addLogDebug("http", "GET[%u] resp %s", c, j.dump().c_str());
             return callback(j);
         });
+    ioc.run();
     return 0;
 }
 
@@ -214,13 +215,14 @@ int POST(const std::string& target, const json& body, std::function<int(const js
 {
     unsigned c = ++post_count;
     net::io_context ioc;
-    addLogDebug("http", "POST[%u] %s %s", c, target.c_str(), body.dump());
+    addLogDebug("http", "POST[%u] %s %s", c, target.c_str(), body.dump().c_str());
     std::make_shared<session>(ioc)->POST(HOST, PORT, target.c_str(), body, 
         [c, &callback](const json& j)
         {
             addLogDebug("http", "POST[%u] resp %s", c, j.dump().c_str());
             return callback(j);
         });
+    ioc.run();
     return 0;
 }
 

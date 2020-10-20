@@ -35,22 +35,22 @@ int auth(const char* auth_key)
                 if ((resp = v.at("code").get<int>()) == 0)
                 {
                     // save sessionKey
-                    strncpy(sessionKey, std::any_cast<std::string>(v.at("session")).c_str(), sizeof(sessionKey));
+                    strncpy(sessionKey, v.at("session").get<std::string>().c_str(), sizeof(sessionKey));
                     addLog(LOG_INFO, "api", "Got session key [%s]", sessionKey);
                 }
                 else
                 {
-                    resp = std::any_cast<int>(v.at("code"));
-                    addLog(LOG_INFO, "api", "Authenciation failed with code %d", resp);
+                    resp = v.at("code").get<int>();
+                    addLog(LOG_ERROR, "api", "Authenciation failed with code %d", resp);
                 }
             }
             else
             {
                 resp = -1;
-                addLog(LOG_INFO, "api", "Authenciation failed");
+                addLog(LOG_ERROR, "api", "Authenciation failed");
             }
 
-            p.set_value_at_thread_exit(resp);
+            p.set_value(resp);
 			return resp;
 		}
     );
@@ -86,10 +86,10 @@ int verify()
             }
             else
             {
-                addLog(LOG_INFO, "api", "Verification failed with code %d", resp);
+                addLog(LOG_ERROR, "api", "Verification failed with code %d", resp);
             }
 
-            p.set_value_at_thread_exit(resp);
+            p.set_value(resp);
 			return resp;
 		}
     );
@@ -101,7 +101,7 @@ int sendMsgCallback(const json& v)
 {
     if (!v.contains("code"))
     {
-        addLogDebug("api", "msg failed with unknown reason");
+        addLog(LOG_WARNING, "api", "msg failed with unknown reason");
         return 1;
     }
     int code = v.at("code");
@@ -115,7 +115,7 @@ int sendMsgCallback(const json& v)
     if (code != 0)
     {
         // TODO msg
-        addLogDebug("api", "msg failed with code %d: %s", code, msg.c_str());
+        addLog(LOG_WARNING, "api", "msg failed with code %d: %s", code, msg.c_str());
         return code;
     }
 
@@ -249,7 +249,7 @@ int getGroupMemberInfo(int64_t groupid, int64_t qqid, group_member_info& g)
             if (body.contains("specialTitle"))
                 g.specialTitle = body.at("specialTitle");
             
-            p.set_value_at_thread_exit(0); 
+            p.set_value(0); 
             return 0; 
         }
     );
@@ -286,7 +286,7 @@ std::vector<group_member_info> getGroupMemberList(int64_t groupid)
                 l.push_back(g);
             }
 
-            p.set_value_at_thread_exit(0); 
+            p.set_value(0); 
             return 0; 
         }
     );
@@ -385,13 +385,13 @@ void startMsgPoll()
                     {
                         procRecvMsgEntry(v);
                     }
-                    p.set_value_at_thread_exit(0); 
+                    p.set_value(0); 
                     return 0; 
                 });
             f.wait();
             std::this_thread::sleep_for(std::chrono::milliseconds(POLLING_INTERVAL_MS));
         }
-        pollingPromise.set_value_at_thread_exit(0);
+        pollingPromise.set_value(0);
     });
     msg_poll_thread->detach();
 
