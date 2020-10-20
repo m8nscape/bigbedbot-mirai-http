@@ -203,12 +203,12 @@ json already_registered(int64_t qq)
 	return std::move(resp);
 }
 
-json registered(int64_t qq)
+json registered(int64_t qq, int64_t balance)
 {
 	json resp = R"({ "messageChain": [] })"_json;
 	resp["messageChain"].push_back(mirai::buildMessageAt(qq));
     std::stringstream ss;
-    ss << "，你可以开始开箱了，送给你" << INITIAL_BALANCE << "个批";
+    ss << "，你可以开始开箱了，送给你" << balance << "个批";
 	resp["messageChain"].push_back(mirai::buildMessagePlain(ss.str()));
 	return std::move(resp);
 }
@@ -272,7 +272,8 @@ json 开通(int64_t qq)
 {
 	if (plist.find(qq) != plist.end()) 
 		return std::move(already_registered(qq));
-	return std::move(registered(qq));
+	plist[qq].createAccount(INITIAL_BALANCE);
+	return std::move(registered(qq, INITIAL_BALANCE));
 }
 
 json 开通提示(int64_t qq)

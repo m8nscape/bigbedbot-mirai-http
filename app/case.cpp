@@ -36,7 +36,7 @@ json not_registered(int64_t qq)
 {
 	json resp = R"({ "messageChain": [] })"_json;
 	resp["messageChain"].push_back(mirai::buildMessageAt(qq));
-	resp["messageChain"].push_back("，你还没有开通菠菜");
+	resp["messageChain"].push_back(mirai::buildMessagePlain("，你还没有开通菠菜"));
 	return resp;
 }
 
@@ -44,7 +44,7 @@ json not_enough_currency(int64_t qq)
 {
 	json resp = R"({ "messageChain": [] })"_json;
 	resp["messageChain"].push_back(mirai::buildMessageAt(qq));
-	resp["messageChain"].push_back("，你的余额不足");
+	resp["messageChain"].push_back(mirai::buildMessagePlain("，你的余额不足"));
 	return resp;
 }
 
@@ -54,7 +54,7 @@ json not_enough_stamina(int64_t qq, time_t rtime)
 	resp["messageChain"].push_back(mirai::buildMessageAt(qq));
 	std::stringstream ss;
 	ss << "，你的体力不足，回满还需" << rtime / (60 * 60) << "小时" << rtime / 60 % 60 << "分钟";
-	resp["messageChain"].push_back(ss.str());
+	resp["messageChain"].push_back(mirai::buildMessagePlain(ss.str()));
 	return resp;
 }
 
