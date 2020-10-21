@@ -20,6 +20,7 @@ class pdata
 {
 public:
 	pdata() {}
+	pdata(int64_t qq): qq(qq) {}
 	pdata(int64_t q, int64_t c, int64_t bc, time_t dt, int64_t k):
 		qq(q), currency(c), opened_box_count(bc), last_draw_time(dt), key_count(k) {}
 	~pdata() = default;
@@ -67,7 +68,7 @@ public:
 	void modifyDrawTime(time_t time);
 	void modifyKeyCount(int64_t delta);
 
-	void createAccount(int64_t initialBalance);
+	void createAccount(int64_t qq, int64_t initialBalance);
 
 };
 

@@ -67,7 +67,7 @@ int initialize()
 
 int config()
 {
-	const char* cfgFile = "./config.yaml";
+	const char* cfgFile = "./config/config.yaml";
 	std::filesystem::path cfgPath(cfgFile);
 	if (!std::filesystem::is_regular_file(cfgPath))
 	{
@@ -94,7 +94,7 @@ int init_app_and_start()
 	botStarted = true;
 
 	// app: user
-    user::init("./app/user.yaml");
+    user::init("./config/user.yaml");
 	addTimedEventEveryMin(std::bind(&SQLite::commit, &user::db, true));
 
 	// app: group
@@ -102,7 +102,7 @@ int init_app_and_start()
 	addTimedEventEveryMin(std::bind(&SQLite::commit, &grp::db, true));
 
 	// app: case
-	opencase::init("./app/case.yaml");
+	opencase::init("./config/case.yaml");
 
 	// app: event_case
 	// event_case::init("./app/event_case_draw.yaml", "./app/eent_case_drop.yaml");

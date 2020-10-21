@@ -10,7 +10,7 @@ namespace opencase
 {
 
 using nlohmann::json;
-void init(const char* case_list_yml);
+void init(const char* cfg_yml);
 
 enum class commands : size_t {
 	开箱,
@@ -24,7 +24,6 @@ void msgDispatcher(const json& body);
 
 ////////////////////////////////////////////////////////////////////////////////
 // 开箱
-const int FEE_PER_CASE = 17;
 class case_type
 {
 private:
@@ -46,7 +45,7 @@ private:
 	std::string _name;
 	int _worth = 0;
 public:
-	//case_detail() : _type_idx(CASE_POOL.size()) {}
+	//case_detail() : _type_idx(CASE_TYPES.size()) {}
 	case_detail();
 	case_detail(size_t ty, std::string n, int w) : _type_idx(ty), _name(n), _worth(w) {}
 	size_t type_idx() const { return _type_idx; }
@@ -60,14 +59,5 @@ public:
 
 const case_detail& draw_case(double p);
 
-////////////////////////////////////////////////////////////////////////////////
-// 技能设定
-const int COST_OPEN_RED = 50;
-const int COST_OPEN_YELLOW = 255;
-
-const int COST_OPEN_ENDLESS = 50;
-
-const int COST_OPEN_RED_STAMINA = 6;
-const int COST_OPEN_ENDLESS_STAMINA = 7;
 
 }

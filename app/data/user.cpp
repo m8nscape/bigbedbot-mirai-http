@@ -173,8 +173,9 @@ void pdata::modifyKeyCount(int64_t c)
 	db.exec("UPDATE pee SET keys=? WHERE qqid=?", { key_count, qq });
 }
 
-void pdata::createAccount(int64_t c)
+void pdata::createAccount(int64_t qqid, int64_t c)
 {
+	qq = qqid;
 	currency = c;
 	db.exec("INSERT INTO pee(qqid, currency, cases, dailytime, keys) VALUES(? , ? , ? , ? , ?)",
 		{ qq, currency, 0, 0, 0 });
@@ -272,7 +273,7 @@ json 开通(int64_t qq)
 {
 	if (plist.find(qq) != plist.end()) 
 		return std::move(already_registered(qq));
-	plist[qq].createAccount(INITIAL_BALANCE);
+	plist[qq].createAccount(qq, INITIAL_BALANCE);
 	return std::move(registered(qq, INITIAL_BALANCE));
 }
 

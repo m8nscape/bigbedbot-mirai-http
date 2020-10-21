@@ -1,0 +1,15 @@
+# 床群bot配置文件
+
+#################################################
+# authkey: mirai-http-api设置的authKey
+authkey: INITKEY111111
+
+# port: mirai-http-api设置的监听端口，请求将发送至http://localhost:port
+port: 23456
+
+# qq: 机器人qq号，必须是mirai已登录的账号
+qq: 1234567890
+
+#################################################
+# qq_root: 管理员qq号
+qq_root: 9876543210

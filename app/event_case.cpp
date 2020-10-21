@@ -221,7 +221,7 @@ void stopEvent()
     }
 }
 
-case_pool loadCases(const char* yaml)
+case_pool loadCfg(const char* yaml)
 {
 	std::filesystem::path cfgPath(yaml);
 	if (!std::filesystem::is_regular_file(cfgPath))
@@ -277,8 +277,8 @@ case_pool loadCases(const char* yaml)
 
 void init(const char* event_case_draw_yml, const char* event_case_drop_yml)
 {
-    pool_draw = loadCases(event_case_draw_yml);
-    pool_drop = loadCases(event_case_drop_yml);
+    pool_draw = loadCfg(event_case_draw_yml);
+    pool_drop = loadCfg(event_case_drop_yml);
 }
 
 }

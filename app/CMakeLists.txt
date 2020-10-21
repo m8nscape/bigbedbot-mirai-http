@@ -1,7 +1,7 @@
 add_library(app STATIC 
     common/dbconn.cpp common/dbconn.h
     data/group.cpp data/group.h data/user.cpp data/user.h
-    case_def.cpp case.cpp case.h
+    case.cpp case.h
 )
 target_include_directories(app 
     PRIVATE ../
