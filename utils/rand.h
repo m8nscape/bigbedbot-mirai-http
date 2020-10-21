@@ -1,8 +1,8 @@
 #pragma once
 
 #include <random>
-inline std::random_device random_rd;  // ½«ÓÃÓÚ»ñµÃËæ»úÊıÒıÇæµÄÖÖ×Ó
-inline std::mt19937 random_gen(random_rd()); // ÒÔ rd() ²¥ÖÖµÄ±ê×¼ mersenne_twister_engine
+inline std::random_device random_rd;  // å°†ç”¨äºè·å¾—éšæœºæ•°å¼•æ“çš„ç§å­
+inline std::mt19937 random_gen(random_rd()); // ä»¥ rd() æ’­ç§çš„æ ‡å‡† mersenne_twister_engine
 
 inline int randInt(int min, int max)   // [min, max]
 {

@@ -17,19 +17,15 @@ using user::plist;
 
 std::vector<case_type> CASE_POOL
 {
-	{ "黑箱", /*-255, */  0.003 },
+	{ "测试箱1", /*-255, */  0.5 },
 	//{ "彩箱", /*10000,*/  0.0006 },
-	{ "黄箱", /*1000, */  0.0045 },
-	{ "红箱", /*200,  */  0.01 },
-	{ "粉箱", /*5,    */  0.03 },
-	{ "紫箱", /*2,    */  0.17 },
 };
-case_type CASE_DEFAULT{ "蓝箱", /*1,*/ 1.0 };
+case_type CASE_DEFAULT{ "测试箱2", /*1,*/ 1.0 };
 
 case_detail::case_detail() : _type_idx(CASE_POOL.size()) {}
 const case_type& case_detail::type() const { return (_type_idx < CASE_POOL.size() ? CASE_POOL[_type_idx] : CASE_DEFAULT); }
 
-std::vector<std::vector<case_detail>> CASE_DETAILS;
+std::vector<std::vector<case_detail>> CASE_DETAILS{{{0, "菠菜种子", 1}}, {{1, "菠菜叶子", 1}}};
 
 
 json not_registered(int64_t qq)
@@ -100,7 +96,7 @@ json 开箱(::int64_t group, ::int64_t qq, std::vector<std::string> args)
 	}
 	std::stringstream ss;
 	ss << reward.full() << "，获得" << reward.worth() << "个批";
-	r.push_back(ss.str());
+	r.push_back(mirai::buildMessagePlain(ss.str()));
 
 	p.modifyCurrency(reward.worth());
 	p.modifyBoxCount(+1);
@@ -214,8 +210,8 @@ json 开红箱(::int64_t group, ::int64_t qq, std::vector<std::string> args)
 	std::stringstream ss;
 	r.push_back(mirai::buildMessageAt(qq));
 	ss << "消耗" << COST_OPEN_RED << "个批和" << COST_OPEN_RED_STAMINA << "点体力发动技能！\n";
-	r.push_back(ss.str());
-	ss.clear();
+	r.push_back(mirai::buildMessageAt(ss.str()));
+	ss.str("");
 
 	std::vector<int> case_counts(CASE_POOL.size() + 1, 0);
 	int count = 0;
@@ -294,8 +290,8 @@ json 开黄箱(::int64_t group, ::int64_t qq, std::vector<std::string> args)
 	std::stringstream ss;
 	r.push_back(mirai::buildMessageAt(qq));
 	ss << "消耗" << COST_OPEN_RED << "个批和" << user::MAX_STAMINA << "点体力发动技能！\n";
-	r.push_back(ss.str());
-	ss.clear();
+	r.push_back(mirai::buildMessageAt(ss.str()));
+	ss.str("");
 
 	std::vector<int> case_counts(CASE_POOL.size() + 1, 0);
 	int count = 0;

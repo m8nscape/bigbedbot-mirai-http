@@ -220,7 +220,7 @@ json currency(int64_t qq, int64_t c, int64_t key, int stamina, time_t rtime)
     std::stringstream ss;
     ss << "，你的余额为" << c << "个批，" << key << "把钥匙\n";
 	resp["messageChain"].push_back(mirai::buildMessagePlain(ss.str()));
-	ss.clear();
+	ss.str("");
 	ss << "你还有" << stamina << "点体力";
 	if (stamina < user::MAX_STAMINA)
 		ss << "，回满还需" << rtime / (60 * 60) << "小时" << rtime / 60 % 60 << "分钟";
@@ -252,7 +252,7 @@ json draw_p(int64_t qq, int64_t base, int64_t bonus, int64_t daily_remain)
 		std::stringstream ss;
 		ss << "，你今天领到" << base << "个批，甚至还有先到的" << bonus << "个批";
 		resp["messageChain"].push_back(mirai::buildMessagePlain(ss.str()));
-		ss.clear();
+		ss.str("");
 		ss << "现在批池还剩" << daily_remain << "个批";
 		resp["messageChain"].push_back(mirai::buildMessagePlain(ss.str()));
 	}
@@ -261,7 +261,7 @@ json draw_p(int64_t qq, int64_t base, int64_t bonus, int64_t daily_remain)
 		std::stringstream ss;
 		ss << "，你今天领到" << base << "个批\n";
 		resp["messageChain"].push_back(mirai::buildMessagePlain(ss.str()));
-		ss.clear();
+		ss.str("");
 		ss << "每日批池么得了，明天请踩点";
 		resp["messageChain"].push_back(mirai::buildMessagePlain(ss.str()));
 	}

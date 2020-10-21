@@ -182,7 +182,7 @@ int sendGroupMsg(int64_t groupid, const std::string& msg, int64_t quotemsgid)
 
 int sendGroupMsg(int64_t groupid, const json& messageChain, int64_t quotemsgid)
 {
-    addLogDebug("api", "Send private msg to %lld: (messagechain)", groupid);
+    addLogDebug("api", "Send group msg to %lld: (messagechain)", groupid);
     json obj;
     obj["sessionKey"] = std::string(sessionKey);
     obj["target"] = groupid;
