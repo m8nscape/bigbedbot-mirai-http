@@ -24,9 +24,10 @@ public:
     std::map<int64_t, mirai::group_member_info> members;
 	int64_t last_talk_member = 0;
 
-	static const int64_t MASK_EAT = 1 << 0;
-	static const int64_t MASK_GAMBOL = 1 << 1;		// rename from flipcoin
-	//static const int64_t MASK_ROULETTE = 1 << 2;	// merged to flipcoin
+
+	static const int64_t MASK_P = 1 << 0;
+	static const int64_t MASK_EAT = 1 << 1;
+	static const int64_t MASK_GAMBOL = 1 << 2;
 	static const int64_t MASK_MONOPOLY = 1 << 3;
 	static const int64_t MASK_SMOKE = 1 << 4;
 	static const int64_t MASK_CASE = 1 << 5;

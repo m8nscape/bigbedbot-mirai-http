@@ -297,6 +297,7 @@ json 领批(int64_t qq, int64_t group)
 {
 	if (plist.find(qq) == plist.end()) 
 		return std::move(not_registered(qq));
+		
 	if (!grp::groups[group].getFlag(grp::Group::MASK_DAILYP))
 		return std::move(no_dailyp_flag());
 		
@@ -368,6 +369,9 @@ void msgCallback(const json& body)
 
 	auto m = mirai::parseMsgMetadata(body);
 
+    if (!grp::groups[m.groupid].getFlag(grp::Group::MASK_P))
+        return;
+
 	json resp;
 	switch (commands_str.at(cmd))
 	{
@@ -405,14 +409,17 @@ int loadUserAlias(const char* yaml)
 	addLog(LOG_INFO, "user", "Loading alias config from %s", std::filesystem::absolute(cfgPath).c_str());
 
 	YAML::Node cfg = YAML::LoadFile(cfgPath);
+	unsigned c = 0;
 	for (const auto& u: cfg)
 	{
 		int64_t qqid = u.first.as<int64_t>();
 		for (const auto& a: u.second)
 		{
 			USER_ALIAS[a.as<std::string>()] = qqid;
+			c++;
 		}
 	}
+	addLog(LOG_INFO, "user", "Loaded %u entries", c);
 
 	return 0;
 }

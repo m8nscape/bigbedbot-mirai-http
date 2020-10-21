@@ -8,6 +8,7 @@
 
 
 int64_t botLoginQQId = 0;
+int64_t rootQQId = 0;
 
 namespace mirai
 {

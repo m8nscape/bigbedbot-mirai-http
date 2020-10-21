@@ -144,7 +144,10 @@ int sendPrivateMsg(int64_t qqid, int64_t groupid, const std::string& msg, int64_
         std::string buf;
         std::getline(ss, buf);
         if (!ss.eof()) buf += "\n";
-        messageChain.push_back({"Plain", buf});
+        json v;
+        v["type"] = "Plain";
+        v["text"] = buf;
+        messageChain.push_back(v);
     }
     return sendPrivateMsg(qqid, groupid, req, quotemsgid);
 }
@@ -175,7 +178,10 @@ int sendGroupMsg(int64_t groupid, const std::string& msg, int64_t quotemsgid)
         std::string buf;
         std::getline(ss, buf);
         if (!ss.eof()) buf += "\n";
-        messageChain.push_back({"Plain", buf});
+        json v;
+        v["type"] = "Plain";
+        v["text"] = buf;
+        messageChain.push_back(v);
     }
     return sendGroupMsg(groupid, resp, quotemsgid);
 }

@@ -201,11 +201,11 @@ int GET(const std::string& target, std::function<int(const json&)> callback)
 {
     unsigned c = ++get_count;
     net::io_context ioc;
-    addLogDebug("http", "GET[%u] %s", c, target.c_str());
+    //addLogDebug("http", "GET[%u] %s", c, target.c_str());
     std::make_shared<session>(ioc)->GET(HOST, PORT, target.c_str(), 
         [c, &callback](const json& j)
         {
-            addLogDebug("http", "GET[%u] resp %s", c, j.dump().c_str());
+            //addLogDebug("http", "GET[%u] resp %s", c, j.dump().c_str());
             return callback(j);
         }, 11);
     ioc.run();
@@ -217,11 +217,11 @@ int POST(const std::string& target, const json& body, std::function<int(const js
 {
     unsigned c = ++post_count;
     net::io_context ioc;
-    addLogDebug("http", "POST[%u] %s %s", c, target.c_str(), body.dump().c_str());
+    //addLogDebug("http", "POST[%u] %s %s", c, target.c_str(), body.dump().c_str());
     std::make_shared<session>(ioc)->POST(HOST, PORT, target.c_str(), body, 
         [c, &callback](const json& j)
         {
-            addLogDebug("http", "POST[%u] resp %s", c, j.dump().c_str());
+            //addLogDebug("http", "POST[%u] resp %s", c, j.dump().c_str());
             return callback(j);
         }, 11);
     ioc.run();

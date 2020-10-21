@@ -2,6 +2,7 @@
 #include <filesystem>
 
 #include "case.h"
+#include "data/group.h"
 #include "mirai/api.h"
 #include "mirai/util.h"
 #include "mirai/msg.h"
@@ -439,6 +440,10 @@ void msgDispatcher(const json& body)
     int64_t qq = 0;
     int64_t group = 0;
     mirai::parseMsgMeta(body, msgid, timestamp, qq, group);
+
+    if (!grp::groups[group].getFlag(grp::Group::MASK_P)
+        || !grp::groups[group].getFlag(grp::Group::MASK_CASE))
+        return;
 
     json resp;
     switch (commands_str.at(cmd))
