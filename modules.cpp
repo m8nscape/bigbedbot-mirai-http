@@ -3,12 +3,12 @@
 #include "app/case.h"
 #include "app/help.h"
 #include "app/tools.h"
+#include "app/smoke.h"
 
 // #include "app/eat.h"
 // #include "app/event_case.h"
 // #include "app/gambol.h"
 // #include "app/monopoly.h"
-// #include "app/smoke.h"
 // #include "app/user_op.h"
 // #include "app/weather.h"
 
@@ -88,6 +88,9 @@ void add_msg_callbacks()
     mirai::regEventProc(evt::FriendMessage, tools::msgDispatcher);
     mirai::regEventProc(evt::TempMessage, 	tools::msgDispatcher);
     mirai::regEventProc(evt::GroupMessage, 	tools::msgDispatcher);
+    mirai::regEventProc(evt::FriendMessage, smoke::privateMsgCallback);
+    mirai::regEventProc(evt::TempMessage, 	smoke::privateMsgCallback);
+    mirai::regEventProc(evt::GroupMessage, 	smoke::groupMsgCallback);
 }
 
 }

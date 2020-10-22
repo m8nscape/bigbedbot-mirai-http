@@ -4,9 +4,12 @@ add_library(app STATIC
     case.cpp case.h
     help.cpp help.h
     tools.cpp tools.h
+    smoke.cpp smoke.h
 )
 target_include_directories(app 
     PRIVATE ../
+    PRIVATE ../thirdparty/nlohmann/json/single-include
+    PRIVATE ../thirdparty/yaml-cpp/include
 )
 set_target_properties(app PROPERTIES
     CXX_STANDARD 17)

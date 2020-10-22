@@ -71,7 +71,9 @@
         "*.ipp": "cpp",
         "forward_list": "cpp",
         "valarray": "cpp",
-        "fstream": "cpp"
+        "fstream": "cpp",
+        "regex": "cpp",
+        "shared_mutex": "cpp"
     },
     "files.autoGuessEncoding": true
 }

@@ -133,7 +133,6 @@ int sendMsgCallback(const json& v)
 
 int sendPrivateMsgStr(int64_t qqid, const std::string& msg, int64_t quotemsgid)
 {
-    addLogDebug("api", "Send private msg to %lld: %s", qqid, msg.c_str());
 	json req = R"({ "messageChain": [] })"_json;
     json &messageChain = req["messageChain"];
     std::stringstream ss(msg);
@@ -166,7 +165,6 @@ int sendPrivateMsg(int64_t qqid, const json& messageChain, int64_t quotemsgid)
 
 int sendGroupMsgStr(int64_t groupid, const std::string& msg, int64_t quotemsgid)
 {
-    addLogDebug("api", "Send group msg to %lld: %s", groupid, msg.c_str());
 	json resp = R"({ "messageChain": [] })"_json;
     json &messageChain = resp["messageChain"];
     std::stringstream ss(msg);
@@ -226,10 +224,10 @@ int mute(int64_t qqid, int64_t groupid, int time_sec)
 }
 
 
-int getGroupMemberInfo(int64_t groupid, int64_t qqid, group_member_info& g)
+group_member_info getGroupMemberInfo(int64_t groupid, int64_t qqid)
 {
     addLogDebug("api", "Get member info for %lld @ %lld", qqid, groupid);
-    g = group_member_info();
+    auto g = group_member_info();
     std::stringstream path;
     path << "/memberInfo?sessionKey=" << sessionKey << "&target=" << groupid << "&memberId=" << qqid;
 
@@ -241,12 +239,12 @@ int getGroupMemberInfo(int64_t groupid, int64_t qqid, group_member_info& g)
             if (body.empty()) return -1;
 
             g.qqid = qqid;
-            if (body.contains("permission"))
-            {
-                const auto& p = body.at("permission");
-                if (p == "ADMINISTRATOR") g.permission = group_member_permission::ADMINISTRATOR;
-                else if (p == "OWNER") g.permission = group_member_permission::OWNER;
-            }
+            // if (body.contains("permission"))
+            // {
+            //     const auto& p = body.at("permission");
+            //     if (p == "ADMINISTRATOR") g.permission = group_member_permission::ADMINISTRATOR;
+            //     else if (p == "OWNER") g.permission = group_member_permission::OWNER;
+            // }
             if (body.contains("name"))
                 g.nameCard = body.at("name");
             if (body.contains("specialTitle"))
@@ -257,7 +255,7 @@ int getGroupMemberInfo(int64_t groupid, int64_t qqid, group_member_info& g)
         }
     );
     f.wait();
-    return f.get();
+    return g;
 }
 
 std::vector<group_member_info> getGroupMemberList(int64_t groupid)
@@ -275,13 +273,13 @@ std::vector<group_member_info> getGroupMemberList(int64_t groupid)
             for (const auto& m: body)
             {
                 group_member_info g;
-                if (body.contains("id"))
-                    g.qqid = body.at("id");
-                if (body.contains("memberName"))
-                    g.nameCard = body.at("memberName");
-                if (body.contains("permission"))
+                if (m.contains("id"))
+                    g.qqid = m.at("id");
+                if (m.contains("memberName"))
+                    g.nameCard = m.at("memberName");
+                if (m.contains("permission"))
                 {
-                    const auto& p = body.at("permission");
+                    const auto& p = m.at("permission");
                     if (p == "ADMINISTRATOR") g.permission = group_member_permission::ADMINISTRATOR;
                     else if (p == "OWNER") g.permission = group_member_permission::OWNER;
                 }

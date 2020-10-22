@@ -60,7 +60,7 @@ struct command
 	callback func = nullptr;
 };
 
-int newGroup(int64_t id);
+int newGroupIfNotExist(int64_t id);
 void msgDispatcher(const json& body);
 
 void broadcastMsg(const char* msg, int64_t flags = -1);

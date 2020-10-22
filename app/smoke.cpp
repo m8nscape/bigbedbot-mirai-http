@@ -1,281 +1,328 @@
 #include <sstream>
+#include <utility>
+#include <regex>
 
 #include "smoke.h"
 #include "utils/rand.h"
-#include "utils/string_util.h"
 
-#include "data/group.h"
 #include "data/user.h"
-#include "private/qqid.h"
+#include "data/group.h"
 
-#include "cpp-base64/base64.h"
-#include "cqp.h"
-#include "appmain.h"
-
+#include "mirai/api.h"
+#include "mirai/msg.h"
+#include "mirai/util.h"
 namespace smoke
 {
 
-using user::plist;
-
-command msgDispatcher(const json& body)
-{
-	command c;
-	auto query = mirai::messageChainToArgs(body);
-	if (query.empty()) return c;
-
-	auto cmd = query[0];
-	bool found = false;
-	decltype(commands::½ûÑÌ) cmdt;
-	for (auto& [str, com] : commands_str)
-	{
-		if (cmd.substr(0, str.length()) == str)
-		{
-			cmdt = com;
-			found = true;
-			break;
-		}
-	}
-
-	if (!found) return c;
-
-	c.args = query;
-	switch (c.c = cmdt)
-	{
-	case commands::½ûÑÌ:
-		c.func = [](::int64_t group, ::int64_t qq, std::vector<std::string> args, std::string raw) -> std::string
-		{
-			if (!isGroupManager(group, botLoginQQId)) return "";
-
-			if (plist.find(qq) == plist.end()) return std::string(CQ_At(qq)) + "£¬Äã»¹Ã»ÓĞ¿ªÍ¨²¤²Ë";
-
-			
-			int64_t target = 0;
-			int64_t duration = -1;
-
-			// smoke last member if req without target
-			if (args[0].substr(4).empty())
-				target = grp::groups[group].last_talk_member;
-			else
-				target = getTargetFromStr(args[0].substr(4));	// ½ûÑÌ£º bd fb / ?? ??
-			if (target == 0) return "";
-
-			// get time
-			try {
-				if (args.size() >= 2)
-					duration = std::stoll(args[1]);
-			}
-			catch (std::exception&) {
-				//ignore
-			}
-			if (duration < 0) return "Äã»á²»»áÑÌÈË£¿";
-
-			return nosmokingWrapper(qq, group, target, duration);
-
-		};
-		break;
-	case commands::½â½û:
-		c.func = [](::int64_t group, ::int64_t qq, std::vector<std::string> args, std::string raw) -> std::string
-		{
-			if (!isGroupManager(group, botLoginQQId)) return "";
-
-			if (args[0].substr(4).empty()) return "";
-
-			int64_t target = getTargetFromStr(args[0].substr(4));	// ½â½û£º bd fb / ?? ??
-			if (target == 0) return "²éÎŞ´ËÈË";
-
-			if (RetVal::OK == nosmoking(group, target, 0))
-				return "½â½ûÁË";
-			else
-				return "½â½ûÊ§°Ü";
-		};
-		break;
-	}
-	return c;
-}
-
 RetVal nosmoking(int64_t group, int64_t target, int duration)
 {
-	if (duration < 0) return RetVal::INVALID_DURATION;
+    if (duration < 0) return RetVal::INVALID_DURATION;
 
-	if (grp::groups.find(group) != grp::groups.end())
-	{
-		if (grp::groups[group].haveMember(target))
-		{
-			if (grp::groups[group].members[target].permission >= 2)
-				return RetVal::TARGET_IS_ADMIN;
+    if (grp::groups.find(group) != grp::groups.end())
+    {
+        // get group info from cache
+        if (grp::groups[group].haveMember(target))
+        {
+            auto perm = grp::groups[group].members[target].permission;
+            if (perm == mirai::group_member_permission::ADMINISTRATOR
+                || perm == mirai::group_member_permission::OWNER)
+                return RetVal::TARGET_IS_ADMIN;
+        }
+        else
+            return RetVal::TARGET_NOT_FOUND;
+    }
+    else
+    {
+        return RetVal::TARGET_NOT_FOUND;
+    }
 
-			CQ_setGroupBan(ac, group, target, int64_t(duration) * 60);
+    mirai::mute(target, group, duration);
+    
+    if (duration == 0)
+    {
+        smokeTimeInGroups[target].erase(group);
+        return RetVal::ZERO_DURATION;
+    }
 
-			if (duration == 0)
-			{
-				smokeTimeInGroups[target].erase(group);
-				return RetVal::ZERO_DURATION;
-			}
-			
-			smokeTimeInGroups[target][group] = time(nullptr) + int64_t(duration) * 60;
-			return RetVal::OK;
-		}
-	}
-	else
-	{
-		const char* cqinfo = CQ_getGroupMemberInfoV2(ac, group, target, FALSE);
-		if (cqinfo && strlen(cqinfo) > 0)
-		{
-			std::string decoded = base64_decode(std::string(cqinfo));
-			if (!decoded.empty())
-			{
-				if (getPermissionFromGroupInfoV2(decoded.c_str()) >= 2)
-					return RetVal::TARGET_IS_ADMIN;
+    smokeTimeInGroups[target][group] = time(nullptr) + int64_t(duration) * 60;
+    return RetVal::OK;
+}
 
-				CQ_setGroupBan(ac, group, target, int64_t(duration) * 60);
+///////////////////////////////////////////////////////////////////////////////
 
-				if (duration == 0)
-				{
-					smokeTimeInGroups[target].erase(group);
-					return RetVal::ZERO_DURATION;
-				}
+using user::plist;
 
-				smokeTimeInGroups[target][group] = time(nullptr) + int64_t(duration) * 60;
-				return RetVal::OK;
-			}
-		}
-	}
-	return RetVal::TARGET_NOT_FOUND;
+enum class commands : size_t {
+    _, 
+    ç¦çƒŸ,
+    è§£ç¦,
+    æ¥è¿‘æˆ‘,
+};
+const std::vector<std::pair<std::regex, commands>> group_commands_regex
+{
+    {std::regex("^ç¦(è¨€|çƒŸ|è¸|ç…™)([^\\s]*) ([^\\s]*?)$", std::regex::optimize | std::regex::extended), commands::ç¦çƒŸ},
+    {std::regex("^(æ¥è¿‘|è§£ç¦)([^\\s]*) ([^\\s]*?)$", std::regex::optimize | std::regex::extended), commands::è§£ç¦},
+};
+
+const std::vector<std::pair<std::regex, commands>> private_commands_regex
+{
+    {std::regex("^(æ¥è¿‘|è§£ç¦)(æˆ‘)?$", std::regex::optimize | std::regex::extended), commands::æ¥è¿‘æˆ‘},
+};
+
+std::string nosmokingWrapper(int64_t qq, int64_t group, int64_t target, int64_t duration);
+void ç¦çƒŸ(const mirai::MsgMetadata& m, int64_t target_qqid, int64_t duration)
+{
+    if (grp::groups[m.groupid].haveMember(botLoginQQId))
+        if (grp::groups[m.groupid].members[botLoginQQId].permission == mirai::group_member_permission::MEMBER) 
+            return;
+
+    if (plist.find(m.qqid) == plist.end())
+    {
+        mirai::sendGroupMsgStr(m.groupid, "æ²¡å¼€æˆ·å°±æƒ³çƒŸäººï¼Ÿ");
+        return;
+    }
+
+    if (duration == LLONG_MIN || duration == LLONG_MAX)
+    {
+        mirai::sendGroupMsgStr(m.groupid, "ä½ ä¼šä¸ä¼šçƒŸäººï¼Ÿ");
+        return;
+    }
+    
+    if (duration < 0)
+    {
+        mirai::sendGroupMsgStr(m.groupid, "æ‚¨æŠ½çƒŸå€’ç€æŠ½ï¼Ÿ");
+        return;
+    }
+
+    // smoke last member if req without target
+    int64_t target = 0;
+    if (target_qqid == 0)
+        target = grp::groups[m.groupid].last_talk_member;
+    else
+        target = target_qqid;
+
+    mirai::sendGroupMsgStr(m.groupid, nosmokingWrapper(m.qqid, m.groupid, target, duration));
+    return;
+}
+
+json not_enough_currency(int64_t qq, int64_t cost)
+{
+    json resp = R"({ "messageChain": [] })"_json;
+    resp["messageChain"].push_back(mirai::buildMessageAt(qq));
+    std::stringstream ss;
+    ss << "ï¼Œä½ çš„ä½™é¢ä¸è¶³ï¼Œéœ€è¦" << cost << "ä¸ªæ‰¹";
+    resp["messageChain"].push_back(mirai::buildMessagePlain(ss.str()));
+    return resp;
 }
 
 std::string nosmokingWrapper(int64_t qq, int64_t group, int64_t target, int64_t duration)
 {
-	if (duration > 30 * 24 * 60) duration = 30 * 24 * 60;
-	if (duration == 0)
-	{
-		nosmoking(group, target, duration);
-		return "½â½ûÁË";
-	}
+    if (duration > 30 * 24 * 60) duration = 30 * 24 * 60;
+    if (duration == 0)
+    {
+        nosmoking(group, target, duration);
+        return "è§£ç¦äº†";
+    }
 
-	int cost = (int64_t)std::floor(std::pow(duration, 1.777777));
-	if (cost > plist[qq].getCurrency()) return std::string(CQ_At(qq)) + "£¬ÄãµÄÓà¶î²»×ã£¬ĞèÒª" + std::to_string(cost) + "¸öÅú";
+    int cost = (int64_t)std::floor(std::pow(duration, 1.777777));
+    if (cost > plist[qq].getCurrency())
+    {
+        mirai::sendGroupMsg(group, not_enough_currency(qq, cost));
+    }
 
-	double reflect = randReal();
+    double reflect = randReal();
 
-	// 10% fail
-	if (reflect < 0.1) 
-		return "ÑÌÍ»È»ÃğÁË£¬ÑÌÆğÊ§°Ü";
+    // 10% fail
+    if (reflect < 0.1) 
+        return "çƒŸçªç„¶ç­äº†ï¼ŒçƒŸèµ·å¤±è´¥";
 
-	// 20% reflect
-	else if (reflect < 0.3)
-	{
-		switch (nosmoking(group, qq, duration))
-		{
-			using r = RetVal;
+    // 20% reflect
+    else if (reflect < 0.3)
+    {
+        switch (nosmoking(group, qq, duration))
+        {
+            using r = RetVal;
 
-		case r::OK:
-			return "Äã×Ô¼ºÑÌÆğ°É";
-		case r::TARGET_IS_ADMIN:
-			return "ÑÌÍ»È»ÃğÁË£¬ÑÌÆğÊ§°Ü";
-		case r::TARGET_NOT_FOUND:
-			return "Ï¹¼¸°ÑÑÌË­ÄØ";
-		default:
-			return "Äã»á²»»áÑÌÈË£¿";
-		}
-	}
-	else
-	{
-		switch (nosmoking(group, target, duration))
-		{
-			using r = RetVal;
+        case r::OK:
+            return "ä½ è‡ªå·±çƒŸèµ·å§";
+        case r::TARGET_IS_ADMIN:
+            return "çƒŸçªç„¶ç­äº†ï¼ŒçƒŸèµ·å¤±è´¥";
+        case r::TARGET_NOT_FOUND:
+            return "çå‡ æŠŠçƒŸè°å‘¢";
+        default:
+            return "ä½ ä¼šä¸ä¼šçƒŸäººï¼Ÿ";
+        }
+    }
+    else
+    {
+        switch (nosmoking(group, target, duration))
+        {
+            using r = RetVal;
 
-		case r::OK:
-		{
-			plist[qq].modifyCurrency(-cost);
-			std::stringstream ss;
-			if (qq == target)
-				ss << "£¿ÎÒ´ÓÀ´Ã»Ìı¹ıÕâÑùµÄÒªÇó£¬Ïû·Ñ" << cost << "¸öÅú";
-			else
-				ss << "ÑÌÆğÅ¶£¬Ïû·Ñ" << cost << "¸öÅú";
-			return ss.str();
-		}
+        case r::OK:
+        {
+            plist[qq].modifyCurrency(-cost);
+            std::stringstream ss;
+            if (qq == target)
+                ss << "ï¼Ÿæˆ‘ä»æ¥æ²¡å¬è¿‡è¿™æ ·çš„è¦æ±‚ï¼Œæ¶ˆè´¹" << cost << "ä¸ªæ‰¹";
+            else
+                ss << "çƒŸèµ·å“¦ï¼Œæ¶ˆè´¹" << cost << "ä¸ªæ‰¹";
+            return ss.str();
+        }
 
-		case r::TARGET_IS_ADMIN:
-			return "½ûÑÌ¹ÜÀíÇëÁªÏµÈºÖ÷Å¶";
+        case r::TARGET_IS_ADMIN:
+            return "ç¦çƒŸç®¡ç†è¯·è”ç³»ç¾¤ä¸»å“¦";
 
-		case r::TARGET_NOT_FOUND:
-			return "Ï¹¼¸°ÑÑÌË­ÄØ";
+        case r::TARGET_NOT_FOUND:
+            return "çå‡ æŠŠçƒŸè°å‘¢";
 
-		default:
-			return "Äã»á²»»áÑÌÈË£¿";
-		}
-	}
+        default:
+            return "ä½ ä¼šä¸ä¼šçƒŸäººï¼Ÿ";
+        }
+    }
 }
 
-int64_t getTargetFromStr(const std::string& targetName, int64_t group)
+void ç¾¤èŠè§£ç¦(const mirai::MsgMetadata& m, int64_t target_qqid)
 {
-	// @
-	if (int64_t tmp; tmp = stripAt(targetName))
-		return tmp;
+    if (grp::groups[m.groupid].haveMember(botLoginQQId))
+        if (grp::groups[m.groupid].members[botLoginQQId].permission == mirai::group_member_permission::MEMBER) 
+            return;
 
-	// USER_ALIAS (private)
-	else if (USER_ALIAS.find(targetName) != USER_ALIAS.end())
-		return USER_ALIAS.at(targetName);
+    if (target_qqid == 0)
+    {
+        mirai::sendGroupMsgStr(m.groupid, "æŸ¥æ— æ­¤äºº");
+        return;
+    }
 
-	// nick, card
-	else if (group != 0)
-	{
-		if (grp::groups.find(group) != grp::groups.end())
-		{
-			if (int64_t qq = grp::groups[group].getMember(targetName.c_str()); qq != 0)
-				return qq;
-		}
-	}
+    if (RetVal::OK == nosmoking(m.groupid, target_qqid, 0))
+        mirai::sendGroupMsgStr(m.groupid, "è§£ç¦äº†");
+    else
+        mirai::sendGroupMsgStr(m.groupid, "è§£ç¦å¤±è´¥");
+}
 
-	return 0;
+void groupMsgCallback(const json& body)
+{
+    auto query = mirai::messageChainToStr(body);
+    if (query.empty()) return;
+
+    commands c = commands::_;
+    int64_t target_qqid = 0;
+    int64_t duration = 0;
+    for (const auto& [re, cmd]: group_commands_regex)
+    {
+        std::smatch res;
+        if (std::regex_match(query, res, re))
+        {
+            c = cmd;
+            target_qqid = user::getUser(res[2].str());
+            duration = std::strtoll(res[3].str().c_str(), nullptr, 10);
+            break;
+        }
+    }
+    if (c == commands::_) return;
+
+    auto m = mirai::parseMsgMetadata(body);
+    grp::newGroupIfNotExist(m.groupid);
+
+    switch (c)
+    {
+    case commands::ç¦çƒŸ:
+        ç¦çƒŸ(m, target_qqid, duration);
+        break;
+    case commands::è§£ç¦:
+        ç¾¤èŠè§£ç¦(m, target_qqid);
+        break;
+    default:
+        break;
+    }
 }
 
 std::string selfUnsmoke(int64_t qq)
 {
-	if (smokeTimeInGroups.find(qq) == smokeTimeInGroups.end() || smokeTimeInGroups[qq].empty())
-		return "ÄãÃ´µÃ±»ÑÌ°¡";
+    if (smokeTimeInGroups.find(qq) == smokeTimeInGroups.end() || smokeTimeInGroups[qq].empty())
+        return "ä½ ä¹ˆå¾—è¢«çƒŸå•Š";
 
-	if (plist.find(qq) == plist.end()) return "Äã»¹Ã»ÓĞ¿ªÍ¨²¤²Ë";
-	auto &p = plist[qq];
+    if (plist.find(qq) == plist.end()) return "ä½ è¿˜æ²¡æœ‰å¼€é€šè èœ";
+    auto &p = plist[qq];
 
-	time_t t = time(nullptr);
-	int64_t total_remain = 0;
-	for (auto& g : smokeTimeInGroups[qq])
-	{
-		if (t <= g.second)
-		{
-			int64_t remain = (g.second - t) / 60; // min
-			int64_t extra = (g.second - t) % 60;  // sec
-			total_remain += remain + !!extra;
-		}
-	}
-	std::stringstream ss;
-	ss << "ÄãÔÚ" << smokeTimeInGroups[qq].size() << "¸öÈº±»ÑÌ" << total_remain << "·ÖÖÓ£¬";
-	int64_t total_cost = (int64_t)std::ceil(total_remain * UNSMOKE_COST_RATIO);
-	if (p.getCurrency() < total_cost)
-	{
-		ss << "ÄãÅú²»¹»£¬ĞèÒª" << total_cost << "¸öÅú£¬¹ş";
-	}
-	else
-	{
-		p.modifyCurrency(-total_cost);
-		ss << "±¾´Î½Ó½üÏû·Ñ" << total_cost << "¸öÅú";
+    time_t t = time(nullptr);
+    int64_t total_remain = 0;
+    for (auto& g : smokeTimeInGroups[qq])
+    {
+        if (t <= g.second)
+        {
+            int64_t remain = (g.second - t) / 60; // min
+            int64_t extra = (g.second - t) % 60;  // sec
+            total_remain += remain + !!extra;
+        }
+    }
+    std::stringstream ss;
+    ss << "ä½ åœ¨" << smokeTimeInGroups[qq].size() << "ä¸ªç¾¤è¢«çƒŸ" << total_remain << "åˆ†é’Ÿï¼Œ";
+    int64_t total_cost = (int64_t)std::ceil(total_remain * UNSMOKE_COST_RATIO);
+    if (p.getCurrency() < total_cost)
+    {
+        ss << "ä½ æ‰¹ä¸å¤Ÿï¼Œéœ€è¦" << total_cost << "ä¸ªæ‰¹ï¼Œå“ˆ";
+    }
+    else
+    {
+        p.modifyCurrency(-total_cost);
+        ss << "æœ¬æ¬¡æ¥è¿‘æ¶ˆè´¹" << total_cost << "ä¸ªæ‰¹";
 
-		// broadcast to groups
-		for (auto& g : smokeTimeInGroups[qq])
-		{
-			if (t > g.second) continue;
-			std::string qqname = getCard(g.first, qq);
-			CQ_setGroupBan(ac, g.first, qq, 0);
-			std::stringstream sg;
-			int64_t remain = (g.second - t) / 60; // min
-			int64_t extra = (g.second - t) % 60;  // sec
-			sg << qqname << "»¨·Ñ¾Ş×Ê" << (int64_t)std::round((remain + !!extra) * UNSMOKE_COST_RATIO) << "¸öÅúÉêÇë½Ó½ü³É¹¦";
-			CQ_sendGroupMsg(ac, g.first, sg.str().c_str());
-		}
-		smokeTimeInGroups[qq].clear();
-	}
-	return ss.str();
+        // broadcast to groups
+        for (auto& g : smokeTimeInGroups[qq])
+        {
+            if (t > g.second) continue;
+
+            mirai::unmute(qq, g.first);
+
+            std::string qqname = mirai::getGroupMemberCard(g.first, qq);
+            if (qqname.empty()) qqname = std::to_string(qq);
+            int64_t remain = (g.second - t) / 60; // min
+            int64_t extra = (g.second - t) % 60;  // sec
+
+            std::stringstream sg;
+            sg << qqname << "èŠ±è´¹å·¨èµ„" << (int64_t)std::round((remain + !!extra) * UNSMOKE_COST_RATIO) << "ä¸ªæ‰¹ç”³è¯·æ¥è¿‘æˆåŠŸ";
+            mirai::sendGroupMsgStr(g.first, sg.str());
+        }
+        smokeTimeInGroups[qq].clear();
+    }
+    return ss.str();
+}
+
+void privateMsgCallback(const json& body)
+{
+    auto query = mirai::messageChainToStr(body);
+    if (query.empty()) return;
+
+    commands c = commands::_;
+    int64_t target_qqid = 0;
+    int64_t duration = 0;
+    for (const auto& [re, cmd]: private_commands_regex)
+    {
+        std::smatch res;
+        if (std::regex_match(query, res, re))
+        {
+            c = cmd;
+            target_qqid = user::getUser(res[2].str());
+            duration = std::strtoll(res[3].str().c_str(), nullptr, 10);
+            break;
+        }
+    }
+    if (c == commands::_) return;
+
+    auto m = mirai::parseMsgMetadata(body);
+
+    std::string resp;
+    switch (c)
+    {
+    case commands::æ¥è¿‘æˆ‘:
+        resp = selfUnsmoke(m.qqid);
+        break;
+    default:
+        break;
+    }
+
+    mirai::sendMsgRespStr(m, resp);
 }
 
 }

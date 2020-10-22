@@ -111,11 +111,11 @@ void Group::sendMsg(const char* msg)
     mirai::sendGroupMsgStr(group_id, std::string(msg));
 }
 
-int newGroup(int64_t id)
+int newGroupIfNotExist(int64_t id)
 {
     if (groups.find(id) == groups.end())
     {
-        groups[id];
+        groups[id].updateMembers();
 
         const char query[] = "INSERT INTO grp(id,flags) VALUES (?,?)";
         auto ret = db.exec(query, { id, 0 });
@@ -132,7 +132,9 @@ int newGroup(int64_t id)
 std::string 开启(::int64_t group, ::int64_t qq, std::vector<std::string> args)
 {
     mirai::group_member_permission p;
-    mirai::getGroupMemberPermission(group, qq, p);
+    if (grp::groups[group].haveMember(qq))
+        p = grp::groups[group].members[qq].permission;
+
     if (qq == rootQQId
         || p == mirai::group_member_permission::ADMINISTRATOR 
         || p == mirai::group_member_permission::OWNER)
@@ -191,7 +193,9 @@ std::string 开启(::int64_t group, ::int64_t qq, std::vector<std::string> args)
 std::string 关闭(::int64_t group, ::int64_t qq, std::vector<std::string> args)
 {
     mirai::group_member_permission p;
-    mirai::getGroupMemberPermission(group, qq, p);
+    if (grp::groups[group].haveMember(qq))
+        p = grp::groups[group].members[qq].permission;
+
     if (qq == rootQQId
         || p == mirai::group_member_permission::ADMINISTRATOR 
         || p == mirai::group_member_permission::OWNER)
@@ -265,7 +269,7 @@ void msgDispatcher(const json& body)
 
     if (groups.find(group) == groups.end())
     {
-        newGroup(group);
+        newGroupIfNotExist(group);
     }
 
     auto cmd = query[0];

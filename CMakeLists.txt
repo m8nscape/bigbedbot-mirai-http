@@ -13,6 +13,8 @@ add_executable(bbb
     time_evt.cpp time_evt.h modules.cpp core.cpp core.h main.cpp)
 target_include_directories(bbb 
     PRIVATE .
+    PRIVATE thirdparty/nlohmann/json/single-include
+    PRIVATE thirdparty/yaml-cpp/include
 )
 set_target_properties(bbb PROPERTIES
     CXX_STANDARD 17)

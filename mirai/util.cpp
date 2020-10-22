@@ -14,26 +14,14 @@ namespace mirai
 {
 using nlohmann::json;
 
-int getGroupMemberCard(int64_t groupid, int64_t qqid, std::string& card)
+std::string getGroupMemberCard(int64_t groupid, int64_t qqid)
 {
-    group_member_info g;
-    int ret = getGroupMemberInfo(groupid, qqid, g);
-    if (ret == 0)
+    group_member_info g = getGroupMemberInfo(groupid, qqid);
+    if (g.qqid == qqid)
     {
-        card = g.nameCard;
+        return g.nameCard;
     }
-    return ret;
-}
-
-int getGroupMemberPermission(int64_t groupid, int64_t qqid, group_member_permission& p)
-{
-    group_member_info g;
-    int ret = getGroupMemberInfo(groupid, qqid, g);
-    if (ret == 0)
-    {
-        p = g.permission;
-    }
-    return ret;
+    return "";
 }
 
 }

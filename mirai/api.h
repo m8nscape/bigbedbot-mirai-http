@@ -20,7 +20,7 @@ int sendGroupMsgStr(int64_t groupid, const std::string& msg, int64_t quotemsgid 
 int sendGroupMsg(int64_t groupid, const json& messageChain, int64_t quotemsgid = 0);
 int recallMsg(int64_t msgid);
 int mute(int64_t qqid, int64_t groupid, int time_sec);
-inline int unmute(int64_t qqid, int64_t groupid, int time_sec) { return mute(qqid, groupid, 0); }
+inline int unmute(int64_t qqid, int64_t groupid) { return mute(qqid, groupid, 0); }
 
 // RECV
 using nlohmann::json;
@@ -118,7 +118,7 @@ struct group_member_info
     std::string nameCard;
     std::string specialTitle;
 };
-int getGroupMemberInfo(int64_t groupid, int64_t qqid, group_member_info& g);
+group_member_info getGroupMemberInfo(int64_t groupid, int64_t qqid);
 std::vector<group_member_info> getGroupMemberList(int64_t groupid);
 
 const int POLLING_INTERVAL_MS = 1000;

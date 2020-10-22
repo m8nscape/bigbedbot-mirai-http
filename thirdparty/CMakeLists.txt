@@ -4,7 +4,7 @@
 # the repository is kinda huge so I just kept the single header version
 add_library(json INTERFACE)
 target_include_directories(json 
-    INTERFACE nlohmann/single-include)
+    INTERFACE nlohmann/json/single-include)
 
 # jbeder/yaml-cpp
 option(YAML_CPP_BUILD_TOOLS "Enable parse tools" OFF)

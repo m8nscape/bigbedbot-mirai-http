@@ -21,6 +21,7 @@ struct MsgMetadata
 int parseMsgMeta(const json&, int& msgid, time_t& time, int64_t& qqid, int64_t& groupid);
 MsgMetadata parseMsgMetadata(const json& v);
 
+std::string messageChainToStr(const json&);
 std::vector<std::string> messageChainToArgs(const json&, unsigned max_count = UINT_MAX);
 
 int sendMsgRespStr(const MsgMetadata& meta, const std::string& str, int64_t quoteMsgId = 0);

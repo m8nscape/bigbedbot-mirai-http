@@ -41,18 +41,38 @@ MsgMetadata parseMsgMetadata(const json& v)
     parseMsgMeta(v, meta.msgid, meta.time, meta.qqid, meta.groupid);
     return meta;
 }
-    
-std::vector<std::string> messageChainToArgs(const json& v, unsigned max_count)
+
+std::string convertMessageChainObject(const json& e)
 {
-    if (!v.contains("messageChain")) return {};
+    if (!e.contains("type")) return "";
+
+    auto type = e.at("type").get<std::string>();
+    std::stringstream ss;
+
+    if (type == "Plain" && e.contains("text"))
+        ss << e.at("text").get<std::string>();
+    else if (type == "At" && e.contains("target"))
+        ss << " @" << e.at("target").get<int64_t>() << " ";
+
+    return ss.str();
+}
+    
+std::string messageChainToStr(const json& v)
+{
+    if (!v.contains("messageChain")) return "";
 
     const auto& m = v.at("messageChain");
     std::stringstream ss;
     for (const auto& e: m)
     {
-        if (e.contains("text"))
-            ss << e.at("text").get<std::string>();
+        ss << convertMessageChainObject(e);
     }
+    return ss.str();
+}
+
+std::vector<std::string> messageChainToArgs(const json& v, unsigned max_count)
+{
+    auto ss = std::stringstream(messageChainToStr(v));
 
     std::vector<std::string> args;
     while (!ss.eof() && args.size() < max_count)

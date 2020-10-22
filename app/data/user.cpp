@@ -425,9 +425,14 @@ int loadUserAlias(const char* yaml)
 }
 int64_t getUser(const std::string& alias) 
 {
+	if (alias.empty()) return 0;
+
 	if (USER_ALIAS.find(alias) != USER_ALIAS.end())
 		return USER_ALIAS.at(alias);
-	return 0;
+	else if (alias[0] == '@')
+		return std::strtoll(alias.substr(1).c_str(), nullptr, 10);
+	else 
+		return std::strtoll(alias.substr(0).c_str(), nullptr, 10);
 }
 
 void init(const char* user_alias_yml)
