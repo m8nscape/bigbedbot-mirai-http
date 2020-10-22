@@ -23,6 +23,9 @@ MsgMetadata parseMsgMetadata(const json& v);
 
 std::vector<std::string> messageChainToArgs(const json&, unsigned max_count = UINT_MAX);
 
+int sendMsgRespStr(const MsgMetadata& meta, const std::string& str, int64_t quoteMsgId = 0);
+int sendMsgResp(const MsgMetadata& meta, const json& messageChain, int64_t quoteMsgId = 0);
+
 inline json buildMessagePlain(const std::string& s)
 {
     json v;

@@ -2,41 +2,54 @@
 
 #include "tools.h"
 #include "utils/rand.h"
-#include "utils/string_util.h"
-
-#include "cqp.h"
+#include "mirai/api.h"
+#include "mirai/msg.h"
 
 namespace tools
 {
 
-command msgDispatcher(const json& body)
+inline std::map<std::string, commands> commands_str
 {
-	command c;
-	auto query = mirai::messageChainToArgs(body);
-	if (query.empty()) return c;
+	{"!roll", commands::roll},
+	{"/roll", commands::roll},
+};
 
-	auto cmd = query[0];
-	if (commands_str.find(cmd) == commands_str.end()) return c;
-
-	c.args = query;
-	switch (c.c = commands_str[cmd])
+std::string roll(const std::vector<std::string>& args)
+{
+	int max = 100;
+	if (args.size() > 1)
 	{
-	case commands::roll:
-		c.func = [](::int64_t group, ::int64_t qq, std::vector<std::string> args, std::string raw) -> std::string
-		{
-			int max = 100;
-			if (args.size() > 1)
-			{
-				max = atoi(args[1].c_str());
-				if (max < 0) max = 100;
-			}
-			return std::to_string(randInt(0, max));
-		};
-		break;
-
-	default: break;
+		max = std::strtol(args[1].c_str(), nullptr, 10);
+		if (max < 0) max = 100;
 	}
-	return c;
+	return std::to_string(randInt(0, max));
+}
+
+void msgDispatcher(const json& body)
+{
+    auto query = mirai::messageChainToArgs(body);
+    if (query.empty()) return;
+
+    auto cmd = query[0];
+    if (commands_str.find(cmd) == commands_str.end()) return;
+
+    auto m = mirai::parseMsgMetadata(body);
+
+    std::string resp;
+    switch (commands_str.at(cmd))
+    {
+    case commands::roll:
+        resp = roll(query);
+        break;
+    default: 
+        break;
+    }
+
+    if (!resp.empty())
+    {
+        mirai::sendMsgRespStr(m, resp);
+    }
+
 }
 
 }

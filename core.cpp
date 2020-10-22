@@ -11,13 +11,13 @@
 
 #include "app/case.h"
 #include "app/help.h"
+#include "app/tools.h"
 
 // #include "app/eat.h"
 // #include "app/event_case.h"
 // #include "app/gambol.h"
 // #include "app/monopoly.h"
 // #include "app/smoke.h"
-// #include "app/tools.h"
 // #include "app/user_op.h"
 // #include "app/weather.h"
 
@@ -184,12 +184,15 @@ void addTimedEvents()
 void addMsgCallbacks()
 {
 	using evt = mirai::RecvMsgType;
-	mirai::regEventProc(evt::GroupMessage, grp::msgDispatcher);
-	mirai::regEventProc(evt::GroupMessage, user::msgCallback);
-	mirai::regEventProc(evt::GroupMessage, opencase::msgDispatcher);
+	mirai::regEventProc(evt::GroupMessage, 	grp::msgDispatcher);
+	mirai::regEventProc(evt::GroupMessage, 	user::msgCallback);
+	mirai::regEventProc(evt::GroupMessage, 	opencase::msgDispatcher);
 	mirai::regEventProc(evt::FriendMessage, help::msgDispatcher);
-	mirai::regEventProc(evt::TempMessage, help::msgDispatcher);
-	mirai::regEventProc(evt::GroupMessage, help::msgDispatcher);
+	mirai::regEventProc(evt::TempMessage, 	help::msgDispatcher);
+	mirai::regEventProc(evt::GroupMessage, 	help::msgDispatcher);
+	mirai::regEventProc(evt::FriendMessage, tools::msgDispatcher);
+	mirai::regEventProc(evt::TempMessage, 	tools::msgDispatcher);
+	mirai::regEventProc(evt::GroupMessage, 	tools::msgDispatcher);
 }
 
 

@@ -133,7 +133,7 @@ int sendMsgCallback(const json& v)
     return 0;
 }
 
-int sendPrivateMsg(int64_t qqid, int64_t groupid, const std::string& msg, int64_t quotemsgid)
+int sendPrivateMsgStr(int64_t qqid, const std::string& msg, int64_t quotemsgid)
 {
     addLogDebug("api", "Send private msg to %lld: %s", qqid, msg.c_str());
 	json req = R"({ "messageChain": [] })"_json;
@@ -149,10 +149,10 @@ int sendPrivateMsg(int64_t qqid, int64_t groupid, const std::string& msg, int64_
         v["text"] = buf;
         messageChain.push_back(v);
     }
-    return sendPrivateMsg(qqid, groupid, req, quotemsgid);
+    return sendPrivateMsg(qqid, req, quotemsgid);
 }
 
-int sendPrivateMsg(int64_t qqid, int64_t groupid, const json& messageChain, int64_t quotemsgid)
+int sendPrivateMsg(int64_t qqid, const json& messageChain, int64_t quotemsgid)
 {
     addLogDebug("api", "Send private msg to %lld: (messagechain)", qqid);
     // TODO check if target is friend
@@ -160,14 +160,13 @@ int sendPrivateMsg(int64_t qqid, int64_t groupid, const json& messageChain, int6
     json obj;
     obj["sessionKey"] = std::string(sessionKey);
     obj["qq"] = qqid;
-    obj["group"] = groupid;
     if (quotemsgid) obj["quote"] = quotemsgid;
     obj["messageChain"] = messageChain.at("messageChain");
 
     return conn::POST("/sendTempMessage", obj, sendMsgCallback);
 }
 
-int sendGroupMsg(int64_t groupid, const std::string& msg, int64_t quotemsgid)
+int sendGroupMsgStr(int64_t groupid, const std::string& msg, int64_t quotemsgid)
 {
     addLogDebug("api", "Send group msg to %lld: %s", groupid, msg.c_str());
 	json resp = R"({ "messageChain": [] })"_json;

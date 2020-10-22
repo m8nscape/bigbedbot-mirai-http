@@ -13,9 +13,9 @@ int verify();
 using nlohmann::json;
 
 // SEND
-int sendPrivateMsg(int64_t qqid, int64_t groupid, const std::string& msg, int64_t quotemsgid = 0);
-int sendPrivateMsg(int64_t qqid, int64_t groupid, const json& messageChain, int64_t quotemsgid = 0);
-int sendGroupMsg(int64_t groupid, const std::string& msg, int64_t quotemsgid = 0);
+int sendPrivateMsgStr(int64_t qqid, const std::string& msg, int64_t quotemsgid = 0);
+int sendPrivateMsg(int64_t qqid, const json& messageChain, int64_t quotemsgid = 0);
+int sendGroupMsgStr(int64_t groupid, const std::string& msg, int64_t quotemsgid = 0);
 int sendGroupMsg(int64_t groupid, const json& messageChain, int64_t quotemsgid = 0);
 int recallMsg(int64_t msgid);
 int mute(int64_t qqid, int64_t groupid, int time_sec);

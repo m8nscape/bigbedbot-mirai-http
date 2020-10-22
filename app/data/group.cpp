@@ -108,7 +108,7 @@ int64_t Group::getMember(const char* name)
 
 void Group::sendMsg(const char* msg)
 {
-    mirai::sendGroupMsg(group_id, std::string(msg));
+    mirai::sendGroupMsgStr(group_id, std::string(msg));
 }
 
 int newGroup(int64_t id)
@@ -281,7 +281,7 @@ void msgDispatcher(const json& body)
 
     if (!resp.empty())
     {
-        mirai::sendGroupMsg(group, resp);
+        mirai::sendGroupMsgStr(group, resp);
     }
 }
 

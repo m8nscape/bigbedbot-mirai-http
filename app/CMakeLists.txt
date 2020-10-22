@@ -3,6 +3,7 @@ add_library(app STATIC
     data/group.cpp data/group.h data/user.cpp data/user.h
     case.cpp case.h
     help.cpp help.h
+    tools.cpp tools.h
 )
 target_include_directories(app 
     PRIVATE ../

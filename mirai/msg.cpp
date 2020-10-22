@@ -1,6 +1,7 @@
 #include <sstream>
 
 #include "msg.h"
+#include "api.h"
 
 namespace mirai
 {
@@ -62,6 +63,22 @@ std::vector<std::string> messageChainToArgs(const json& v, unsigned max_count)
     }
     if (!ss.eof()) args.push_back(ss.str());
     return args;
+}
+
+int sendMsgRespStr(const MsgMetadata& meta, const std::string& str, int64_t quoteMsgId)
+{
+    if (meta.groupid == 0) 
+        return sendPrivateMsgStr(meta.qqid, str, quoteMsgId);
+    else 
+        return sendGroupMsgStr(meta.groupid, str, quoteMsgId);
+}
+
+int sendMsgResp(const MsgMetadata& meta, const json& messageChain, int64_t quoteMsgId)
+{
+    if (meta.groupid == 0) 
+        return sendPrivateMsg(meta.qqid, messageChain, quoteMsgId);
+    else 
+        return sendGroupMsg(meta.groupid, messageChain, quoteMsgId);
 }
 
 }

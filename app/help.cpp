@@ -36,7 +36,7 @@ void msgDispatcher(const json& body)
 
     if (!resp.empty())
     {
-        mirai::sendGroupMsg(m.groupid, resp);
+        mirai::sendMsgRespStr(m, resp);
     }
 }
 
