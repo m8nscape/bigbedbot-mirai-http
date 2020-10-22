@@ -8,7 +8,12 @@
 namespace tools
 {
 
-inline std::map<std::string, commands> commands_str
+enum class commands : size_t {
+	roll,
+
+};
+
+const std::map<std::string, commands> commands_str
 {
 	{"!roll", commands::roll},
 	{"/roll", commands::roll},

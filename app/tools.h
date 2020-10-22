@@ -8,12 +8,6 @@
 
 namespace tools
 {
-
-enum class commands : size_t {
-	roll,
-
-};
-
 using nlohmann::json;
 void msgDispatcher(const json& body);
 }
