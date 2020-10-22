@@ -1,41 +1,49 @@
-#include "help.h"
 #include <sstream>
 #include <algorithm>
 
-#include "utils/string_util.h"
+#include "help.h"
+#include "mirai/api.h"
+#include "mirai/msg.h"
 
 namespace help
 {
 
-command msgDispatcher(const json& body)
+const std::map<std::string, commands> commands_str
 {
-	command c;
-	auto query = mirai::messageChainToArgs(body);
-	if (query.empty()) return c;
+	{"å¸®åŠ©", commands::help},
+	{"å¹«åŠ©", commands::help},
+};
 
-	auto cmd = query[0];
-	if (commands_str.find(cmd) == commands_str.end()) return c;
+void msgDispatcher(const json& body)
+{
+    auto query = mirai::messageChainToArgs(body);
+    if (query.empty()) return;
 
-	c.args = query;
-	switch (c.c = commands_str[cmd])
-	{
-	case commands::help:
-		c.func = [](::int64_t group, ::int64_t qq, std::vector<std::string> args, std::string raw) -> std::string
-		{
-			return help();
-		};
-		break;
+    auto cmd = query[0];
+    if (commands_str.find(cmd) == commands_str.end()) return;
 
-	default:
-		break;
-	}
-	return c;
+    auto m = mirai::parseMsgMetadata(body);
+
+    std::string resp;
+    switch (commands_str.at(cmd))
+    {
+    case commands::help:
+        resp = help();
+        break;
+    default: 
+        break;
+    }
+
+    if (!resp.empty())
+    {
+        mirai::sendGroupMsg(m.groupid, resp);
+    }
 }
 
 std::string boot_info()
 {
     std::stringstream ss;
-    ss << "bot»îÁË£¡";
+    ss << "botæ´»äº†ï¼";
     ss << help();
 	return ss.str();
 }
@@ -43,8 +51,8 @@ std::string boot_info()
 std::string help()
 {
     std::stringstream ss;
-    ss << "×îºó¸üÐÂÈÕÆÚ£º" << __DATE__ << " " __TIME__ << std::endl <<
-        "°ïÖúÎÄµµ£ºhttps://github.com/yaasdf/bigbedbot-cqvc/blob/master/CQPdemo/README.md";
+    ss << "æœ€åŽæ›´æ–°æ—¥æœŸï¼š" << __DATE__ << " " __TIME__ << std::endl <<
+        "å¸®åŠ©æ–‡æ¡£ï¼šhttps://github.com/yaasdf/bigbedbot-mirai-http/blob/master/app/README.md";
     return ss.str();
 }
 }

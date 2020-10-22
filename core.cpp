@@ -10,17 +10,17 @@
 #include "app/data/group.h"
 
 #include "app/case.h"
-/*
-#include "app/eat.h"
-#include "app/event_case.h"
-#include "app/gambol.h"
 #include "app/help.h"
-#include "app/monopoly.h"
-#include "app/smoke.h"
-#include "app/tools.h"
-#include "app/user_op.h"
-#include "app/weather.h"
-*/
+
+// #include "app/eat.h"
+// #include "app/event_case.h"
+// #include "app/gambol.h"
+// #include "app/monopoly.h"
+// #include "app/smoke.h"
+// #include "app/tools.h"
+// #include "app/user_op.h"
+// #include "app/weather.h"
+
 
 #include "mirai/http_conn.h"
 #include "mirai/api.h"
@@ -187,6 +187,9 @@ void addMsgCallbacks()
 	mirai::regEventProc(evt::GroupMessage, grp::msgDispatcher);
 	mirai::regEventProc(evt::GroupMessage, user::msgCallback);
 	mirai::regEventProc(evt::GroupMessage, opencase::msgDispatcher);
+	mirai::regEventProc(evt::FriendMessage, help::msgDispatcher);
+	mirai::regEventProc(evt::TempMessage, help::msgDispatcher);
+	mirai::regEventProc(evt::GroupMessage, help::msgDispatcher);
 }
 
 
