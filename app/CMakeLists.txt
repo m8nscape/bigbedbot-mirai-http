@@ -10,7 +10,7 @@ target_include_directories(app
     PRIVATE ../thirdparty
 )
 set_target_properties(app PROPERTIES
-    CXX_STANDARD 20)
+    CXX_STANDARD 17)
 target_link_libraries(app 
     PRIVATE mirai-api
     PRIVATE yaml-cpp

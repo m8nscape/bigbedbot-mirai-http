@@ -14,6 +14,19 @@
 - ☐ 活动开箱
 - ☐ 
 
+
+# Dependencies
+- C++17 compatible compiler
+- CMake
+- Boost (for http)
+- sqlite3
+
+
+# Fetch
+git clone https://github.com/yaasdf/bigbedbot-mirai-http
+git submodule update --init --recursive
+
+
 # Build
 ```shell
 mkdir build

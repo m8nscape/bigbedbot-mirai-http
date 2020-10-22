@@ -2,6 +2,7 @@
 #include <string>
 #include <functional>
 #include <vector>
+#include <map>
 
 #include <nlohmann/json.hpp>
 
@@ -62,6 +63,44 @@ enum class RecvMsgType
     MemberJoinRequestEvent,
     BotInvitedJoinGroupRequestEvent,
 };
+
+const std::map<std::string, RecvMsgType> RecvMsgTypeMap
+{
+    { "GroupMessage", RecvMsgType::GroupMessage },
+    { "FriendMessage", RecvMsgType::FriendMessage },
+    { "TempMessage", RecvMsgType::TempMessage },
+    { "BotOnlineEvent", RecvMsgType::BotOnlineEvent },
+    { "BotOfflineEventActive", RecvMsgType::BotOfflineEventActive },
+    { "BotOfflineEventForce", RecvMsgType::BotOfflineEventForce },
+    { "BotOfflineEventDropped", RecvMsgType::BotOfflineEventDropped },
+    { "BotReloginEvent", RecvMsgType::BotReloginEvent },
+    { "GroupRecallEvent", RecvMsgType::GroupRecallEvent },
+    { "FriendRecallEvent", RecvMsgType::FriendRecallEvent },
+    { "BotGroupPermissionChangeEvent", RecvMsgType::BotGroupPermissionChangeEvent },
+    { "BotMuteEvent", RecvMsgType::BotMuteEvent },
+    { "BotUnmuteEvent", RecvMsgType::BotUnmuteEvent },
+    { "BotJoinGroupEvent", RecvMsgType::BotJoinGroupEvent },
+    { "BotLeaveEventActive", RecvMsgType::BotLeaveEventActive },
+    { "BotLeaveEventKick", RecvMsgType::BotLeaveEventKick },
+    { "GroupNameChangeEvent", RecvMsgType::GroupNameChangeEvent },
+    { "GroupEntranceAnnouncementChangeEvent", RecvMsgType::GroupEntranceAnnouncementChangeEvent },
+    { "GroupMuteAllEvent", RecvMsgType::GroupMuteAllEvent },
+    { "GroupAllowAnonymousChatEvent", RecvMsgType::GroupAllowAnonymousChatEvent },
+    { "GroupAllowConfessTalkEvent", RecvMsgType::GroupAllowConfessTalkEvent },
+    { "GroupAllowMemberInviteEvent", RecvMsgType::GroupAllowMemberInviteEvent },
+    { "MemberJoinEvent", RecvMsgType::MemberJoinEvent },
+    { "MemberLeaveEventKick", RecvMsgType::MemberLeaveEventKick },
+    { "MemberLeaveEventQuit", RecvMsgType::MemberLeaveEventQuit },
+    { "MemberCardChangeEvent", RecvMsgType::MemberCardChangeEvent },
+    { "MemberSpecialTitleChangeEvent", RecvMsgType::MemberSpecialTitleChangeEvent },
+    { "MemberPermissionChangeEvent", RecvMsgType::MemberPermissionChangeEvent },
+    { "MemberMuteEvent", RecvMsgType::MemberMuteEvent },
+    { "MemberUnmuteEvent", RecvMsgType::MemberUnmuteEvent },
+    { "NewFriendRequestEvent", RecvMsgType::NewFriendRequestEvent },
+    { "MemberJoinRequestEvent", RecvMsgType::MemberJoinRequestEvent },
+    { "BotInvitedJoinGroupRequestEvent", RecvMsgType::BotInvitedJoinGroupRequestEvent },
+};
+
 int regEventProc(RecvMsgType evt, MessageProc cb);
 
 

@@ -6,8 +6,6 @@
 #include <map>
 #include <future>
 
-#include <magic_enum.hpp>
-
 #include "util.h"
 #include "logger.h"
 
@@ -309,10 +307,9 @@ int procRecvMsgEntry(const json& v)
     std::string type = v.at("type");
     addLogDebug("api", "Recv event %s", type.c_str());
 
-    auto evt = magic_enum::enum_cast<RecvMsgType>(type);
-    if (evt.has_value())
+    if (RecvMsgTypeMap.find(type) != RecvMsgTypeMap.end())
     {
-        RecvMsgType e = evt.value();
+        RecvMsgType e = RecvMsgTypeMap.at(type);
         for (const auto& cb: eventCallbacks[e])
         {
             cb(v);
