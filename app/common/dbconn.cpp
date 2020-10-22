@@ -9,7 +9,7 @@
 #define SQLITE_UINT64_TYPE uint64_t
 #include <sqlite3.h>
 
-#include "logger.h"
+#include "utils/logger.h"
 
 SQLite::SQLite(const char* path, const char* log) { strcpy(logGrp, log); sqlite3_open(path, &_db); }
 SQLite::~SQLite() { sqlite3_close(_db); }

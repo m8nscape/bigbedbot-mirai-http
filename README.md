@@ -18,6 +18,7 @@
 # Dependencies
 - C++17 compatible compiler
 - CMake
+- libcurl
 - Boost (for http)
 - sqlite3
 

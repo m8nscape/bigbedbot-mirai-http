@@ -7,12 +7,12 @@ add_library(app STATIC
 )
 target_include_directories(app 
     PRIVATE ../
-    PRIVATE ../thirdparty
 )
 set_target_properties(app PROPERTIES
     CXX_STANDARD 17)
 target_link_libraries(app 
     PRIVATE mirai-api
+    PRIVATE json
     PRIVATE yaml-cpp
 )
 target_link_libraries(bbb PUBLIC app)

@@ -8,7 +8,7 @@
 #include "mirai/msg.h"
 #include "data/user.h"
 #include "utils/rand.h"
-#include "logger.h"
+#include "utils/logger.h"
 
 #include "yaml-cpp/yaml.h"
 

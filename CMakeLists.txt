@@ -8,10 +8,11 @@ project(bigbetbot-mirai-http
     VERSION 1.0
     LANGUAGES CXX)
 
-add_executable(bbb logger.cpp logger.h time_evt.cpp time_evt.h core.cpp core.h main.cpp)
+add_executable(bbb 
+    utils/logger.cpp utils/logger.h utils/rand.h
+    time_evt.cpp time_evt.h modules.cpp core.cpp core.h main.cpp)
 target_include_directories(bbb 
     PRIVATE .
-    PRIVATE thirdparty
 )
 set_target_properties(bbb PROPERTIES
     CXX_STANDARD 17)
@@ -24,5 +25,6 @@ target_link_libraries(bbb
     PRIVATE -lsqlite3
     PRIVATE -lcurl
     PRIVATE -lpthread
+    PUBLIC json
     PUBLIC yaml-cpp
 )
