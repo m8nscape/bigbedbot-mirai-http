@@ -435,33 +435,29 @@ void msgDispatcher(const json& body)
     auto cmd = query[0];
     if (commands_str.find(cmd) == commands_str.end()) return;
 
-    int msgid = 0;
-    time_t timestamp = 0;
-    int64_t qq = 0;
-    int64_t group = 0;
-    mirai::parseMsgMeta(body, msgid, timestamp, qq, group);
+    auto m = mirai::parseMsgMetadata(body);
 
-    if (!grp::groups[group].getFlag(grp::Group::MASK_P)
-        || !grp::groups[group].getFlag(grp::Group::MASK_CASE))
+    if (!grp::groups[m.groupid].getFlag(grp::Group::MASK_P)
+        || !grp::groups[m.groupid].getFlag(grp::Group::MASK_CASE))
         return;
 
     json resp;
     switch (commands_str.at(cmd))
     {
     case commands::开箱:
-        resp = 开箱(group, qq, query);
+        resp = 开箱(m.groupid, m.qqid, query);
         break;
     case commands::开箱10:
-        resp = 开箱10(group, qq, query);
+        resp = 开箱10(m.groupid, m.qqid, query);
         break;
     case commands::开红箱:
-        resp = 开红箱(group, qq, query);
+        resp = 开红箱(m.groupid, m.qqid, query);
         break;
     case commands::开黄箱:
-        resp = 开黄箱(group, qq, query);
+        resp = 开黄箱(m.groupid, m.qqid, query);
         break;
     case commands::开箱endless:
-        resp = 开箱endless(group, qq, query);
+        resp = 开箱endless(m.groupid, m.qqid, query);
         break;
     default: 
         break;
@@ -469,7 +465,7 @@ void msgDispatcher(const json& body)
 
     if (!resp.empty())
     {
-        mirai::sendGroupMsg(group, resp);
+        mirai::sendGroupMsg(m.groupid, resp);
     }
 }
 

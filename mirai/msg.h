@@ -16,9 +16,14 @@ struct MsgMetadata
     time_t  time = 0;
     int64_t qqid = 0;
     int64_t groupid = 0;    // optional
+    enum {
+        FRIEND,
+        TEMP,
+        GROUP
+    } source = FRIEND;
 };
 
-int parseMsgMeta(const json&, int& msgid, time_t& time, int64_t& qqid, int64_t& groupid);
+//int parseMsgMeta(const json&, int& msgid, time_t& time, int64_t& qqid, int64_t& groupid, int& source);
 MsgMetadata parseMsgMetadata(const json& v);
 
 std::string messageChainToStr(const json&);

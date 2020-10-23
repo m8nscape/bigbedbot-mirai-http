@@ -256,36 +256,32 @@ void msgDispatcher(const json& body)
     auto query = mirai::messageChainToArgs(body);
     if (query.empty()) return;
 
-    int msgid = 0;
-    time_t timestamp = 0;
-    int64_t qq = 0;
-    int64_t group = 0;
-    mirai::parseMsgMeta(body, msgid, timestamp, qq, group);
+    auto m = mirai::parseMsgMetadata(body);
 
-    if (group == 0)
+    if (m.groupid == 0)
     {
         return;
     }
 
-    if (groups.find(group) == groups.end())
+    if (groups.find(m.groupid) == groups.end())
     {
-        newGroupIfNotExist(group);
+        newGroupIfNotExist(m.groupid);
     }
 
     auto cmd = query[0];
     std::string resp;
     if (cmd.substr(0, strlen("开启")) == "开启")
     {
-        resp = 开启(group, qq, query);
+        resp = 开启(m.groupid, m.qqid, query);
     }
     else if (cmd.substr(0, strlen("关闭")) == "关闭")
     {
-        resp = 关闭(group, qq, query);
+        resp = 关闭(m.groupid, m.qqid, query);
     }
 
     if (!resp.empty())
     {
-        mirai::sendGroupMsgStr(group, resp);
+        mirai::sendGroupMsgStr(m.groupid, resp);
     }
 }
 

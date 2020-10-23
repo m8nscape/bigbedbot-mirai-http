@@ -214,7 +214,7 @@ void groupMsgCallback(const json& body)
         if (std::regex_match(query, res, re))
         {
             c = cmd;
-            target_qqid = user::getUser(res[2].str());
+            target_qqid = res[2].str().empty() ? 0 : user::getUser(res[2].str());
             duration = std::strtoll(res[3].str().c_str(), nullptr, 10);
             break;
         }

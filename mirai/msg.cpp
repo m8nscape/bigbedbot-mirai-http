@@ -6,39 +6,38 @@
 namespace mirai
 {
 
-int parseMsgMeta(const json& v, int& msgid, time_t& time, int64_t& qqid, int64_t& groupid)
+MsgMetadata parseMsgMetadata(const json& v)
 {
-    msgid = 0;
-    time = 0;
+    MsgMetadata meta;
+
+    if (v.contains("type"))
+    {
+        const std::string type = v.at("type").get<std::string>();
+        if (v == "FriendMessage") meta.source = MsgMetadata::FRIEND;
+        else if (v == "TempMessage") meta.source = MsgMetadata::TEMP;
+        else if (v == "GroupMessage") meta.source = MsgMetadata::GROUP;
+    }
+
     if (v.contains("messageChain") && v.at("messageChain").contains("Source"))
     {
         const json& s = v.at("messageChain").at("Source");
-        msgid = s.at("id").get<int>();
-        time = s.at("time").get<int>();
+        meta.msgid = s.at("id").get<int>();
+        meta.time = s.at("time").get<int>();
     }
 
-    qqid = 0;
-    groupid = 0;
     if (v.contains("sender"))
     {
         const json& s = v.at("sender");
         if (s.contains("id"))
-            qqid = s.at("id").get<int>();
+            meta.qqid = s.at("id").get<int>();
         if (s.contains("group"))
         {
             const json& g = s.at("group");
             if (g.contains("id"))
-                groupid = g.at("id").get<int>();
+                meta.groupid = g.at("id").get<int>();
         }
     }
 
-    return 0;
-}
-
-MsgMetadata parseMsgMetadata(const json& v)
-{
-    MsgMetadata meta;
-    parseMsgMeta(v, meta.msgid, meta.time, meta.qqid, meta.groupid);
     return meta;
 }
 
@@ -87,7 +86,7 @@ std::vector<std::string> messageChainToArgs(const json& v, unsigned max_count)
 
 int sendMsgRespStr(const MsgMetadata& meta, const std::string& str, int64_t quoteMsgId)
 {
-    if (meta.groupid == 0) 
+    if (meta.source != MsgMetadata::GROUP || meta.groupid == 0) 
         return sendPrivateMsgStr(meta.qqid, str, quoteMsgId);
     else 
         return sendGroupMsgStr(meta.groupid, str, quoteMsgId);
@@ -95,7 +94,7 @@ int sendMsgRespStr(const MsgMetadata& meta, const std::string& str, int64_t quot
 
 int sendMsgResp(const MsgMetadata& meta, const json& messageChain, int64_t quoteMsgId)
 {
-    if (meta.groupid == 0) 
+    if (meta.source != MsgMetadata::GROUP || meta.groupid == 0) 
         return sendPrivateMsg(meta.qqid, messageChain, quoteMsgId);
     else 
         return sendGroupMsg(meta.groupid, messageChain, quoteMsgId);
