@@ -1,9 +1,14 @@
+
 #include "core.h"
 #include "mirai/api.h"
+#include "app/data/user.h"
+#include "app/data/group.h"
 #include "app/case.h"
 #include "app/help.h"
 #include "app/tools.h"
 #include "app/smoke.h"
+
+#include "time_evt.h"
 
 // #include "app/eat.h"
 // #include "app/event_case.h"
@@ -54,18 +59,19 @@ void shutdown_modules()
 
 void add_timed_events()
 {
-    /*
     // 每天刷新群名片
-    for (auto&[group, groupObj] : grp::groups)
-        addTimedEvent([&]() { groupObj.updateMembers(); }, 0, 0);
-
-    // steam game list
-    addTimedEvent([&]() { eat::updateSteamGameList(); }, 0, 0);
+    for (auto it = grp::groups.begin(); it != grp::groups.end(); ++it)
+        addTimedEvent(std::bind(&grp::Group::updateMembers, &it->second), 0, 0);
 
     // 每天刷批
-    user_op::daily_refresh_time = time(nullptr) - 60 * 60 * 24; // yesterday
-    user_op::daily_refresh_tm_auto = getLocalTime(TIMEZONE_HR, TIMEZONE_MIN);
-    addTimedEvent([&]() { user_op::flushDailyTimep(true); }, user_op::NEW_DAY_TIME_HOUR, user_op::NEW_DAY_TIME_MIN);
+    user::daily_refresh_time = time(nullptr) - 60 * 60 * 24; // yesterday
+    //user::daily_refresh_tm_auto = getLocalTime(TIMEZONE_HR, TIMEZONE_MIN);
+    user::daily_refresh_tm_auto = *localtime(&user::daily_refresh_time);
+    addTimedEvent(std::bind(user::flushDailyTimep, true), user::NEW_DAY_TIME_HOUR, user::NEW_DAY_TIME_MIN);
+
+    /*
+    // steam game list
+    addTimedEvent([&]() { eat::updateSteamGameList(); }, 0, 0);
 
     // 照顾美国人
     addTimedEvent([&]() { event_case::startEvent(); }, 4, 0);
