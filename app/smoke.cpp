@@ -101,7 +101,9 @@ void 禁烟(const mirai::MsgMetadata& m, int64_t target_qqid, int64_t duration)
     else
         target = target_qqid;
 
-    mirai::sendGroupMsgStr(m.groupid, nosmokingWrapper(m.qqid, m.groupid, target, duration));
+    auto resp = nosmokingWrapper(m.qqid, m.groupid, target, duration);
+    if (!resp.empty())
+        mirai::sendGroupMsgStr(m.groupid, resp);
     return;
 }
 
@@ -128,6 +130,7 @@ std::string nosmokingWrapper(int64_t qq, int64_t group, int64_t target, int64_t 
     if (cost > plist[qq].getCurrency())
     {
         mirai::sendGroupMsg(group, not_enough_currency(qq, cost));
+        return "";
     }
 
     double reflect = randReal();

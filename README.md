@@ -16,8 +16,8 @@
 
 
 # Dependencies
-- C++17 compatible compiler
-- CMake
+- C++17 compatible compiler (tested on g++ 10.2.0)
+- CMake 3.8
 - libcurl
 - Boost (for http)
 - sqlite3
@@ -37,5 +37,7 @@ cmake --build build/RelWithDebInfo
 
 # Install
 ```shell
+mkdir -p ~/mirai-console/bbb/config
+cp default/* ~/mirai-console/bbb/config
 cp build/RelWithDebInfo/bbb ~/mirai-console/bbb/
 ```
