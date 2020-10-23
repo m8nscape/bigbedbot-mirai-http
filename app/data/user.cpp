@@ -251,7 +251,7 @@ json draw_p(int64_t qq, int64_t base, int64_t bonus, int64_t daily_remain)
     if (bonus)
     {
         std::stringstream ss;
-        ss << "，你今天领到" << base << "个批，甚至还有先到的" << bonus << "个批";
+        ss << "，你今天领到" << base << "个批，甚至还有先到的" << bonus << "个批\n";
         resp["messageChain"].push_back(mirai::buildMessagePlain(ss.str()));
         ss.str("");
         ss << "现在批池还剩" << daily_remain << "个批";
