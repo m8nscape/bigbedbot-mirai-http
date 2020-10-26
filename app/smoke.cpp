@@ -1,6 +1,7 @@
 #include <sstream>
 #include <utility>
 #include <regex>
+#include <list>
 
 #include "smoke.h"
 #include "utils/rand.h"
@@ -205,6 +206,23 @@ void 群聊解禁(const mirai::MsgMetadata& m, int64_t target_qqid)
 
 void groupMsgCallback(const json& body)
 {
+    auto m = mirai::parseMsgMetadata(body);
+
+    // update smoke status
+    if (m.qqid != botLoginQQId && m.qqid != 10000 && m.qqid != 1000000)
+    {
+        // time expiration
+        if (smoke::smokeTimeInGroups.find(m.qqid) != smoke::smokeTimeInGroups.end())
+        {
+            time_t t = time(nullptr);
+            std::list<int64_t> expired;
+            for (auto& g : smoke::smokeTimeInGroups[m.qqid])
+                if (t > g.second) expired.push_back(g.first);
+            for (auto& g : expired)
+                smoke::smokeTimeInGroups.erase(g);
+        }
+    }
+
     auto query = mirai::messageChainToStr(body);
     if (query.empty()) return;
 
@@ -224,7 +242,6 @@ void groupMsgCallback(const json& body)
     }
     if (c == commands::_) return;
 
-    auto m = mirai::parseMsgMetadata(body);
     grp::newGroupIfNotExist(m.groupid);
 
     switch (c)
