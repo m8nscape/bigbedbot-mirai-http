@@ -15,9 +15,9 @@
 namespace smoke
 {
 
-RetVal nosmoking(int64_t group, int64_t target, int duration)
+RetVal nosmoking(int64_t group, int64_t target, int duration_min)
 {
-    if (duration < 0) return RetVal::INVALID_DURATION;
+    if (duration_min < 0) return RetVal::INVALID_DURATION;
 
     if (grp::groups.find(group) != grp::groups.end())
     {
@@ -37,15 +37,15 @@ RetVal nosmoking(int64_t group, int64_t target, int duration)
         return RetVal::TARGET_NOT_FOUND;
     }
 
-    mirai::mute(target, group, duration);
+    mirai::mute(target, group, duration_min * 60);
     
-    if (duration == 0)
+    if (duration_min == 0)
     {
         smokeTimeInGroups[target].erase(group);
         return RetVal::ZERO_DURATION;
     }
 
-    smokeTimeInGroups[target][group] = time(nullptr) + int64_t(duration) * 60;
+    smokeTimeInGroups[target][group] = time(nullptr) + int64_t(duration_min) * 60;
     return RetVal::OK;
 }
 
@@ -70,7 +70,7 @@ const std::vector<std::pair<std::regex, commands>> private_commands_regex
     {std::regex("^(接近|解禁)(我)?$", std::regex::optimize | std::regex::extended), commands::接近我},
 };
 
-std::string nosmokingWrapper(int64_t qq, int64_t group, int64_t target, int64_t duration);
+std::string nosmokingWrapper(int64_t qq, int64_t group, int64_t target, int64_t duration_min);
 void 禁烟(const mirai::MsgMetadata& m, int64_t target_qqid, int64_t duration)
 {
     if (grp::groups[m.groupid].haveMember(botLoginQQId))
@@ -118,16 +118,18 @@ json not_enough_currency(int64_t qq, int64_t cost)
     return resp;
 }
 
-std::string nosmokingWrapper(int64_t qq, int64_t group, int64_t target, int64_t duration)
+std::string nosmokingWrapper(int64_t qq, int64_t group, int64_t target, int64_t duration_min)
 {
-    if (duration > 30 * 24 * 60) duration = 30 * 24 * 60;
-    if (duration == 0)
+    if (duration_min > 30 /*days*/ * 24 /*hours*/ * 60 /*minutes*/) 
+        duration_min = 30 * 24 * 60;
+
+    if (duration_min == 0)
     {
-        nosmoking(group, target, duration);
+        nosmoking(group, target, duration_min);
         return "解禁了";
     }
 
-    int cost = (int64_t)std::floor(std::pow(duration, 1.777777));
+    int cost = (int64_t)std::floor(std::pow(duration_min, 1.777777));
     if (cost > plist[qq].getCurrency())
     {
         mirai::sendGroupMsg(group, not_enough_currency(qq, cost));
@@ -143,7 +145,7 @@ std::string nosmokingWrapper(int64_t qq, int64_t group, int64_t target, int64_t 
     // 20% reflect
     else if (reflect < 0.3)
     {
-        switch (nosmoking(group, qq, duration))
+        switch (nosmoking(group, qq, duration_min))
         {
             using r = RetVal;
 
@@ -159,7 +161,7 @@ std::string nosmokingWrapper(int64_t qq, int64_t group, int64_t target, int64_t 
     }
     else
     {
-        switch (nosmoking(group, target, duration))
+        switch (nosmoking(group, target, duration_min))
         {
             using r = RetVal;
 
@@ -236,7 +238,9 @@ void groupMsgCallback(const json& body)
         {
             c = cmd;
             target_qqid = res[2].str().empty() ? 0 : user::getUser(res[2].str());
-            duration = std::strtoll(res[3].str().c_str(), nullptr, 10);
+            char* duration_strtoll_endptr;
+            duration = std::strtoll(res[3].str().c_str(), &duration_strtoll_endptr, 10);
+            if (*duration_strtoll_endptr) duration = LLONG_MIN;
             break;
         }
     }
