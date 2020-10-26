@@ -27,6 +27,8 @@ target_link_libraries(bbb
     PRIVATE -lsqlite3
     PRIVATE -lcurl
     PRIVATE -lpthread
-    PUBLIC json
-    PUBLIC yaml-cpp
+    PRIVATE json
+    PRIVATE yaml-cpp
+    PRIVATE mirai-api
+    PRIVATE app
 )

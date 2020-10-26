@@ -1,3 +1,5 @@
+cmake_minimum_required(VERSION 3.8...3.18)
+
 # nlohmann/json
 #set(JSON_BuildTests OFF CACHE INTERNAL "")
 #add_subdirectory(nlohmann_json)

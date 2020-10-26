@@ -1,3 +1,5 @@
+cmake_minimum_required(VERSION 3.8...3.18)
+
 add_library(app STATIC 
     common/dbconn.cpp common/dbconn.h
     data/group.cpp data/group.h data/user.cpp data/user.h
@@ -18,4 +20,3 @@ target_link_libraries(app
     PRIVATE json
     PRIVATE yaml-cpp
 )
-target_link_libraries(bbb PUBLIC app)

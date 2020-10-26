@@ -1,3 +1,5 @@
+cmake_minimum_required(VERSION 3.8...3.18)
+
 add_library(mirai-api STATIC 
     util.cpp util.h 
     msg.cpp msg.h 
@@ -6,11 +8,9 @@ add_library(mirai-api STATIC
 )
 target_include_directories(mirai-api
     PRIVATE ../
-    PRIVATE ../thirdparty/nlohmann/json/single-include
 )
 set_target_properties(mirai-api PROPERTIES
-    CXX_STANDARD 20)
+    CXX_STANDARD 17)
 target_link_libraries(mirai-api
     PRIVATE json
 )
-target_link_libraries(bbb PUBLIC mirai-api)
