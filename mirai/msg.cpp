@@ -86,18 +86,36 @@ std::vector<std::string> messageChainToArgs(const json& v, unsigned max_count)
 
 int sendMsgRespStr(const MsgMetadata& meta, const std::string& str, int64_t quoteMsgId)
 {
-    if (meta.source != MsgMetadata::GROUP || meta.groupid == 0) 
-        return sendPrivateMsgStr(meta.qqid, str, quoteMsgId);
-    else 
+    switch (meta.source)
+    {
+    case MsgMetadata::GROUP:
         return sendGroupMsgStr(meta.groupid, str, quoteMsgId);
+    case MsgMetadata::FRIEND:
+        return sendFriendMsgStr(meta.qqid, str, quoteMsgId);
+    case MsgMetadata::TEMP:
+        return sendTempMsgStr(meta.qqid, meta.groupid, str, quoteMsgId);
+        break;
+    default:
+        break;
+    }
+    return -1;
 }
 
 int sendMsgResp(const MsgMetadata& meta, const json& messageChain, int64_t quoteMsgId)
 {
-    if (meta.source != MsgMetadata::GROUP || meta.groupid == 0) 
-        return sendPrivateMsg(meta.qqid, messageChain, quoteMsgId);
-    else 
-        return sendGroupMsg(meta.groupid, messageChain, quoteMsgId);
+    switch (meta.source)
+    {
+    case MsgMetadata::GROUP:
+        return sendGroupMsgStr(meta.groupid, messageChain, quoteMsgId);
+    case MsgMetadata::FRIEND:
+        return sendFriendMsgStr(meta.qqid, messageChain, quoteMsgId);
+    case MsgMetadata::TEMP:
+        return sendTempMsgStr(meta.qqid, meta.groupid, messageChain, quoteMsgId);
+        break;
+    default:
+        break;
+    }
+    return -1;
 }
 
 }
