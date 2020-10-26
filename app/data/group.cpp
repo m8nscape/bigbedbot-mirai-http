@@ -267,6 +267,9 @@ void msgDispatcher(const json& body)
     {
         newGroupIfNotExist(m.groupid);
     }
+    
+    // last talked member
+    grp::groups[m.groupid].last_talk_member = m.qqid;
 
     auto cmd = query[0];
     std::string resp;
