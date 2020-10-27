@@ -70,6 +70,8 @@ const std::vector<std::pair<std::regex, commands>> private_commands_regex
     {std::regex("^(接近|解禁)(我)?$", std::regex::optimize | std::regex::extended), commands::接近我},
 };
 
+std::map<int64_t, int64_t> groupLastTalkedMember;
+
 std::string nosmokingWrapper(int64_t qq, int64_t group, int64_t target, int64_t duration_min);
 void 禁烟(const mirai::MsgMetadata& m, int64_t target_qqid, int64_t duration)
 {
@@ -98,7 +100,7 @@ void 禁烟(const mirai::MsgMetadata& m, int64_t target_qqid, int64_t duration)
     // smoke last member if req without target
     int64_t target = 0;
     if (target_qqid == 0)
-        target = grp::groups[m.groupid].last_talk_member;
+        target = groupLastTalkedMember[m.groupid];
     else
         target = target_qqid;
 
@@ -259,6 +261,8 @@ void groupMsgCallback(const json& body)
     default:
         break;
     }
+
+    groupLastTalkedMember[m.groupid] = m.qqid;
 }
 
 std::string selfUnsmoke(int64_t qq)
