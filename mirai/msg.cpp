@@ -74,7 +74,7 @@ std::vector<std::string> messageChainToArgs(const json& v, unsigned max_count)
     auto ss = std::stringstream(messageChainToStr(v));
 
     std::vector<std::string> args;
-    while (!ss.eof() && args.size() < max_count)
+    while (!ss.eof() && args.size() < max_count - 1)
     {
         std::string s;
         ss >> s;
@@ -106,11 +106,11 @@ int sendMsgResp(const MsgMetadata& meta, const json& messageChain, int64_t quote
     switch (meta.source)
     {
     case MsgMetadata::GROUP:
-        return sendGroupMsgStr(meta.groupid, messageChain, quoteMsgId);
+        return sendGroupMsg(meta.groupid, messageChain, quoteMsgId);
     case MsgMetadata::FRIEND:
-        return sendFriendMsgStr(meta.qqid, messageChain, quoteMsgId);
+        return sendFriendMsg(meta.qqid, messageChain, quoteMsgId);
     case MsgMetadata::TEMP:
-        return sendTempMsgStr(meta.qqid, meta.groupid, messageChain, quoteMsgId);
+        return sendTempMsg(meta.qqid, meta.groupid, messageChain, quoteMsgId);
         break;
     default:
         break;
