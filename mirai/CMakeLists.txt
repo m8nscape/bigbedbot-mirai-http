@@ -7,7 +7,7 @@ add_library(mirai-api STATIC
     api.cpp api.h
 )
 target_include_directories(mirai-api
-    PRIVATE ../
+    PRIVATE ${CMAKE_SOURCE_DIR}
 )
 set_target_properties(mirai-api PROPERTIES
     CXX_STANDARD 17)

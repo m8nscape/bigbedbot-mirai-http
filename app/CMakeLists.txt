@@ -16,7 +16,7 @@ target_link_libraries(app
     PRIVATE yaml-cpp
 )
 target_include_directories(app 
-    PRIVATE ../
+    PRIVATE ${CMAKE_SOURCE_DIR}
 )
 
 find_package(SQLite3 CONFIG)

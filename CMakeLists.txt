@@ -33,7 +33,7 @@ target_link_libraries(bbb
     PRIVATE app
 )
 target_include_directories(bbb 
-    PRIVATE .
+    PRIVATE ${CMAKE_SOURCE_DIR}
     PRIVATE ${json_INCLUDE_DIR}
     PRIVATE ${yaml-cpp_INCLUDE_DIR}
 )
