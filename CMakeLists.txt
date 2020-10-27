@@ -19,11 +19,6 @@ endif()
 add_executable(bbb 
     utils/logger.cpp utils/logger.h utils/rand.h
     time_evt.cpp time_evt.h modules.cpp core.cpp core.h main.cpp)
-target_include_directories(bbb 
-    PRIVATE .
-    PRIVATE thirdparty/nlohmann/json/single-include
-    PRIVATE thirdparty/yaml-cpp/include
-)
 set_target_properties(bbb PROPERTIES
     CXX_STANDARD 17)
 
@@ -37,11 +32,22 @@ target_link_libraries(bbb
     PRIVATE mirai-api
     PRIVATE app
 )
+target_include_directories(bbb 
+    PRIVATE .
+    PRIVATE ${json_INCLUDE_DIR}
+    PRIVATE ${yaml-cpp_INCLUDE_DIR}
+)
 
-find_package(CURL CONFIG REQUIRED)
-target_link_libraries(bbb PRIVATE CURL::libcurl)
-target_include_directories(bbb PRIVATE ${CURL_INCLUDE_DIR})
+find_package(CURL CONFIG)
+if (CURL_FOUND)
+    set(CURL_LIBRARY CURL::libcurl)
+    target_link_libraries(bbb PRIVATE ${CURL_LIBRARY})
+else()
+    message("Using libcurl from system")
+    set(CURL_LIBRARY -lcurl)
+    target_link_libraries(bbb PRIVATE ${CURL_LIBRARY})
+endif()
 
-if (${UNIX} OR ${MINGW})
+if (UNIX OR MINGW)
     target_link_libraries(bbb PRIVATE -lpthread)
 endif()

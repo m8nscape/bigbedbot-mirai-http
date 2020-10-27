@@ -8,11 +8,6 @@ add_library(app STATIC
     tools.cpp tools.h
     smoke.cpp smoke.h
 )
-target_include_directories(app 
-    PRIVATE ../
-    PRIVATE ../thirdparty/nlohmann/json/single-include
-    PRIVATE ../thirdparty/yaml-cpp/include
-)
 set_target_properties(app PROPERTIES
     CXX_STANDARD 17)
 target_link_libraries(app 
@@ -20,18 +15,24 @@ target_link_libraries(app
     PRIVATE json
     PRIVATE yaml-cpp
 )
+target_include_directories(app 
+    PRIVATE ../
+)
 
 find_package(SQLite3 CONFIG)
 if (SQLite3_FOUND)
-    target_link_libraries(app PRIVATE SQLite::SQLite3)
-    target_include_directories(app PRIVATE ${SQLite3_INCLUDE_DIR})
+    set(sqlite3_LIBRARY SQLite::SQLite3)
+    target_link_libraries(app PRIVATE ${sqlite3_LIBRARY})
 else()
-    find_package(unofficial-sqlite3 CONFIG REQUIRED)
-    target_link_libraries(app PRIVATE unofficial::sqlite3::sqlite3)
-    target_include_directories(app PRIVATE ${unofficial-sqlite3_INCLUDE_DIRS})
+    find_package(unofficial-sqlite3 CONFIG)
+    if (unofficial-sqlite3_FOUND)
+        set(sqlite3_LIBRARY unofficial::sqlite3::sqlite3)
+        target_link_libraries(app PRIVATE ${sqlite3_LIBRARY})
+    else()
+        message("Using libsqlite3 from system")
+        set(sqlite3_LIBRARY -lsqlite3)
+        target_link_libraries(app PRIVATE ${sqlite3_LIBRARY})
+    endif()
 endif()
 
-
-find_package(CURL CONFIG REQUIRED)
-target_link_libraries(app PRIVATE CURL::libcurl)
-target_include_directories(app PRIVATE ${CURL_INCLUDE_DIR})
+target_link_libraries(app PRIVATE ${CURL_LIBRARY})
