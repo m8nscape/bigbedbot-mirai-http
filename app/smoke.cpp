@@ -61,8 +61,8 @@ enum class commands : size_t {
 };
 const std::vector<std::pair<std::regex, commands>> group_commands_regex
 {
-    {std::regex("^禁(言|烟|菸|煙)([^\\s]*) ([^\\s]*?)$", std::regex::optimize | std::regex::extended), commands::禁烟},
-    {std::regex("^(接近|解禁)([^\\s]*) ([^\\s]*?)$", std::regex::optimize | std::regex::extended), commands::解禁},
+    {std::regex("^禁(言|烟|菸|煙)([^\\s]*) ([^\\s]*)$", std::regex::optimize | std::regex::extended), commands::禁烟},
+    {std::regex("^(接近|解禁)([^\\s]*) ([^\\s]*)$", std::regex::optimize | std::regex::extended), commands::解禁},
 };
 
 const std::vector<std::pair<std::regex, commands>> private_commands_regex
