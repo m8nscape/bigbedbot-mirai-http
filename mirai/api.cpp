@@ -149,7 +149,7 @@ int sendTempMsgStr(int64_t qqid, int64_t groupid, const std::string& msg, int64_
 
 int sendTempMsg(int64_t qqid, int64_t groupid, const json& messageChain, int64_t quotemsgid)
 {
-    addLogDebug("api", "Send private msg to %lld: (messagechain)", qqid);
+    addLogDebug("api", "Send temp msg to %lld @ %lld: (messagechain)", qqid, groupid);
 
     json obj;
     obj["sessionKey"] = std::string(sessionKey);

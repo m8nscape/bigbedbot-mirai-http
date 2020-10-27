@@ -13,9 +13,9 @@ MsgMetadata parseMsgMetadata(const json& v)
     if (v.contains("type"))
     {
         const std::string type = v.at("type").get<std::string>();
-        if (v == "FriendMessage") meta.source = MsgMetadata::FRIEND;
-        else if (v == "TempMessage") meta.source = MsgMetadata::TEMP;
-        else if (v == "GroupMessage") meta.source = MsgMetadata::GROUP;
+        if (type == "FriendMessage") meta.source = MsgMetadata::FRIEND;
+        else if (type == "TempMessage") meta.source = MsgMetadata::TEMP;
+        else if (type == "GroupMessage") meta.source = MsgMetadata::GROUP;
     }
 
     if (v.contains("messageChain") && v.at("messageChain").contains("Source"))
