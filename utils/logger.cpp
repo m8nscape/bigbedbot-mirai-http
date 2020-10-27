@@ -5,6 +5,12 @@
 
 #include "utils/logger.h"
 
+#ifdef WIN32
+const char* BashColorStrs[] =
+{
+    "", "", "", "", "", "", "", "",
+};
+#else
 const char* BashColorStrs[] = 
 {
     [static_cast<unsigned>(BashColors::None)] = "\e[0m",
@@ -16,6 +22,7 @@ const char* BashColorStrs[] =
     [static_cast<unsigned>(BashColors::Cyan)] = "\e[0;36m",
     [static_cast<unsigned>(BashColors::Gray)] = "\e[0;37m",
 };
+#endif
 
 inline std::ostream& getOutStream()
 {

@@ -22,13 +22,23 @@
 - Boost (for http)
 - sqlite3
 
+Installing dependencies on Windows
+```ps
+vcpkg install curl:x64-windows
+vcpkg install boost:x64-windows-static
+vcpkg install sqlite3:x64-windows
+```
+
 
 # Fetch
+```shell
 git clone https://github.com/yaasdf/bigbedbot-mirai-http
 git submodule update --init --recursive
+```
 
 
 # Build
+Linux
 ```shell
 mkdir build
 cmake -S . -B build/RelWithDebInfo -DCMAKE_BUILD_TYPE=RelWithDebInfo

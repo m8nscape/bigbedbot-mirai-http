@@ -498,7 +498,7 @@ int loadCfg(const char* yaml)
     }
     addLog(LOG_INFO, "user", "Loading case config from %s", std::filesystem::absolute(cfgPath).c_str());
 
-    YAML::Node cfg = YAML::LoadFile(cfgPath);
+    YAML::Node cfg = YAML::LoadFile(yaml);
 
     // 配置
     FEE_PER_CASE = cfg["cost_draw"].as<int>(FEE_PER_CASE);

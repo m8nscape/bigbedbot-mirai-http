@@ -62,7 +62,7 @@ int config()
         return -1;
     }
     addLog(LOG_INFO, "core", "Loading config from %s", std::filesystem::absolute(cfgPath).c_str());
-    YAML::Node cfg = YAML::LoadFile(cfgPath);
+    YAML::Node cfg = YAML::LoadFile(cfgFile);
     authKey = cfg["authkey"].as<std::string>();
     mirai::conn::set_port(cfg["port"].as<unsigned short>());
     botLoginQQId = cfg["qq"].as<int64_t>();

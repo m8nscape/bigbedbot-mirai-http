@@ -7,6 +7,14 @@ endif()
 project(bigbetbot-mirai-http
     VERSION 1.0
     LANGUAGES CXX)
+    
+if (MSVC)
+    add_compile_options("/utf-8")
+endif()
+
+if (WIN32)
+    add_definitions(-DNOMINMAX)
+endif()
 
 add_executable(bbb 
     utils/logger.cpp utils/logger.h utils/rand.h
@@ -24,11 +32,16 @@ add_subdirectory(mirai)
 add_subdirectory(app)
 
 target_link_libraries(bbb 
-    PRIVATE -lsqlite3
-    PRIVATE -lcurl
-    PRIVATE -lpthread
     PRIVATE json
     PRIVATE yaml-cpp
     PRIVATE mirai-api
     PRIVATE app
 )
+
+find_package(CURL CONFIG REQUIRED)
+target_link_libraries(bbb PRIVATE CURL::libcurl)
+target_include_directories(bbb PRIVATE ${CURL_INCLUDE_DIR})
+
+if (${UNIX} OR ${MINGW})
+    target_link_libraries(bbb PRIVATE -lpthread)
+endif()

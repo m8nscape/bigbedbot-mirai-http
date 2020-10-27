@@ -14,3 +14,6 @@ set_target_properties(mirai-api PROPERTIES
 target_link_libraries(mirai-api
     PRIVATE json
 )
+
+find_package(Boost REQUIRED)
+target_link_libraries(mirai-api PUBLIC Boost::disable_autolinking)

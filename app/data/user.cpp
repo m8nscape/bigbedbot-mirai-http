@@ -408,7 +408,7 @@ int loadUserAlias(const char* yaml)
     }
     addLog(LOG_INFO, "user", "Loading alias config from %s", std::filesystem::absolute(cfgPath).c_str());
 
-    YAML::Node cfg = YAML::LoadFile(cfgPath);
+    YAML::Node cfg = YAML::LoadFile(yaml);
     unsigned c = 0;
     for (const auto& u: cfg)
     {

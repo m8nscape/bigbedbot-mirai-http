@@ -1,2 +1,5 @@
+.vs/**
+CMakeFiles
+out
 app/private
-build/**
+build
