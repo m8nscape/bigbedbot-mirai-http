@@ -7,6 +7,7 @@ add_library(app STATIC
     help.cpp help.h
     tools.cpp tools.h
     smoke.cpp smoke.h
+    eatwhat.cpp eatwhat.h
 )
 set_target_properties(app PROPERTIES
     CXX_STANDARD 17)

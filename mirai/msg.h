@@ -32,6 +32,9 @@ std::vector<std::string> messageChainToArgs(const json&, unsigned max_count = UI
 int sendMsgRespStr(const MsgMetadata& meta, const std::string& str, int64_t quoteMsgId = 0);
 int sendMsgResp(const MsgMetadata& meta, const json& messageChain, int64_t quoteMsgId = 0);
 
+inline const json MSG_TEMPLATE = R"({ "messageChain": [] })"_json;
+#define MSG_LINE(x) json::parse( R"({ "messageChain": [{"type":"Plain","text":")" x R"("}] })" )
+
 inline json buildMessagePlain(const std::string& s)
 {
     json v;

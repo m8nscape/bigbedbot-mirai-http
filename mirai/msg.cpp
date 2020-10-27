@@ -71,16 +71,26 @@ std::string messageChainToStr(const json& v)
 
 std::vector<std::string> messageChainToArgs(const json& v, unsigned max_count)
 {
-    auto ss = std::stringstream(messageChainToStr(v));
+    auto str = messageChainToStr(v);
+    auto ss = std::stringstream(str);
 
     std::vector<std::string> args;
+    size_t lengthProcessed = 0;
     while (!ss.eof() && args.size() < max_count - 1)
     {
         std::string s;
         ss >> s;
         args.push_back(s);
+        lengthProcessed += s.length();
     }
-    if (!ss.eof()) args.push_back(ss.str());
+    if (!ss.eof())
+    {
+        while (str.length() > lengthProcessed
+            && (str[lengthProcessed] == ' ' || str[lengthProcessed] == '\t' || str[lengthProcessed] == '\n'))
+            lengthProcessed++;
+
+        args.push_back(str.substr(lengthProcessed));
+    }
     return args;
 }
 

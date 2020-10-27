@@ -7,10 +7,10 @@
 #include "app/help.h"
 #include "app/tools.h"
 #include "app/smoke.h"
+#include "app/eatwhat.h"
 
 #include "time_evt.h"
 
-// #include "app/eat.h"
 // #include "app/event_case.h"
 // #include "app/gambol.h"
 // #include "app/monopoly.h"
@@ -29,10 +29,11 @@ void init_modules()
     // event_case::init("./app/event_case_draw.yaml", "./app/eent_case_drop.yaml");
 
     // app: eat
-    // eat::foodCreateTable();
-    // eat::drinkCreateTable();
-    // //eat::foodLoadListFromDb();
-    // eat::updateSteamGameList();
+    eatwhat::foodCreateTable();
+    eatwhat::drinkCreateTable();
+    addTimedEventEveryMin(std::bind(&SQLite::commit, &eatwhat::db, true));
+    //eat::foodLoadListFromDb();
+    //eat::updateSteamGameList();
     
     // app: monopoly
     //mnp::calc_event_max();
@@ -53,7 +54,7 @@ void shutdown_modules()
     // 		gambol::roulette::roundCancel(group);
     // }
 
-    //eat::db.transactionStop();
+    eatwhat::db.transactionStop();
 
 }
 
@@ -97,6 +98,7 @@ void add_msg_callbacks()
     mirai::regEventProc(evt::FriendMessage, smoke::privateMsgCallback);
     mirai::regEventProc(evt::TempMessage, 	smoke::privateMsgCallback);
     mirai::regEventProc(evt::GroupMessage, 	smoke::groupMsgCallback);
+    mirai::regEventProc(evt::GroupMessage, 	eatwhat::msgDispatcher);
 }
 
 }

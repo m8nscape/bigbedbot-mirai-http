@@ -1,5 +1,7 @@
 #include <cstdlib>
 #include <cstring>
+#include <string>
+#include <vector>
 
 #include "playwhat.h"
 
@@ -433,6 +435,23 @@ void updateSteamGameList()
         break;
     }
 
+}
+
+std::string 玩什么(::int64_t group, ::int64_t qq, std::vector<std::string> args)
+{
+    if (games.available && !games.games.empty())
+    {
+        int idx = randInt(0, games.games.size());
+        std::stringstream ss;
+        ss << CQ_At(qq) << "，你阔以选择 " <<
+            games.games[idx].name << std::endl <<
+            "https://store.steampowered.com/app/" << games.games[idx].appid;
+        return ss.str();
+    }
+    else
+    {
+        return "Steam游戏列表不可用";
+    }
 }
 
 
