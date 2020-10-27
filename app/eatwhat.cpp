@@ -1,114 +1,15 @@
 #include <sstream>
-#include "cqp.h"
-#include "eat.h"
-#include "appmain.h"
-#include "private/qqid.h"
+#include "eatwhat.h"
 #include "data/group.h"
-#include <Windows.h>
-#include <curl/curl.h>
-#include "cpp-base64/base64.h"
-#include "common/steam_parser.h"
-#include "utils/encoding.h"
-#include "utils/string_util.h"
 #include "utils/rand.h"
 
-namespace eat {
+#include <curl/curl.h>
 
-class curl_buffer
-{
-public:
-    int length = 0;
-    char* content = NULL;
-    curl_buffer() = delete;
-    curl_buffer(int len) { content = new char[len]; memset(content, 0, len * sizeof(char)); }
-    ~curl_buffer() { if (content) delete content; }
-};
-
-size_t curl_write(void* buffer, size_t size, size_t count, void* stream)
-{
-    curl_buffer* buf = (curl_buffer*)stream;
-    int newsize = size * count;
-    memcpy(buf->content + buf->length, buffer, newsize);
-    buf->length += newsize;
-    return newsize;
-}
-
-steam::SteamAppListParser games;
-//std::vector<std::pair<long, std::string>> steamGameList;
-void updateSteamGameList()
-{
-#ifdef _DEBUG
-    return;
-#endif
-
-    CURL *curl = curl_easy_init();
-    if (!curl)
-    {
-        addLog(LOG_WARNING, "play", "curl init error");
-    }
-
-    curl_buffer curlbuf(8 * 1024 * 1024);   // 8MB
-    curl_easy_setopt(curl, CURLOPT_URL, "http://api.steampowered.com/ISteamApps/GetAppList/v0002/?format=json");
-    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curl_write);
-    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &curlbuf);
-#ifdef _DEBUG
-    curl_easy_setopt(curl, CURLOPT_PROXY, "http://localhost:1080");
-#endif
-    curl_easy_setopt(curl, CURLOPT_TIMEOUT, 30);
-    int ret = curl_easy_perform(curl);
-    curl_easy_cleanup(curl);
-
-    switch (ret)
-    {
-    case CURLE_OK:
-	{
-		steam::SteamAppListParser gamestmp;
-		switch (gamestmp.parse(curlbuf.content))
-		{
-		case 0:
-			games.games.clear();
-			games = std::move(gamestmp);
-			char msg[128];
-			sprintf_s(msg, "added %u games", games.games.size());
-			addLogDebug("play", msg);
-			break;
-
-		case 2:
-			addLog(LOG_WARNING, "play", "parse error");
-			break;
-
-		case 3:
-			addLog(LOG_WARNING, "play", "parsing fsm state error");
-			break;
-
-		case 4:
-			addLog(LOG_WARNING, "play", "unexpected end of brace");
-			break;
-
-		case 5:
-			addLog(LOG_WARNING, "play", "deadloop detected");
-			break;
-
-		default:
-			break;
-		}
-	}
-		break;
-
-    default:
-    {
-        char msg[128];
-        sprintf_s(msg, "curl error: %d", ret);
-        addLog(LOG_WARNING, "play", msg);
-    }
-        break;
-    }
-
-}
+namespace eatwhat {
 
 std::string food::to_string(int64_t group)
 {
-    std::string qqname = "¸ô±ÚÈºÓÑ";
+    std::string qqname = "éš”å£ç¾¤å‹";
     if (group != 0 && offererType == food::QQ && offerer.qq != 0)
     {
         if (grp::groups.find(group) != grp::groups.end())
@@ -137,8 +38,8 @@ std::string food::to_string(int64_t group)
     ss << name;
     switch (offererType)
     {
-    case food::NAME:  ss << " (" << offerer.name << "Ìá¹©)"; break;
-    case food::QQ:    ss << " (" << qqname << "Ìá¹©)"; break;
+    case food::NAME:  ss << " (" << offerer.name << "æä¾›)"; break;
+    case food::QQ:    ss << " (" << qqname << "æä¾›)"; break;
     default: break;
     }
 
@@ -342,55 +243,55 @@ command msgDispatcher(const json& body)
     c.args = query;
     switch (c.c = commands_str[cmd])
     {
-    case commands::³ÔÊ²Ã´:
+    case commands::åƒä»€ä¹ˆ:
         c.func = [](::int64_t group, ::int64_t qq, std::vector<std::string> args, std::string raw) -> std::string
         {
             std::stringstream ss;
             ss << CQ_At(qq);
-            ss << "£¬ÄãÀ«ÒÔÑ¡Ôñ";
+            ss << "ï¼Œä½ é˜”ä»¥é€‰æ‹©";
 			food f;
-			if (getFood(f)) return "Ÿo";
+			if (getFood(f)) return "ç„¡";
             ss << f.to_string(group);
             return ss.str();
         };
         break;
-    case commands::ºÈÊ²Ã´:
+    case commands::å–ä»€ä¹ˆ:
         c.func = [](::int64_t group, ::int64_t qq, std::vector<std::string> args, std::string raw) -> std::string
         {
 			std::stringstream ss;
 			ss << CQ_At(qq);
-			ss << "£¬ÄãÀ«ÒÔÑ¡Ôñ";
+			ss << "ï¼Œä½ é˜”ä»¥é€‰æ‹©";
 			drink d;
-			if (getDrink(d)) return "Ÿo";
+			if (getDrink(d)) return "ç„¡";
 			ss << d.name;
 			return ss.str();
         };
         break;
-    case commands::ÍæÊ²Ã´:
+    case commands::ç©ä»€ä¹ˆ:
         c.func = [](::int64_t group, ::int64_t qq, std::vector<std::string> args, std::string raw) -> std::string
         {
             if (games.available && !games.games.empty())
             {
                 int idx = randInt(0, games.games.size());
                 std::stringstream ss;
-                ss << CQ_At(qq) << "£¬ÄãÀ«ÒÔÑ¡Ôñ " <<
+                ss << CQ_At(qq) << "ï¼Œä½ é˜”ä»¥é€‰æ‹© " <<
                     games.games[idx].name << std::endl <<
                     "https://store.steampowered.com/app/" << games.games[idx].appid;
                 return ss.str();
             }
             else
             {
-                return "SteamÓÎÏ·ÁĞ±í²»¿ÉÓÃ";
+                return "Steamæ¸¸æˆåˆ—è¡¨ä¸å¯ç”¨";
             }
         };
         break;
-    case commands::³ÔÊ²Ã´Ê®Á¬:
+    case commands::åƒä»€ä¹ˆåè¿:
         c.func = [](::int64_t group, ::int64_t qq, std::vector<std::string> args, std::string raw) -> std::string
         {
             std::stringstream ss;
             ss << CQ_At(qq);
-            ss << "£¬ÄãÀ«ÒÔÑ¡Ôñ£º\n";
-			if (!haveFood()) return "Ÿo";
+            ss << "ï¼Œä½ é˜”ä»¥é€‰æ‹©ï¼š\n";
+			if (!haveFood()) return "ç„¡";
 
 			food f[10];
 			int size = getFood10(f);
@@ -398,26 +299,26 @@ command msgDispatcher(const json& body)
 			{
 				ss << " - " << f[i].to_string(group) << "\n";
 			}
-            ss << "³Ô¶«Î÷»¹Ê®Á¬£¬×£Äú³ÅËÀ£¬¹ş";
+            ss << "åƒä¸œè¥¿è¿˜åè¿ï¼Œç¥æ‚¨æ’‘æ­»ï¼Œå“ˆ";
             return ss.str();
         };
         break;
-    case commands::¼Ó²Ë:
+    case commands::åŠ èœ:
         c.func = [](::int64_t group, ::int64_t qq, std::vector<std::string> args, std::string raw) -> std::string
         {
-            if (args.size() == 1) return "¿ÕÆø²»ÄÜ³ÔµÄ";
+            if (args.size() == 1) return "ç©ºæ°”ä¸èƒ½åƒçš„";
 
             std::string r(raw);
-            r = strip(r.substr(5));    // ¼Ó²Ë£ºBC D3 / B2 CB / 20
-            if (raw.empty()) return "¿ÕÆø²»ÄÜ³ÔµÄ";
-            if (r == "¿ÕÆø") return "¿ÕÆø²»ÄÜ³ÔµÄ";
-            if (r.length() > 30) return "Äã¾ÍÊÇ·ÉÌìÒâÃæÉñ½ÌÈË£¿";
+            r = strip(r.substr(5));    // åŠ èœï¼šBC D3 / B2 CB / 20
+            if (raw.empty()) return "ç©ºæ°”ä¸èƒ½åƒçš„";
+            if (r == "ç©ºæ°”") return "ç©ºæ°”ä¸èƒ½åƒçš„";
+            if (r.length() > 30) return "ä½ å°±æ˜¯é£å¤©æ„é¢ç¥æ•™äººï¼Ÿ";
 
             //TODO filter
 
             // check repeat
 			if (haveFood(r))
-                return r + "ÒÑ¾­ÓĞÁË£¡£¡£¡";
+                return r + "å·²ç»æœ‰äº†ï¼ï¼ï¼";
 
             food f;
             f.name = r;
@@ -425,25 +326,25 @@ command msgDispatcher(const json& body)
             f.offererType = f.QQ;
             if (addFood(f))
             {
-                return "²»×¼¼Ó";
+                return "ä¸å‡†åŠ ";
             }
             std::stringstream ss;
-            ss << "ÒÑÌí¼Ó" << f.to_string(group);
+            ss << "å·²æ·»åŠ " << f.to_string(group);
             return ss.str();
         };
         break;
-	case commands::É¾²Ë:
+	case commands::åˆ èœ:
 		c.func = [](::int64_t group, ::int64_t qq, std::vector<std::string> args, std::string raw) -> std::string
 		{
 			if (isGroupManager(group, qq))
 			{
-				if (args.size() == 1) return "¿ÕÆø²»ÄÜÉ¾µÄ";
+				if (args.size() == 1) return "ç©ºæ°”ä¸èƒ½åˆ çš„";
 
 				std::string r(raw);
-				r = strip(r.substr(5));    // ¼Ó²Ë£ºBC D3 / B2 CB / 20
-				if (raw.empty()) return "¿ÕÆø²»ÄÜÉ¾µÄ";
-				if (r == "¿ÕÆø") return "¿ÕÆø²»ÄÜÉ¾µÄ";
-				if (r.length() > 30) return "Äã¾ÍÊÇ·ÉÌìÒâÃæÉñ½ÌÈË£¿";
+				r = strip(r.substr(5));    // åŠ èœï¼šBC D3 / B2 CB / 20
+				if (raw.empty()) return "ç©ºæ°”ä¸èƒ½åˆ çš„";
+				if (r == "ç©ºæ°”") return "ç©ºæ°”ä¸èƒ½åˆ çš„";
+				if (r.length() > 30) return "ä½ å°±æ˜¯é£å¤©æ„é¢ç¥æ•™äººï¼Ÿ";
 
 				int64_t count = haveFood(r);
 				if (count)
@@ -452,30 +353,30 @@ command msgDispatcher(const json& body)
 				}
 
 				std::stringstream ss;
-				ss << "ÒÑÉ¾³ı" << count << "Ìõ" << r;
+				ss << "å·²åˆ é™¤" << count << "æ¡" << r;
 				return ss.str();
 			}
-			return "ÄãÉ¾¸ö´¸×Ó£¿";
+			return "ä½ åˆ ä¸ªé”¤å­ï¼Ÿ";
 		};
 		break;
-	case commands::¼ÓÒûÁÏ:
+	case commands::åŠ é¥®æ–™:
 		c.func = [](::int64_t group, ::int64_t qq, std::vector<std::string> args, std::string raw) -> std::string
 		{
-			if (!isGroupOwner(group, qq)) return "Äã¼Ó¸ö´¸×Ó£¿";
+			if (!isGroupOwner(group, qq)) return "ä½ åŠ ä¸ªé”¤å­ï¼Ÿ";
 
-			if (args.size() == 1) return "¿ÕÆø²»ÄÜºÈµÄ";
+			if (args.size() == 1) return "ç©ºæ°”ä¸èƒ½å–çš„";
 
 			std::string r(raw);
-			r = strip(r.substr(7));    // ¼Ó²Ë£ºBC D3 / B2 CB / 20
-			if (raw.empty()) return "¿ÕÆø²»ÄÜºÈµÄ";
-			if (r == "¿ÕÆø") return "¿ÕÆø²»ÄÜºÈµÄ";
-			if (r.length() > 30) return "Äã¾ÍÊÇ·ÉÌìÒâÃæÉñ½ÌÈË£¿";
+			r = strip(r.substr(7));    // åŠ èœï¼šBC D3 / B2 CB / 20
+			if (raw.empty()) return "ç©ºæ°”ä¸èƒ½å–çš„";
+			if (r == "ç©ºæ°”") return "ç©ºæ°”ä¸èƒ½å–çš„";
+			if (r.length() > 30) return "ä½ å°±æ˜¯é£å¤©æ„é¢ç¥æ•™äººï¼Ÿ";
 
 			//TODO filter
 
 			// check repeat
 			if (haveDrink(r))
-				return r + "ÒÑ¾­ÓĞÁË£¡£¡£¡";
+				return r + "å·²ç»æœ‰äº†ï¼ï¼ï¼";
 
 			drink d;
 			d.name = r;
@@ -483,25 +384,25 @@ command msgDispatcher(const json& body)
 			d.group = group;
 			if (addDrink(d))
 			{
-				return "²»×¼¼Ó";
+				return "ä¸å‡†åŠ ";
 			}
 			std::stringstream ss;
-			ss << "ÒÑÌí¼Ó" << d.name;
+			ss << "å·²æ·»åŠ " << d.name;
 			return ss.str();
 		};
 		break;
-	case commands::É¾ÒûÁÏ:
+	case commands::åˆ é¥®æ–™:
 		c.func = [](::int64_t group, ::int64_t qq, std::vector<std::string> args, std::string raw) -> std::string
 		{
-			if (!isGroupOwner(group, qq)) return "Äã¼Ó¸ö´¸×Ó£¿";
+			if (!isGroupOwner(group, qq)) return "ä½ åŠ ä¸ªé”¤å­ï¼Ÿ";
 
-			if (args.size() == 1) return "¿ÕÆø²»ÄÜÉ¾µÄ";
+			if (args.size() == 1) return "ç©ºæ°”ä¸èƒ½åˆ çš„";
 
 			std::string r(raw);
-			r = strip(r.substr(5));    // ¼Ó²Ë£ºBC D3 / B2 CB / 20
-			if (raw.empty()) return "¿ÕÆø²»ÄÜÉ¾µÄ";
-			if (r == "¿ÕÆø") return "¿ÕÆø²»ÄÜÉ¾µÄ";
-			if (r.length() > 30) return "Äã¾ÍÊÇ·ÉÌìÒâÃæÉñ½ÌÈË£¿";
+			r = strip(r.substr(5));    // åŠ èœï¼šBC D3 / B2 CB / 20
+			if (raw.empty()) return "ç©ºæ°”ä¸èƒ½åˆ çš„";
+			if (r == "ç©ºæ°”") return "ç©ºæ°”ä¸èƒ½åˆ çš„";
+			if (r.length() > 30) return "ä½ å°±æ˜¯é£å¤©æ„é¢ç¥æ•™äººï¼Ÿ";
 
 			int64_t count = haveDrink(r);
 			if (count)
@@ -510,17 +411,17 @@ command msgDispatcher(const json& body)
 			}
 
 			std::stringstream ss;
-			ss << "ÒÑÉ¾³ı" << count << "Ìõ" << r;
+			ss << "å·²åˆ é™¤" << count << "æ¡" << r;
 			return ss.str();
 		};
 		break;
-    case commands::²Ëµ¥:
+    case commands::èœå•:
         c.func = [](::int64_t group, ::int64_t qq, std::vector<std::string> args, std::string raw) -> std::string
         {
 			int64_t count = haveFood();
-            if (!count) return "ÎŞ";
+            if (!count) return "æ— ";
 
-			return "²Ëµ¥ÔİÊ±²»¿ÉÓÃ£¡";
+			return "èœå•æš‚æ—¶ä¸å¯ç”¨ï¼";
 			/*
             // defuault: last 9 entries
             size_t range_min = (count <= 9) ? 0 : (count - 9);
@@ -562,11 +463,11 @@ command msgDispatcher(const json& body)
 			*/
         };
         break;
-    case commands::É¾¿â:
+    case commands::åˆ åº“:
         c.func = [](::int64_t group, ::int64_t qq, std::vector<std::string> args, std::string raw) -> std::string
         {
             if (qq != qqid_admin)
-                return "²»×¼É¾";
+                return "ä¸å‡†åˆ ";
 
             if (db.exec(
                 "DELETE FROM food \
@@ -576,7 +477,7 @@ command msgDispatcher(const json& body)
                 return db.errmsg();
             }
             //foodList.clear();
-            return "dropÁË";
+            return "dropäº†";
         };
         break;
     default: break;

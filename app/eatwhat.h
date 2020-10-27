@@ -4,47 +4,49 @@
 #include <string>
 #include <functional>
 #include <iostream>
+
 #include "common/dbconn.h"
-namespace eat {
+
+namespace eatwhat {
 
 inline SQLite db("eat.db", "eat");
 
 enum class commands: size_t {
-    ³ÔÊ²Ã´,
-    ºÈÊ²Ã´,
-    ÍæÊ²Ã´,
-    ³ÔÊ²Ã´Ê®Á¬,
-    ¼Ó²Ë,
-	É¾²Ë,
-	¼ÓÒûÁÏ,
-	É¾ÒûÁÏ,
-    ²Ëµ¥,
-    É¾¿â,
+    åƒä»€ä¹ˆ,
+    å–ä»€ä¹ˆ,
+    ç©ä»€ä¹ˆ,
+    åƒä»€ä¹ˆåè¿,
+    åŠ èœ,
+	åˆ èœ,
+	åŠ é¥®æ–™,
+	åˆ é¥®æ–™,
+    èœå•,
+    åˆ åº“,
 };
 
 inline std::map<std::string, commands> commands_str
 {
-    {"³ÔÊ²Ã´", commands::³ÔÊ²Ã´},
-    {"³ÔÊ²üN", commands::³ÔÊ²Ã´},   //·±ów»¯
-    {"ºÈÊ²Ã´", commands::ºÈÊ²Ã´},
-    {"ºÈÊ²üN", commands::ºÈÊ²Ã´},   //·±ów»¯
-    {"ÍæÊ²Ã´", commands::ÍæÊ²Ã´},
-    {"ÍæÊ²üN", commands::ÍæÊ²Ã´},   //·±ów»¯
-    {"³ÔÊ²Ã´Ê®Á¬", commands::³ÔÊ²Ã´Ê®Á¬},
-    {"³ÔÊ²üNÊ®ßB", commands::³ÔÊ²Ã´Ê®Á¬},   //·±ów»¯
-    {"¼Ó²Ë", commands::¼Ó²Ë},
-    {"¼Ó²Ë", commands::¼Ó²Ë},   //·±ów»¯
-	{"¼õ²Ë", commands::É¾²Ë},
-    {"œp²Ë", commands::É¾²Ë},   //·±ów»¯
-	{"É¾²Ë", commands::É¾²Ë},
-    {"„h²Ë", commands::É¾²Ë},   //·±ów»¯
-	{"¼ÓÒûÁÏ", commands::¼ÓÒûÁÏ},
-    {"¼Óï‹ÁÏ", commands::¼ÓÒûÁÏ},   //·±ów»¯
-	{"É¾ÒûÁÏ", commands::É¾ÒûÁÏ},
-    {"„hï‹ÁÏ", commands::É¾ÒûÁÏ},   //·±ów»¯
-    {"²Ëµ¥", commands::²Ëµ¥},
-    {"²Ë†Î", commands::²Ëµ¥},   //·±ów»¯
-    //{"drop", commands::É¾¿â},
+    {"åƒä»€ä¹ˆ", commands::åƒä»€ä¹ˆ},
+    {"åƒä»€éº¼", commands::åƒä»€ä¹ˆ},   //ç¹é«”åŒ–
+    {"å–ä»€ä¹ˆ", commands::å–ä»€ä¹ˆ},
+    {"å–ä»€éº¼", commands::å–ä»€ä¹ˆ},   //ç¹é«”åŒ–
+    {"ç©ä»€ä¹ˆ", commands::ç©ä»€ä¹ˆ},
+    {"ç©ä»€éº¼", commands::ç©ä»€ä¹ˆ},   //ç¹é«”åŒ–
+    {"åƒä»€ä¹ˆåè¿", commands::åƒä»€ä¹ˆåè¿},
+    {"åƒä»€éº¼åé€£", commands::åƒä»€ä¹ˆåè¿},   //ç¹é«”åŒ–
+    {"åŠ èœ", commands::åŠ èœ},
+    {"åŠ èœ", commands::åŠ èœ},   //ç¹é«”åŒ–
+	{"å‡èœ", commands::åˆ èœ},
+    {"æ¸›èœ", commands::åˆ èœ},   //ç¹é«”åŒ–
+	{"åˆ èœ", commands::åˆ èœ},
+    {"åˆªèœ", commands::åˆ èœ},   //ç¹é«”åŒ–
+	{"åŠ é¥®æ–™", commands::åŠ é¥®æ–™},
+    {"åŠ é£²æ–™", commands::åŠ é¥®æ–™},   //ç¹é«”åŒ–
+	{"åˆ é¥®æ–™", commands::åˆ é¥®æ–™},
+    {"åˆªé£²æ–™", commands::åˆ é¥®æ–™},   //ç¹é«”åŒ–
+    {"èœå•", commands::èœå•},
+    {"èœå–®", commands::èœå•},   //ç¹é«”åŒ–
+    //{"drop", commands::åˆ åº“},
 };
 
 typedef std::function<std::string(::int64_t, ::int64_t, std::vector<std::string>&, const char*)> callback;
@@ -80,6 +82,4 @@ struct drink
 inline std::vector<drink> drinkList;
 void drinkCreateTable();
 
-void updateSteamGameList();
-    
 }
