@@ -380,7 +380,7 @@ std::string 加饮料(::int64_t group, ::int64_t qq, const std::string& r)
     return ss.str();
 }
 
-std::string 删饮料(::int64_t group, ::int64_t qq, std::string& r)
+std::string 删饮料(::int64_t group, ::int64_t qq, const std::string& r)
 {
     if (grp::groups[group].haveMember(qq) 
         && grp::groups[group].members[qq].permission != mirai::group_member_permission::OWNER)
@@ -508,16 +508,20 @@ void msgDispatcher(const json& body)
         mirai::sendMsgResp(m, 吃什么十连(m.groupid, m.qqid, query));
         break;
     case commands::加菜:
-        mirai::sendMsgRespStr(m, 加菜(m.groupid, m.qqid, query[1]));
+        if (query.size() > 1)
+            mirai::sendMsgRespStr(m, 加菜(m.groupid, m.qqid, query[1]));
         break;
     case commands::删菜:
-        mirai::sendMsgRespStr(m, 删菜(m.groupid, m.qqid, query[1]));
+        if (query.size() > 1)
+            mirai::sendMsgRespStr(m, 删菜(m.groupid, m.qqid, query[1]));
         break;
     case commands::加饮料:
-        mirai::sendMsgRespStr(m, 加饮料(m.groupid, m.qqid, query[1]));
+        if (query.size() > 1)
+            mirai::sendMsgRespStr(m, 加饮料(m.groupid, m.qqid, query[1]));
         break;
     case commands::删饮料:
-        mirai::sendMsgRespStr(m, 删饮料(m.groupid, m.qqid, query[1]));
+        if (query.size() > 1)
+            mirai::sendMsgRespStr(m, 删饮料(m.groupid, m.qqid, query[1]));
         break;
     case commands::菜单:
         mirai::sendMsgRespStr(m, 菜单(m.groupid, m.qqid, query));

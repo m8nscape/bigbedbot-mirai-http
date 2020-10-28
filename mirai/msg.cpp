@@ -89,7 +89,8 @@ std::vector<std::string> messageChainToArgs(const json& v, unsigned max_count)
             && (str[lengthProcessed] == ' ' || str[lengthProcessed] == '\t' || str[lengthProcessed] == '\n'))
             lengthProcessed++;
 
-        args.push_back(str.substr(lengthProcessed));
+        if (str.length() > lengthProcessed)
+            args.push_back(str.substr(lengthProcessed));
     }
     return args;
 }
