@@ -39,7 +39,7 @@ std::vector<chance> chanceList;
 struct flags
 {
     time_t  freeze_assets_expire_time = 0;
-    time_t  adrenaline_expire_time = 0;
+    time_t  adrenaline_expire_time = LONG_MAX;
     bool    chaos = false;
     bool    skip_mul_all_currency_sub1 = false;
 
@@ -249,7 +249,7 @@ std::string convertRespMsg(const std::string& raw, int64_t qqid, int64_t groupid
     return std::move(s);
 }
 
-void doChance(const mirai::MsgMetadata& m, const chance& c)
+void doChance(const mirai::MsgMetadata& m, const chance& c, bool adrenaline)
 {
     // save pre-cmd info
     auto pre = user::plist[m.qqid];
@@ -264,17 +264,37 @@ void doChance(const mirai::MsgMetadata& m, const chance& c)
     // send resp
     json resp = mirai::MSG_TEMPLATE;
     json& r = resp["messageChain"];
+    if (adrenaline)
+        r.push_back(mirai::buildMessagePlain("肾上腺素生效！"));
     r.push_back(mirai::buildMessageAt(m.qqid));
     r.push_back(mirai::buildMessagePlain(convertRespMsg(c.msg, m.qqid, m.groupid, target, pre, user::plist[m.qqid])));
     mirai::sendMsgResp(m, resp);
 
 }
 
+json not_registered(int64_t qq)
+{
+    json resp = mirai::MSG_TEMPLATE;
+    resp["messageChain"].push_back(mirai::buildMessageAt(qq));
+    resp["messageChain"].push_back(mirai::buildMessagePlain("，你还没有开通菠菜"));
+    return resp;
+}
+
+json not_enough_stamina(int64_t qq, time_t rtime)
+{
+    json resp = mirai::MSG_TEMPLATE;
+    resp["messageChain"].push_back(mirai::buildMessageAt(qq));
+    std::stringstream ss;
+    ss << "，你的体力不足，回满还需"
+        << rtime / (60 * 60) << "小时" << rtime / 60 % 60 << "分钟";
+    resp["messageChain"].push_back(mirai::buildMessagePlain(ss.str()));
+    return resp;
+}
+
 void msgCallback(const json& body)
 {
     auto query = mirai::messageChainToArgs(body);
     if (query.empty()) return;
-
     if (query[0] != "抽卡") return;
 
     auto m = mirai::parseMsgMetadata(body);
@@ -282,11 +302,29 @@ void msgCallback(const json& body)
     if (!grp::groups[m.groupid].getFlag(grp::Group::MASK_P | grp::Group::MASK_MONOPOLY))
         return;
 
+    if (user::plist.find(m.qqid) == user::plist.end()) 
+    {
+        mirai::sendMsgResp(m, not_registered(m.qqid));
+        return;
+    }
+
+    time_t t = time(nullptr);
+    bool adrenaline = t > user_stat[m.qqid].adrenaline_expire_time;
+    if (adrenaline)
+    {
+        auto [enough, stamina, rtime] = user::plist[m.qqid].modifyStamina(1);
+        if (!enough)
+        {
+            mirai::sendMsgResp(m, not_enough_stamina(m.qqid, rtime));
+            return;
+        }
+    }
+
     if (user_stat[m.qqid].chaos)
     {
         user_stat[m.qqid].chaos = false;
         size_t idx = randInt(0, chanceList.size() - 1);
-        doChance(m, chanceList[idx]);
+        doChance(m, chanceList[idx], adrenaline);
     }
     else
     {
@@ -296,7 +334,7 @@ void msgCallback(const json& body)
         {
             if (prob < p)
             {
-                doChance(m, c);
+                doChance(m, c, adrenaline);
                 break;
             }
             p += c.prob;
