@@ -332,12 +332,12 @@ void msgCallback(const json& body)
         double p = 0.0;
         for (const auto& c : chanceList)
         {
+            p += c.prob;
             if (prob < p)
             {
                 doChance(m, c, adrenaline);
                 break;
             }
-            p += c.prob;
         }
     }
 }
