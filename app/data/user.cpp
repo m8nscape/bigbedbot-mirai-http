@@ -40,14 +40,13 @@ void peeLoadFromDb()
         p3 = std::any_cast<time_t> (row[3]);
         p4 = std::any_cast<int64_t>(row[4]);
         plist[qq] = { qq, p1, p2, p3, p4 };
-        plist[qq].freeze_assets_expire_time = INT64_MAX;
     }
     char msg[128];
     sprintf(msg, "added %u users", plist.size());
     addLogDebug("pee", msg);
 }
 
-pdata::resultStamina pdata::getStamina(bool extra)
+pdata::resultStamina pdata::getStamina(bool extra) const
 {
     time_t t = time(nullptr);
     time_t last = stamina_recovery_time;
@@ -108,7 +107,7 @@ pdata::resultStamina pdata::modifyStamina(int cost, bool extra)
     return { enough, stamina, stamina_recovery_time - t };
 }
 
-pdata::resultStamina pdata::testStamina(int cost)
+pdata::resultStamina pdata::testStamina(int cost) const
 {
     int stamina = getStamina(false).staminaAfterUpdate;
 

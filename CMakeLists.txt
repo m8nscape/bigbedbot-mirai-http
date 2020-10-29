@@ -18,9 +18,11 @@ endif()
 
 add_executable(bbb 
     utils/logger.cpp utils/logger.h utils/rand.h
-    time_evt.cpp time_evt.h modules.cpp core.cpp core.h main.cpp)
+    time_evt.cpp time_evt.h modules.cpp core.cpp core.h main.cpp  )
 set_target_properties(bbb PROPERTIES
     CXX_STANDARD 17)
+
+find_package(Boost REQUIRED)
 
 add_subdirectory(thirdparty)
 add_subdirectory(mirai)

@@ -8,6 +8,7 @@ add_library(app STATIC
     tools.cpp tools.h
     smoke.cpp smoke.h
     eatwhat.cpp eatwhat.h
+    monopoly.cpp monopoly.h
 )
 set_target_properties(app PROPERTIES
     CXX_STANDARD 17)
@@ -37,3 +38,5 @@ else()
 endif()
 
 target_link_libraries(app PRIVATE ${CURL_LIBRARY})
+
+target_link_libraries(app PRIVATE Boost::disable_autolinking)
