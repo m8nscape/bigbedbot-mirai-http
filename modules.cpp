@@ -8,12 +8,12 @@
 #include "app/tools.h"
 #include "app/smoke.h"
 #include "app/eatwhat.h"
+#include "app/monopoly.h"
 
 #include "time_evt.h"
 
 // #include "app/event_case.h"
 // #include "app/gambol.h"
-// #include "app/monopoly.h"
 // #include "app/user_op.h"
 // #include "app/weather.h"
 
@@ -37,6 +37,7 @@ void init_modules()
     
     // app: monopoly
     //mnp::calc_event_max();
+    monopoly::init("./config/monopoly_chance.yaml");
 
     // announce startup
     //std::string boot_info = help::boot_info();
@@ -98,7 +99,8 @@ void add_msg_callbacks()
     mirai::regEventProc(evt::FriendMessage, smoke::privateMsgCallback);
     mirai::regEventProc(evt::TempMessage, 	smoke::privateMsgCallback);
     mirai::regEventProc(evt::GroupMessage, 	smoke::groupMsgCallback);
-    mirai::regEventProc(evt::GroupMessage, 	eatwhat::msgDispatcher);
+    mirai::regEventProc(evt::GroupMessage,  eatwhat::msgDispatcher);
+    mirai::regEventProc(evt::GroupMessage, 	monopoly::msgCallback);
 }
 
 }

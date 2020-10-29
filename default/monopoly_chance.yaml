@@ -1,0 +1,64 @@
+# 抽卡命运卡
+
+# 概率设定(prob)方式为加权平均
+
+# 打印消息(msg)可以带以下参数：
+# {currency_pre}      # 事件前余额
+# {currency_post}     # 事件后余额
+# {currency_delta}    # 事件改变的余额
+# {key_pre}           # 事件前钥匙数
+# {key_post}          # 事件后钥匙数
+# {key_delta}         # 事件改变的钥匙数
+# {stamina_pre}       # 事件前体力
+# {stamina_post}      # 事件后体力
+# {stamina_delta}     # 事件改变的体力
+# {player_card}       # 随机事件的目标群名片
+# {target_card}       # 随机事件的目标群名片
+
+# 每个事件可以带以下指令(commands)（可选）：
+# muted x             # 被禁烟x分钟
+# mute_dk x           # 禁烟跌坑x分钟
+# mute_bot x          # 禁烟bot x分钟
+# mute_random x       # 随机抽一个人禁烟x分钟
+# give_key x          # 获得x把钥匙（可为负数）
+# give_currency x     # 获得x个批（可为负数）
+# give_stamina x      # 获得x点体力（可为负数）
+# give_stamina_extra x # 获得x点体力，可超过上限（可为负数）
+# set_stamina x       # 变成x点体力
+# mul_currency x      # 批乘x 四舍五入
+# give_all_key x      # 全群获得x把钥匙
+# give_all_currency x # 全群获得x个批
+# give_all_currency_range x y # 全群获得随机x-y个批，每人随机一次
+# give_all_stamina x  # 全群获得x点体力
+# mul_all_currency x  # 全群批乘x 四舍五入
+# set_all_stamina x   # 全群变成x点体力
+# add_daily_pool x    # 明日批池增加x个批（可为负数）
+# get_mul_sub1_skip   # 免疫下一次小于1的全群批乘
+# fever x             # 肾上腺素，接下来x秒内抽卡不消耗体力
+# chaos               # 下次抽卡以古典概型抽卡池
+
+#################################################
+
+msg: 铁制钥匙1把
+prob: 10
+commands:
+    - get_key 1
+-
+msg: 扔在路边没人要的地下水，获得1个批
+prob: 10
+commands:
+    - get_currency 1
+-
+msg: 再来一次券，获得1点体力
+prob: 10
+commands:
+    - get_stamina 1
+-
+msg: 禁烟儿童套餐，烟起1分钟
+prob: 5
+commands:
+    - muted 1
+-
+msg: 锤子，你抽个锤子
+prob: 10
+-

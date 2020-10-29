@@ -1,480 +1,305 @@
-#include <cmath>
-#include <thread>
-#include <sstream>
 #include "monopoly.h"
 
-#include "utils/rand.h"
-#include "utils/string_util.h"
+#include <filesystem>
+#include <functional>
+#include <map>
+#include <list>
 
-#include "data/user.h"
+#include <boost/algorithm/string.hpp>
+
+#include "yaml-cpp/yaml.h"
+
 #include "data/group.h"
-#include "private/qqid.h"
+#include "data/user.h"
+#include "utils/logger.h"
+#include "utils/rand.h"
 
-#include "user_op.h"
-#include "smoke.h"
+#include "mirai/api.h"
+#include "mirai/msg.h"
+#include "mirai/util.h"
 
-#include "cqp.h"
-#include "cqp_ex.h"
-
-extern time_t banTime_me;
-
-namespace mnp
+namespace monopoly
 {
-using user::plist;
 
-const std::vector<event_type> EVENT_POOL{
-    { 0.02,[](int64_t group, int64_t qq) { plist[qq].modifyKeyCount(+1); return "铁制钥匙1把"; }},
-    { 0.02,[](int64_t group, int64_t qq) { plist[qq].modifyKeyCount(+1); return "金钥匙1把"; }},
-    { 0.02,[](int64_t group, int64_t qq) { plist[qq].modifyKeyCount(+1); return "铜制钥匙1把"; }},
-    { 0.02,[](int64_t group, int64_t qq) { plist[qq].modifyKeyCount(+1); return "开锁用铁丝，能撬开1个箱子"; }},
-    { 0.02,[](int64_t group, int64_t qq) { plist[qq].modifyKeyCount(+1); return "扳手，能砸开1个箱子"; }},
-    { 0.01,[](int64_t group, int64_t qq) { plist[qq].modifyKeyCount(+2); return "黑桃钥匙，能开2个箱子"; }},
-    { 0.01,[](int64_t group, int64_t qq) { plist[qq].modifyKeyCount(+2); return "红心钥匙，能开2个箱子"; }},
-    { 0.01,[](int64_t group, int64_t qq) { plist[qq].modifyKeyCount(+2); return "梅花钥匙，能开2个箱子"; }},
-    { 0.01,[](int64_t group, int64_t qq) { plist[qq].modifyKeyCount(+2); return "方块钥匙，能开2个箱子"; }},
-    { 0.01,[](int64_t group, int64_t qq) { plist[qq].modifyKeyCount(+2); return "钻石钥匙，能开2个箱子"; }},
-    { 0.01,[](int64_t group, int64_t qq) { plist[qq].modifyKeyCount(+10); return "钥匙套装，获得10把钥匙"; }},
-	{ 0.05,[](int64_t group, int64_t qq) { plist[qq].modifyCurrency(+1); return "扔在路边没人要的地下水，获得1个批"; }},
-    { 0.02,[](int64_t group, int64_t qq) { plist[qq].modifyCurrency(+5); return "限量版康帅博牛肉面，获得5个批"; }},
-    { 0.01,[](int64_t group, int64_t qq) { plist[qq].modifyCurrency(+20); return "爪子刀玩具模型，获得20个批"; }},
-    { 0.005,[](int64_t group, int64_t qq) { plist[qq].modifyCurrency(+100); return "大床纪念相册，获得100个批"; }},
-	{ 0.06,[](int64_t group, int64_t qq) { plist[qq].modifyStamina(-1); return "再来一次券，获得1点体力"; }},
-    { 0.02,[](int64_t group, int64_t qq) { plist[qq].modifyStamina(-2); return "再来一次双人体验套餐，获得2点体力"; }},
-    { 0.01,[](int64_t group, int64_t qq) { plist[qq].modifyStamina(-4); return "原素瓶，获得4点体力"; }},
-    { 0.01,[](int64_t group, int64_t qq) { plist[qq].modifyKeyCount(+4); return "原素灰瓶，你用魔法做出了4把钥匙"; }},
-    { 0.002,[](int64_t group, int64_t qq) { plist[qq].modifyCurrency(+500); return "大床兔子BEX通关纪念雕像，获得500个批"; }},
-    { 0.02,[](int64_t group, int64_t qq) { plist[qq].modifyKeyCount(+5); return "开锁工具，能开5个箱子"; }},
+using namespace std::placeholders;
 
-    { 0.01,[](int64_t group, int64_t qq) { plist[qq].modifyStamina(1); return "残业，你加了半小时班"; } },
-    { 0.01,[](int64_t group, int64_t qq) { plist[qq].modifyStamina(-2); return "葡萄糖液，获得2点体力"; } },
-    { 0.01,[](int64_t group, int64_t qq) { plist[qq].modifyStamina(-2); return "海市蜃楼，获得2点体力"; } },
-    { 0.01,[](int64_t group, int64_t qq) { plist[qq].modifyStamina(1); return "大家好，你被美食图片饿走1点体力"; } },
-    { 0.01,[](int64_t group, int64_t qq) { smoke::nosmoking(group, qq, 2); return "禁烟1+1=12套餐，烟起2分钟"; } },
-    { 0.005,[](int64_t group, int64_t qq) { plist[qq].modifyStamina(-user::MAX_STAMINA); return "回复石，你感觉神清气爽，体力回满了"; }},
+using func = std::function<void(int64_t qqid, int64_t groupid, int64_t& target)>;
 
-    { 0.01,[](int64_t group, int64_t qq)
-    {
-        plist[qq].modifyStamina(-3, true);
-        using namespace std::string_literals;
-        return "小蓝杯，获得3点体力"s + (plist[qq].getStamina(true).staminaAfterUpdate > user::MAX_STAMINA ? "，甚至突破了体力上限"s : ""s);
-    }},
-
-    { 0.008,[](int64_t group, int64_t qq)
-    {
-        auto [enough, stamina, t] = plist[qq].modifyStamina(0);
-        plist[qq].modifyStamina(stamina);
-        return "加班邮件，你的体力被吸光了";
-    }},
-
-    { 0.04,[](int64_t group, int64_t qq) { smoke::nosmoking(group, qq, 1); return "禁烟儿童套餐，烟起1分钟"; }},
-    { 0.005,[](int64_t group, int64_t qq) { smoke::nosmoking(group, qq, 5); return "禁烟板烧套餐，烟起5分钟"; }},
-
-    { 0.01,[](int64_t group, int64_t qq)
-    {
-        plist[qq].modifyCurrency(-50);
-        return "仙人掌，你的手被扎成了马蜂窝，花费医药费50批";
-    }},
-
-    { 0.01,[](int64_t group, int64_t qq)
-    {
-		plist[qq].modifyCurrency(-10);
-        user_op::extra_tomorrow += 10;
-        return "慈善参与奖，花费10批加入明日批池"; 
-    }},
-
-    { 0.01,[](int64_t group, int64_t qq)
-    {
-        double p = randReal();
-        if (p < 0.5) p = 1.0 + (p / 0.5);
-		plist[qq].multiplyCurrency(p);
-        using namespace std::string_literals;
-        return "一把菠菜，你的批变成了"s + std::to_string(p) + "倍"s;
-    }},
-
-    { 0.01,[](int64_t group, int64_t qq) -> std::string
-    {
-        if (grp::groups[group].haveMember(qqid_dk))
-        {
-            smoke::nosmoking(group, qqid_dk, 1);
-            return "干死也军车，烟他！";
-        }
-        else return EVENT_POOL[0].func()(group, qq);
-    }},
-
-    { 0.002,[](int64_t group, int64_t qq) -> std::string
-    {
-        for (auto& [qq, pd] : plist)
-        {
-            if (grp::groups[group].haveMember(qq))
-            {
-                auto [enough, stamina, t] = plist[qq].modifyStamina(0);
-                plist[qq].modifyStamina(stamina);
-                plist[qq].modifyStamina(-2);
-            }
-        }
-        return "二向箔，本群所有人的体力都变成了2点";
-    }},
-
-    { 0.002,[](int64_t group, int64_t qq) -> std::string
-    {
-        for (auto& [qq, pd] : plist)
-        {
-            if (grp::groups[group].haveMember(qq))
-            {
-                if (plist[qq].meteor_shield)
-                {
-                    plist[qq].meteor_shield = false;
-                    continue;
-                }
-				plist[qq].multiplyCurrency(0.9);
-            }
-        }
-        return "陨石，本群所有人的钱包都被炸飞10%";
-    }},
-
-    { 0.005,[](int64_t group, int64_t qq) -> std::string
-    {
-        std::thread([]() {using namespace std::chrono_literals; std::this_thread::sleep_for(2s); user_op::flushDailyTimep(); }).detach();
-        return "F5";
-    }},
-
-    { 0.01,[](int64_t group, int64_t qq) { return "断钥匙一把，你尝试用来开箱但是失败了"; } },
-    { 0.01,[](int64_t group, int64_t qq) { return "机械鼠标球一个，但是没有什么用"; } },
-    { 0.01,[](int64_t group, int64_t qq) { return "巨大回车键一个，但是没有什么用"; } },
-    { 0.01,[](int64_t group, int64_t qq) { return EMOJI_HAMMER + "，你抽个" + EMOJI_HAMMER; } },
-    { 0.01,[](int64_t group, int64_t qq) { return "一团稀有气体，但是没有什么用"; } },
-
-    { 0.002,[](int64_t group, int64_t qq)
-    {
-		plist[qq].modifyCurrency(-500);
-        return "JJ怪，你的家被炸烂了，损失500批";
-    } },
-
-    { 0.01,[](int64_t group, int64_t qq)
-    {
-		plist[qq].modifyCurrency(+10);
-		user_op::extra_tomorrow -= 10;
-        if (-user_op::extra_tomorrow > user_op::DAILY_BONUS) user_op::extra_tomorrow = -user_op::DAILY_BONUS;
-        return "二级钳工认证，从明日批池偷到10批";
-    } },
-
-    { 0.01,[](int64_t group, int64_t qq) -> std::string
-    {
-        if (plist[qq].getKeyCount() < 1) return EVENT_POOL[0].func()(group, qq);
-		plist[qq].modifyKeyCount(-1);
-        return "空箱子，你什么也没有开到，消耗1把钥匙";
-    } },
-
-    { 0.002,[](int64_t group, int64_t qq) -> std::string
-    {
-        for (auto& [qq, pd] : plist)
-        {
-            if (grp::groups[group].haveMember(qq))
-            {
-                plist[qq].modifyStamina(-user::MAX_STAMINA);
-            }
-        }
-        return "一箱黄金胡萝卜，本群所有人的体力都回满了";
-    } },
-
-    { 0.002,[](int64_t group, int64_t qq) -> std::string
-    {
-        for (auto& [qq, pd] : plist)
-        {
-            if (grp::groups[group].haveMember(qq))
-            {
-                int bonus = randInt(50, 1000);
-				plist[qq].modifyCurrency(+bonus);
-            }
-        }
-        return "大风吹来本群的一堆批，自己查余额看捡到多少哦";
-    } },
-
-    { 0.01,[](int64_t group, int64_t qq) -> std::string
-    {
-        if (grp::groups[group].haveMember(qqid_dk))
-        {
-            int d = randInt(1, 5);
-            smoke::nosmoking(group, qq, d);
-            using namespace std::string_literals;
-            return "疯批跌坑，你被跌坑禁烟"s + std::to_string(d) + "分钟"s;
-        }
-        else return EVENT_POOL[0].func()(group, qq);
-    } },
-
-    { 0.01,[](int64_t group, int64_t qq) { return EMOJI_HORN + "，傻逼"; } },
-
-    /*
-    { 0.002,[](int64_t group, int64_t qq)
-    {
-        std::vector<unsigned> numbers;
-        auto c = plist[qq].currency;
-        while (c > 0)
-        {
-            int tmp = c % 10;
-            c /= 10;
-            numbers.push_back(tmp);
-        }
-        size_t size = numbers.size();
-        int64_t p = 0;
-        for (size_t i = 0; i < size; ++i)
-        {
-            unsigned idx = randInt(0, numbers.size() - 1);
-            p = p * 10 + numbers[idx];
-            numbers.erase(numbers.begin() + idx);
-        }
-        plist[qq].currency = p;
-        modifyCurrency(qq, plist[qq].currency);
-        return "混沌药水，你的批被打乱了";
-    } },
-
-    { 0.002,[](int64_t group, int64_t qq)
-    {
-        std::vector<unsigned> numbers;
-        auto c = plist[qq].currency;
-        size_t size = 0;
-        while (c > 0)
-        {
-            int tmp = c % 10;
-            c /= 10;
-            ++size;
-            if (tmp != 0) numbers.push_back(tmp);
-        }
-        if (numbers.empty())
-        {
-            // 0
-            return "融合药水，你的批全部变成了一样的数字";
-        }
-
-        int64_t p = 0;
-        unsigned idx = randInt(0, numbers.size() - 1);
-        for (size_t i = 0; i < size; ++i)
-        {
-            p = p * 10 + numbers[idx];
-        }
-        plist[qq].currency = p;
-        modifyCurrency(qq, plist[qq].currency);
-        return "融合药水，你的批全部变成了一样的数字";
-    } },
-
-    { 0.002,[](int64_t group, int64_t qq)
-    {
-        std::vector<unsigned> numbers;
-        auto c = plist[qq].currency;
-        while (c > 0)
-        {
-            int tmp = c % 10;
-            c /= 10;
-            numbers.push_back(tmp);
-        }
-        size_t size = numbers.size();
-        int64_t p = 0;
-        for (size_t i = 0; i < size; ++i)
-        {
-            p = p * 10 + numbers[i];
-        }
-        plist[qq].currency = p;
-        modifyCurrency(qq, plist[qq].currency);
-        return "镜像药水，你的批被反过来了";
-    } },
-        */
-
-    { 0.005,[](int64_t group, int64_t qq) -> std::string
-    {
-        std::vector<int64_t> grouplist;
-        for (auto& [qq, pd] : plist)
-        {
-            if (grp::groups[group].haveMember(qq))
-                grouplist.push_back(qq);
-        }
-        size_t idx = randInt(0, grouplist.size() - 1);
-        int64_t target = grouplist[idx];
-        smoke::nosmoking(group, target, 1);
-        using namespace std::string_literals;
-        return "禁烟洲际导弹，"s + CQ_At(target) + "不幸被烟1分钟";
-    } },
-
-
-    { 0.002,[](int64_t group, int64_t qq) -> std::string
-    {
-        plist[qq].meteor_shield = true;
-        return "陨石防护罩充能胶囊，免疫下一次陨石伤害";
-    } },
-
-    { 0.002,[](int64_t group, int64_t qq) -> std::string
-    {
-        int64_t cost = plist[qq].getCurrency() * 0.1;
-		plist[qq].modifyCurrency(-cost);
-        using namespace std::string_literals;
-        return "菠菜罚款单，你高强度菠菜被菜市场管理小组发现了，缴纳罚款"s + std::to_string(cost) + "批";
-    } },
-
-        /*
-    { 0.003,[](int64_t group, int64_t qq) -> std::string
-    {
-        plist[qq].air_pump_count = 5;
-        return "高级气泵，5次抽卡内必出空气";
-    } },
-
-    { 0.005,[](int64_t group, int64_t qq) -> std::string
-    {
-        plist[qq].air_ignore_count = 10;
-        return "真空抽气机，10次抽卡内不出空气";
-    } },
-    */
-
-    { 0.01,[](int64_t group, int64_t qq) -> std::string
-    {
-        time_t t = time(nullptr);
-        for (auto& c : smoke::smokeTimeInGroups)
-            for (auto& g : c.second)
-                if (t < g.second)
-                    CQ_setGroupBan(ac, g.first, c.first, 0);
-        return "大暴雨，所有人的烟都被浇灭了";
-    } },
-
-    { 0.002,[](int64_t group, int64_t qq) -> std::string
-    {
-		plist[qq].modifyKeyCount(+50);
-        return "王国之链，获得等身大接触式万能钥匙型武器一把，能敲开50个箱子"; 
-    } },
-
-    { 0.002,[](int64_t group, int64_t qq) -> std::string
-    {
-        time_t t = time(nullptr);
-        plist[qq].adrenaline_expire_time = t + 15;
-        return "肾上腺素，接下来15秒内抽卡不消耗体力";
-    } },
-
-
-    { 0.005,[](int64_t group, int64_t qq) -> std::string
-    {
-        time_t t = time(nullptr);
-        banTime_me = t + 60;
-        return "电子烟，bot被烟起1分钟";
-    } },
-
-    { 0.001,[](int64_t group, int64_t qq) -> std::string
-    {
-        time_t t = time(nullptr);
-        banTime_me = t + 60 * 5;
-        return "流感病毒，bot差点被你毒死，只好休息5分钟";
-    } },
-
-    { 0.005,[](int64_t group, int64_t qq) -> std::string
-    {
-        plist[qq].chaos = true;
-        return "世界线震动预警，下一次抽卡很可能会抽到奇怪的东西哦";
-    } },
+struct chance
+{
+    double prob;
+    std::string msg;
+    int category;
+    std::list<func> cmds;
+    static double total_prob;
 };
-const event_type EVENT_DEFAULT{ 1.0, [](int64_t group, int64_t qq) { return "空气，什么都么得"; } };
+double chance::total_prob = 0;
+std::vector<chance> chanceList;
 
-
-command msgDispatcher(const json& body)
+struct flags
 {
-    command c;
-    auto query = mirai::messageChainToArgs(body);
-    if (query.empty()) return c;
+    time_t  freeze_assets_expire_time = 0;
+    time_t  adrenaline_expire_time = 0;
+    bool    chaos = false;
+    bool    skip_mul_all_currency_sub1 = false;
 
-    auto cmd = query[0];
-    if (commands_str.find(cmd) == commands_str.end()) return c;
+};
+std::map<int64_t, flags> user_stat;
 
-    c.args = query;
-    switch (c.c = commands_str[cmd])
+namespace command
+{
+inline int64_t round(double x) { return static_cast<int64_t>(std::round(x)); }
+inline int64_t trunc(double x) { return static_cast<int64_t>(std::trunc(x)); }
+
+
+using efunc = std::function<void(int64_t qqid, int64_t groupid, double x, double y)>;
+void do_all(int64_t groupid, efunc f, double x = 0.0, double y = 0.0);
+
+int64_t get_random_registered_member(int64_t groupid);
+
+// events
+auto& pd = user::plist;
+void muted(int64_t qqid, int64_t groupid, double x) { mirai::mute(qqid, groupid, round(x * 60)); }
+void mute_dk(int64_t qqid, int64_t groupid, double x) { mirai::mute(/*TODO who is dk*/0, groupid, round(x * 60)); }
+void mute_bot(int64_t qqid, int64_t groupid, double x) { mirai::mute(botLoginQQId, groupid, round(x * 60)); }
+void mute_random(int64_t qqid, int64_t groupid, double x, int64_t& target) { target = get_random_registered_member(groupid); mirai::mute(target, groupid, round(x * 60)); }
+void give_key(int64_t qqid, double x) { pd[qqid].modifyKeyCount(round(x)); }
+void give_currency(int64_t qqid, double x) { pd[qqid].modifyCurrency(round(x)); }
+void give_stamina(int64_t qqid, double x) { pd[qqid].modifyStamina(-round(x)); }
+void give_stamina_extra(int64_t qqid, double x) { pd[qqid].modifyStamina(-round(x), true); }
+void set_stamina(int64_t qqid, double x) { pd[qqid].modifyStamina(pd[qqid].modifyStamina(0).staminaAfterUpdate); pd[qqid].modifyStamina(-round(x)); }
+void mul_currency(int64_t qqid, double x) { pd[qqid].modifyCurrency(round(pd[qqid].getCurrency() * x)); }
+void give_all_key(int64_t groupid, double x) { do_all(groupid, std::bind(give_key, _1, _3), x); }
+void give_all_currency(int64_t groupid, double x) { do_all(groupid, std::bind(give_currency, _1, _3), x); }
+void give_all_currency_range(int64_t groupid, double x, double y) { do_all(groupid, [](int64_t qqid, int64_t groupid, double x, double y) {pd[qqid].modifyCurrency(randInt(round(x), round(y))); }, x, y); }
+void give_all_stamina(int64_t groupid, double x) { do_all(groupid, std::bind(give_stamina, _1, _3), x); }
+void mul_all_currency(int64_t groupid, double x) { do_all(groupid, std::bind(mul_currency, _1, _3), x); }
+void set_all_stamina(int64_t groupid, double x) { do_all(groupid, std::bind(set_stamina, _1, _3), x); }
+void add_daily_pool(double x) { user::extra_tomorrow += round(x); }
+void get_mul_sub1_skip(int64_t qqid) { user_stat[qqid].skip_mul_all_currency_sub1 = true; }
+void fever(int64_t qqid, double x) { user_stat[qqid].adrenaline_expire_time = time(nullptr) + 15; }
+void chaos(int64_t qqid) { user_stat[qqid].chaos = true; }
+
+const std::map<std::string, void*> strMap
+{
+    {"muted", muted},
+    {"mute_dk", mute_dk},
+    {"mute_bot", mute_bot},
+    {"mute_random", mute_random},
+    {"give_key", give_key},
+    {"give_currency", give_currency},
+    {"give_stamina", give_stamina},
+    {"give_stamina_extra", give_stamina_extra},
+    {"set_stamina", set_stamina},
+    {"mul_currency", mul_currency},
+    {"give_all_key", give_all_key},
+    {"give_all_currency", give_all_currency},
+    {"give_all_currency_range", give_all_currency_range},
+    {"give_all_stamina", give_all_stamina},
+    {"mul_all_currency", mul_all_currency},
+    {"set_all_stamina", set_all_stamina},
+    {"add_daily_pool", add_daily_pool},
+    {"get_mul_sub1_skip", get_mul_sub1_skip},
+    {"fever", fever},
+    {"chaos", chaos},
+};
+
+void do_all(int64_t groupid, efunc f, double x, double y)
+{
+    bool check_skip_mul_all_currency_sub1 = false;
     {
-    case commands::抽卡:
-        c.func = [](::int64_t group, ::int64_t qq, std::vector<std::string> args, std::string raw)->std::string
+        auto pf = f.target<decltype(mul_all_currency)>();
+        if (pf && *pf == mul_all_currency && x < 1.0)
+            check_skip_mul_all_currency_sub1 = true;
+    }
+
+    for (auto& [qqid, u] : grp::groups.at(groupid).members)
+    {
+        if (check_skip_mul_all_currency_sub1)
         {
-            if (plist.find(qq) == plist.end()) return std::string(CQ_At(qq)) + "，你还没有开通菠菜";
-
-            std::stringstream ss;
-            time_t t = time(nullptr);
-            if (t > plist[qq].adrenaline_expire_time)
+            if (user_stat[qqid].skip_mul_all_currency_sub1)
             {
-                auto [enough, stamina, rtime] = plist[qq].modifyStamina(1);
+                user_stat[qqid].skip_mul_all_currency_sub1 = false;
+                continue;
+            }
+        }
 
-                if (!enough)
+        f(qqid, groupid, x, y);
+    }
+}
+
+int64_t get_random_registered_member(int64_t groupid)
+{
+    std::vector<int64_t> registeredMemberList;
+    for (auto& [qq, pd] : user::plist)
+    {
+        if (grp::groups[groupid].haveMember(qq))
+            registeredMemberList.push_back(qq);
+    }
+    if (!registeredMemberList.empty())
+    {
+        size_t idx = randInt(0, registeredMemberList.size() - 1);
+        return registeredMemberList[idx];
+    }
+    return 0;
+}
+
+}
+
+int init(const char* yaml)
+{
+    std::filesystem::path cfgPath(yaml);
+    if (!std::filesystem::is_regular_file(cfgPath))
+    {
+        addLog(LOG_ERROR, "monopoly", "chance list file %s not found", std::filesystem::absolute(cfgPath).c_str());
+        return -1;
+    }
+    addLog(LOG_INFO, "monopoly", "Loading chance events from %s", std::filesystem::absolute(cfgPath).c_str());
+
+    YAML::Node cfg = YAML::LoadFile(yaml);
+    unsigned count = 0;
+    chance::total_prob = 0.0;
+    for (const auto& u : cfg)
+    {
+        chance c;
+        c.prob = u["prob"].as<double>();
+        c.msg = u["msg"].as<std::string>();
+        for (const auto& e : cfg["cmds"])
+        {
+            std::vector<std::string> args;
+            boost::algorithm::split(args, e.as<std::string>(), boost::is_any_of(" "), boost::algorithm::token_compress_on);
+            if (args.empty()) break;
+
+            auto& cmd = args[0];
+            if (command::strMap.find(cmd) != command::strMap.end())
+            {
+                double x = 0.0, y = 0.0;
+                if (args.size() > 2)
                 {
-                    ss << CQ_At(qq) << "，你的体力不足，回满还需"
-                        << rtime / (60 * 60) << "小时" << rtime / 60 % 60 << "分钟";
-                    return ss.str();
+                    char* endptr = nullptr;
+                    double tmp = std::strtod(args[1].c_str(), &endptr);
+                    if (!endptr)
+                    {
+                        addLog(LOG_INFO, "monopoly", "error parsing param \"%s\"", e.as<std::string>().c_str());
+                        continue;
+                    }
+                    x = tmp;
                 }
-                // fall through if stamina is enough
+                if (args.size() > 3)
+                {
+                    char* endptr = nullptr;
+                    double tmp = std::strtod(args[2].c_str(), &endptr);
+                    if (!endptr)
+                    {
+                        addLog(LOG_INFO, "monopoly", "error parsing param \"%s\"", e.as<std::string>().c_str());
+                        continue;
+                    }
+                    y = tmp;
+                }
+
+                using namespace command;
+                auto pf = (uintptr_t)strMap.at(cmd);
+                if      (pf == (uintptr_t)muted)                c.cmds.emplace_back(std::bind(muted, _1, _2, x));
+                else if (pf == (uintptr_t)mute_dk)              c.cmds.emplace_back(std::bind(mute_dk, _1, _2, x));
+                else if (pf == (uintptr_t)mute_bot)             c.cmds.emplace_back(std::bind(mute_bot, _1, _2, x));
+                else if (pf == (uintptr_t)mute_random)          c.cmds.emplace_back(std::bind(mute_random, _1, _2, x, _3));
+                else if (pf == (uintptr_t)give_key)             c.cmds.emplace_back(std::bind(give_key, _1, x));
+                else if (pf == (uintptr_t)give_currency)        c.cmds.emplace_back(std::bind(give_currency, _1, x));
+                else if (pf == (uintptr_t)give_stamina)         c.cmds.emplace_back(std::bind(give_stamina, _1, x));
+                else if (pf == (uintptr_t)give_stamina_extra)   c.cmds.emplace_back(std::bind(give_stamina_extra, _1, x));
+                else if (pf == (uintptr_t)set_stamina)          c.cmds.emplace_back(std::bind(set_stamina, _1, x));
+                else if (pf == (uintptr_t)mul_currency)         c.cmds.emplace_back(std::bind(mul_currency, _1, x));
+                else if (pf == (uintptr_t)give_all_key)         c.cmds.emplace_back(std::bind(give_all_key, _2, x));
+                else if (pf == (uintptr_t)give_all_currency)    c.cmds.emplace_back(std::bind(give_all_currency, _2, x));
+                else if (pf == (uintptr_t)give_all_currency_range) c.cmds.emplace_back(std::bind(give_all_currency_range, _2, x, y));
+                else if (pf == (uintptr_t)give_all_stamina)     c.cmds.emplace_back(std::bind(give_all_stamina, _2, x));
+                else if (pf == (uintptr_t)mul_all_currency)     c.cmds.emplace_back(std::bind(mul_all_currency, _2, x));
+                else if (pf == (uintptr_t)set_all_stamina)      c.cmds.emplace_back(std::bind(set_all_stamina, _2, x));
+                else if (pf == (uintptr_t)add_daily_pool)       c.cmds.emplace_back(std::bind(add_daily_pool, x));
+                else if (pf == (uintptr_t)get_mul_sub1_skip)    c.cmds.emplace_back(std::bind(get_mul_sub1_skip, _1));
+                else if (pf == (uintptr_t)fever)                c.cmds.emplace_back(std::bind(fever, _1, x));
+                else if (pf == (uintptr_t)chaos)                c.cmds.emplace_back(std::bind(chaos, _1));
+                else addLog(LOG_WARNING, "monopoly", "unknown event \"%s\"", cmd.c_str());
             }
             else
-            {
-                ss << "肾上腺素生效！";
-            }
-
-            event_type reward = EVENT_DEFAULT;
-            bool chaos = plist[qq].chaos;
-            plist[qq].chaos = false;
-
-            // 气泵最先生效
-            if (plist[qq].air_pump_count)
-            {
-                --plist[qq].air_pump_count;
-                reward = EVENT_DEFAULT;
-                ss << CQ_At(qq) << "，恭喜你抽到了" << reward.func()(group, qq);
-                return ss.str();
-            }
-
-            // 抽气机覆盖气泵效果
-            if (plist[qq].air_ignore_count)
-            {
-                --plist[qq].air_ignore_count;
-                do {
-                    reward = chaos ? draw_event_chaos() : draw_event(randReal());
-                } while (reward.prob() == 1.0);
-            }
-            else // 通常抽卡
-            {
-                reward = chaos ? draw_event_chaos() : draw_event(randReal());
-            }
-            ss << CQ_At(qq) << "，恭喜你抽到了" << reward.func()(group, qq);
-            return ss.str();
-        };
-        break;
-
-    default:
-        break;
+                addLog(LOG_WARNING, "monopoly", "unknown event \"%s\"", cmd.c_str());
+        }
+        c.total_prob += c.prob;
+        chanceList.push_back(std::move(c));
     }
-    return c;
+    addLog(LOG_INFO, "monopoly", "Loaded %u entries", count);
+
+    return 0;
 }
 
-double event_max = 0.0;
-void calc_event_max()
+std::string convertRespMsg(const std::string& raw, int64_t qqid, int64_t groupid, int64_t target, const user::pdata& pre, const user::pdata& post)
 {
-    event_max = 0.0;
-    for (const auto& e : EVENT_POOL)
+    std::string s(raw);
+    boost::algorithm::replace_all(s, "{currency_pre}",      std::to_string(pre.getCurrency()));
+    boost::algorithm::replace_all(s, "{currency_post}",     std::to_string(post.getCurrency()));
+    boost::algorithm::replace_all(s, "{currency_delta}",    std::to_string(post.getCurrency() - pre.getCurrency()));
+    boost::algorithm::replace_all(s, "{key_pre}",           std::to_string(pre.getKeyCount()));
+    boost::algorithm::replace_all(s, "{key_post}",          std::to_string(post.getKeyCount()));
+    boost::algorithm::replace_all(s, "{key_delta}",         std::to_string(post.getKeyCount() - pre.getKeyCount()));
+    boost::algorithm::replace_all(s, "{stamina_pre}",       std::to_string(pre.getStamina(true).staminaAfterUpdate));
+    boost::algorithm::replace_all(s, "{stamina_post}",      std::to_string(post.getStamina(true).staminaAfterUpdate));
+    boost::algorithm::replace_all(s, "{stamina_delta}",     std::to_string(post.getStamina(true).staminaAfterUpdate - pre.getStamina(true).staminaAfterUpdate));
+    boost::algorithm::replace_all(s, "{player_card}",       grp::groups[groupid].members[qqid].nameCard);
+    boost::algorithm::replace_all(s, "{target_card}",       target ? grp::groups[groupid].members[target].nameCard : "");
+    return std::move(s);
+}
+
+void doChance(const mirai::MsgMetadata& m, const chance& c)
+{
+    // save pre-cmd info
+    auto pre = user::plist[m.qqid];
+
+    // run cmds
+    int64_t target = 0;
+    for (const auto& cmd : c.cmds)
     {
-        event_max += e.prob();
+        cmd(m.qqid, m.groupid, target);
     }
+
+    // send resp
+    json resp = mirai::MSG_TEMPLATE;
+    json& r = resp["messageChain"];
+    std::string s = convertRespMsg(c.msg, m.qqid, m.groupid, target, pre, user::plist[m.qqid]);
+    mirai::sendMsgRespStr(m, s);
+
 }
 
-const event_type& draw_event(double p)
+void msgCallback(const json& body)
 {
-    p = p * event_max;
-    if (p < 0.0 || p > event_max) return EVENT_DEFAULT;
-    double totalp = 0;
-    for (const auto& c : EVENT_POOL)
+    auto query = mirai::messageChainToArgs(body);
+    if (query.empty()) return;
+
+    if (query[0] != "抽卡") return;
+
+    auto m = mirai::parseMsgMetadata(body);
+
+    if (!grp::groups[m.groupid].getFlag(grp::Group::MASK_P | grp::Group::MASK_MONOPOLY))
+        return;
+
+    if (user_stat[m.qqid].chaos)
     {
-        if (p <= totalp + c.prob()) return c;
-        totalp += c.prob();
+        user_stat[m.qqid].chaos = false;
+        size_t idx = randInt(0, chanceList.size() - 1);
+        doChance(m, chanceList[idx]);
     }
-    return EVENT_DEFAULT;        // not match any case
-}
-
-
-const event_type& draw_event_chaos()
-{
-    int cnt = EVENT_POOL.size() - 1 + 1;  // include default
-    int evt = randInt(0, cnt);
-
-    if (evt == cnt)
-        return EVENT_DEFAULT;
     else
-        return EVENT_POOL[evt];
+    {
+        auto prob = randReal(0, chance::total_prob);
+        double p = 0.0;
+        for (const auto& c : chanceList)
+        {
+            if (prob < p)
+            {
+                doChance(m, c);
+                break;
+            }
+            p += c.prob;
+        }
+    }
 }
-
 }

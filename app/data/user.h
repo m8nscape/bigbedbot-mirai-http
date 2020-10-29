@@ -35,14 +35,6 @@ protected:
 	int		stamina_extra = 0;
 
 public:
-	// flags
-    time_t  freeze_assets_expire_time = 0;
-    bool    meteor_shield = 0;
-    int     air_pump_count = 0;
-    int     air_ignore_count = 0;
-    time_t  adrenaline_expire_time = 0;
-    bool    chaos = false;
-
     // counter
     //int     event_drop_count = 0;
 
@@ -55,13 +47,13 @@ public:
 		int		staminaAfterUpdate;
 		time_t	fullRecoverTime;
 	};
-	resultStamina getStamina(bool extra);
+	resultStamina getStamina(bool extra) const;
 	resultStamina modifyStamina(int cost = 0, bool extra = false);
-	resultStamina testStamina(int cost = 0);
+	resultStamina testStamina(int cost = 0) const;
 
-	int64_t getCurrency() { return currency; }
-	int64_t getKeyCount() { return key_count; }
-	time_t  getLastDrawTime() { return last_draw_time; }
+	int64_t getCurrency() const { return currency; }
+	int64_t getKeyCount() const { return key_count; }
+	time_t  getLastDrawTime() const { return last_draw_time; }
 	void modifyCurrency(int64_t delta);
 	void multiplyCurrency(double a);
 	void modifyBoxCount(int64_t delta);
