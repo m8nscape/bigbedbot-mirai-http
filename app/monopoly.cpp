@@ -157,14 +157,13 @@ int init(const char* yaml)
     addLog(LOG_INFO, "monopoly", "Loading chance events from %s", std::filesystem::absolute(cfgPath).c_str());
 
     YAML::Node cfg = YAML::LoadFile(yaml);
-    unsigned count = 0;
     chance::total_prob = 0.0;
     for (const auto& u : cfg)
     {
         chance c;
         c.prob = u["prob"].as<double>();
         c.msg = u["msg"].as<std::string>();
-        for (const auto& e : cfg["cmds"])
+        for (const auto& e : u["cmds"])
         {
             std::vector<std::string> args;
             boost::algorithm::split(args, e.as<std::string>(), boost::is_any_of(" "), boost::algorithm::token_compress_on);
@@ -174,7 +173,7 @@ int init(const char* yaml)
             if (command::strMap.find(cmd) != command::strMap.end())
             {
                 double x = 0.0, y = 0.0;
-                if (args.size() > 2)
+                if (args.size() >= 2)
                 {
                     char* endptr = nullptr;
                     double tmp = std::strtod(args[1].c_str(), &endptr);
@@ -185,7 +184,7 @@ int init(const char* yaml)
                     }
                     x = tmp;
                 }
-                if (args.size() > 3)
+                if (args.size() >= 3)
                 {
                     char* endptr = nullptr;
                     double tmp = std::strtod(args[2].c_str(), &endptr);
@@ -227,14 +226,15 @@ int init(const char* yaml)
         c.total_prob += c.prob;
         chanceList.push_back(std::move(c));
     }
-    addLog(LOG_INFO, "monopoly", "Loaded %u entries", count);
+    addLog(LOG_INFO, "monopoly", "Loaded %u entries", chanceList.size());
 
     return 0;
 }
 
 std::string convertRespMsg(const std::string& raw, int64_t qqid, int64_t groupid, int64_t target, const user::pdata& pre, const user::pdata& post)
 {
-    std::string s(raw);
+    std::string s;
+    s += "，恭喜你抽到了" + raw;
     boost::algorithm::replace_all(s, "{currency_pre}",      std::to_string(pre.getCurrency()));
     boost::algorithm::replace_all(s, "{currency_post}",     std::to_string(post.getCurrency()));
     boost::algorithm::replace_all(s, "{currency_delta}",    std::to_string(post.getCurrency() - pre.getCurrency()));
@@ -264,8 +264,9 @@ void doChance(const mirai::MsgMetadata& m, const chance& c)
     // send resp
     json resp = mirai::MSG_TEMPLATE;
     json& r = resp["messageChain"];
-    std::string s = convertRespMsg(c.msg, m.qqid, m.groupid, target, pre, user::plist[m.qqid]);
-    mirai::sendMsgRespStr(m, s);
+    r.push_back(mirai::buildMessageAt(m.qqid));
+    r.push_back(mirai::buildMessagePlain(convertRespMsg(c.msg, m.qqid, m.groupid, target, pre, user::plist[m.qqid])));
+    mirai::sendMsgResp(m, resp);
 
 }
 
@@ -274,7 +275,7 @@ void msgCallback(const json& body)
     auto query = mirai::messageChainToArgs(body);
     if (query.empty()) return;
 
-    if (query[0] != "�鿨") return;
+    if (query[0] != "抽卡") return;
 
     auto m = mirai::parseMsgMetadata(body);
 
