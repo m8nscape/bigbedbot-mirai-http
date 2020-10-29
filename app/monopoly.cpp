@@ -82,33 +82,33 @@ void chaos(int64_t qqid) { user_stat[qqid].chaos = true; }
 
 const std::map<std::string, void*> strMap
 {
-    {"muted", muted},
-    {"mute_dk", mute_dk},
-    {"mute_bot", mute_bot},
-    {"mute_random", mute_random},
-    {"give_key", give_key},
-    {"give_currency", give_currency},
-    {"give_stamina", give_stamina},
-    {"give_stamina_extra", give_stamina_extra},
-    {"set_stamina", set_stamina},
-    {"mul_currency", mul_currency},
-    {"give_all_key", give_all_key},
-    {"give_all_currency", give_all_currency},
-    {"give_all_currency_range", give_all_currency_range},
-    {"give_all_stamina", give_all_stamina},
-    {"mul_all_currency", mul_all_currency},
-    {"set_all_stamina", set_all_stamina},
-    {"add_daily_pool", add_daily_pool},
-    {"get_mul_sub1_skip", get_mul_sub1_skip},
-    {"fever", fever},
-    {"chaos", chaos},
+    {"muted", (void*)muted},
+    {"mute_dk", (void*)mute_dk},
+    {"mute_bot", (void*)mute_bot},
+    {"mute_random", (void*)mute_random},
+    {"give_key", (void*)give_key},
+    {"give_currency", (void*)give_currency},
+    {"give_stamina", (void*)give_stamina},
+    {"give_stamina_extra", (void*)give_stamina_extra},
+    {"set_stamina", (void*)set_stamina},
+    {"mul_currency", (void*)mul_currency},
+    {"give_all_key", (void*)give_all_key},
+    {"give_all_currency", (void*)give_all_currency},
+    {"give_all_currency_range", (void*)give_all_currency_range},
+    {"give_all_stamina", (void*)give_all_stamina},
+    {"mul_all_currency", (void*)mul_all_currency},
+    {"set_all_stamina", (void*)set_all_stamina},
+    {"add_daily_pool", (void*)add_daily_pool},
+    {"get_mul_sub1_skip", (void*)get_mul_sub1_skip},
+    {"fever", (void*)fever},
+    {"chaos", (void*)chaos},
 };
 
 void do_all(int64_t groupid, efunc f, double x, double y)
 {
     bool check_skip_mul_all_currency_sub1 = false;
     {
-        auto pf = f.target<decltype(mul_all_currency)>();
+        auto pf = f.target<decltype(mul_all_currency)*>();
         if (pf && *pf == mul_all_currency && x < 1.0)
             check_skip_mul_all_currency_sub1 = true;
     }
