@@ -133,22 +133,22 @@
   prob: 5
   cmds:
     - give_currency 100
- -
+-
   msg: 大床兔子BEX通关纪念雕像，获得500个批
   prob: 2
   cmds:
     - give_currency 500
- -
+-
   msg: 仙人掌，你的手被扎成了马蜂窝，花费医药费50批
   prob: 10
   cmds:
     - give_currency -50
- -
+-
   msg: JJ怪，你的家被炸烂了，损失500批
   prob: 2
   cmds:
     - give_currency -500
- -
+-
   msg: 大风吹来本群的一堆批，自己查余额看捡到多少哦
   prob: 2
   cmds:
@@ -260,16 +260,16 @@
   prob: 5
   cmds:
     - muted 5
--
-  msg: 大暴雨，所有人的烟都被浇灭了
-  prob: 10
-  cmds:
-    - muted 5
--
-  msg: 干死也军车，烟他！
-  prob: 10
-  cmds:
-    - mute_dk 1
+# -
+#   msg: 大暴雨，所有人的烟都被浇灭了
+#   prob: 10
+#   cmds:
+#     - muted 5
+# -
+#   msg: 干死也军车，烟他！
+#   prob: 10
+#   cmds:
+#     - mute_dk 1
 -
   msg: 禁烟洲际导弹，{target_card}不幸被烟1分钟
   prob: 5
@@ -303,16 +303,16 @@
   prob: 10
   cmds:
     - fever 15
--
-  msg: 电子烟，bot被烟起1分钟
-  prob: 5
-  cmds:
-    - mute_bot 1
--
-  msg: 流感病毒，bot差点被你毒死，只好休息5分钟
-  prob: 1
-  cmds:
-    - mute_bot 5
+# -
+#   msg: 电子烟，bot被烟起1分钟
+#   prob: 5
+#   cmds:
+#     - mute_bot 1
+# -
+#   msg: 流感病毒，bot差点被你毒死，只好休息5分钟
+#   prob: 1
+#   cmds:
+#     - mute_bot 5
 -
   msg: 世界线震动预警，下一次抽卡很可能会抽到奇怪的东西哦
   prob: 5
