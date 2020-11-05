@@ -208,24 +208,27 @@ void 群聊解禁(const mirai::MsgMetadata& m, int64_t target_qqid)
         mirai::sendGroupMsgStr(m.groupid, "解禁失败");
 }
 
+void updateSmokeTimeList(int64_t qqid)
+{
+    // time expiration
+    if (smoke::smokeTimeInGroups.find(qqid) != smoke::smokeTimeInGroups.end())
+    {
+        time_t t = time(nullptr);
+        std::list<int64_t> expired;
+        for (auto& g : smoke::smokeTimeInGroups[qqid])
+            if (t > g.second) expired.push_back(g.first);
+        for (auto& g : expired)
+            smoke::smokeTimeInGroups.erase(g);
+    }
+}
+
 void groupMsgCallback(const json& body)
 {
     auto m = mirai::parseMsgMetadata(body);
 
     // update smoke status
     if (m.qqid != botLoginQQId && m.qqid != 10000 && m.qqid != 1000000)
-    {
-        // time expiration
-        if (smoke::smokeTimeInGroups.find(m.qqid) != smoke::smokeTimeInGroups.end())
-        {
-            time_t t = time(nullptr);
-            std::list<int64_t> expired;
-            for (auto& g : smoke::smokeTimeInGroups[m.qqid])
-                if (t > g.second) expired.push_back(g.first);
-            for (auto& g : expired)
-                smoke::smokeTimeInGroups.erase(g);
-        }
-    }
+        updateSmokeTimeList(m.qqid);
 
     auto query = mirai::messageChainToStr(body);
     if (query.empty()) return;
@@ -279,7 +282,7 @@ std::string selfUnsmoke(int64_t qq)
     {
         if (t <= g.second)
         {
-            int64_t remain = (g.second - t) / 60; // min
+            int64_t remain = (g.second - t) / 60.0; // min
             int64_t extra = (g.second - t) % 60;  // sec
             total_remain += remain + !!extra;
         }
@@ -339,6 +342,10 @@ void privateMsgCallback(const json& body)
     if (c == commands::_) return;
 
     auto m = mirai::parseMsgMetadata(body);
+
+    // update smoke status
+    if (m.qqid != botLoginQQId && m.qqid != 10000 && m.qqid != 1000000)
+        updateSmokeTimeList(m.qqid);
 
     std::string resp;
     switch (c)
