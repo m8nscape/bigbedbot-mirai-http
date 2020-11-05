@@ -69,7 +69,7 @@ void give_currency(int64_t qqid, double x) { pd[qqid].modifyCurrency(round(x)); 
 void give_stamina(int64_t qqid, double x) { pd[qqid].modifyStamina(-round(x)); }
 void give_stamina_extra(int64_t qqid, double x) { pd[qqid].modifyStamina(-round(x), true); }
 void set_stamina(int64_t qqid, double x) { pd[qqid].modifyStamina(pd[qqid].modifyStamina(0).staminaAfterUpdate); pd[qqid].modifyStamina(-round(x)); }
-void mul_currency(int64_t qqid, double x) { pd[qqid].modifyCurrency(round(pd[qqid].getCurrency() * x)); }
+void mul_currency(int64_t qqid, double x) { pd[qqid].modifyCurrency(round(pd[qqid].getCurrency() * x) - pd[qqid].getCurrency()); }
 void give_all_key(int64_t groupid, double x) { do_all(groupid, std::bind(give_key, _1, _3), x); }
 void give_all_currency(int64_t groupid, double x) { do_all(groupid, std::bind(give_currency, _1, _3), x); }
 void give_all_currency_range(int64_t groupid, double x, double y) { do_all(groupid, [](int64_t qqid, int64_t groupid, double x, double y) {pd[qqid].modifyCurrency(randInt(round(x), round(y))); }, x, y); }
