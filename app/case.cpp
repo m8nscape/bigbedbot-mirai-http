@@ -496,7 +496,7 @@ int loadCfg(const char* yaml)
         addLog(LOG_ERROR, "case", "Case config file %s not found", std::filesystem::absolute(cfgPath).c_str());
         return -1;
     }
-    addLog(LOG_INFO, "user", "Loading case config from %s", std::filesystem::absolute(cfgPath).c_str());
+    addLog(LOG_INFO, "case", "Loading case config from %s", std::filesystem::absolute(cfgPath).c_str());
 
     YAML::Node cfg = YAML::LoadFile(yaml);
 
