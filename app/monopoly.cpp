@@ -60,10 +60,10 @@ int64_t get_random_registered_member(int64_t groupid);
 
 // events
 auto& pd = user::plist;
-void muted(int64_t qqid, int64_t groupid, double x) { smoke::nosmoking(groupid, qqid, round(x * 60)); }
-void mute_dk(int64_t qqid, int64_t groupid, double x) { smoke::nosmoking(groupid, /*TODO who is dk*/0, round(x * 60)); }
-void mute_bot(int64_t qqid, int64_t groupid, double x) { smoke::nosmoking(groupid, botLoginQQId, round(x * 60)); }
-void mute_random(int64_t qqid, int64_t groupid, double x, int64_t& target) { target = get_random_registered_member(groupid); smoke::nosmoking(groupid, target, round(x * 60)); }
+void muted(int64_t qqid, int64_t groupid, double x) { smoke::nosmoking(groupid, qqid, round(x)); }
+void mute_dk(int64_t qqid, int64_t groupid, double x) { smoke::nosmoking(groupid, /*TODO who is dk*/0, round(x)); }
+void mute_bot(int64_t qqid, int64_t groupid, double x) { smoke::nosmoking(groupid, botLoginQQId, round(x)); }
+void mute_random(int64_t qqid, int64_t groupid, double x, int64_t& target) { target = get_random_registered_member(groupid); smoke::nosmoking(groupid, target, round(x)); }
 void give_key(int64_t qqid, double x) { pd[qqid].modifyKeyCount(round(x)); }
 void give_currency(int64_t qqid, double x) { pd[qqid].modifyCurrency(round(x)); }
 void give_stamina(int64_t qqid, double x) { pd[qqid].modifyStamina(-round(x)); }

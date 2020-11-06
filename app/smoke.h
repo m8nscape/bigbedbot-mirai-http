@@ -21,7 +21,7 @@ enum class RetVal
     TARGET_NOT_FOUND,
 };
 
-RetVal nosmoking(int64_t group, int64_t target, int duration);
+RetVal nosmoking(int64_t group, int64_t target, int duration_min);
 
 ////////////////////////////////////////////////////////////////////////////////
 
