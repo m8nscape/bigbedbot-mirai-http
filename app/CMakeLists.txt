@@ -9,6 +9,7 @@ add_library(app STATIC
     smoke.cpp smoke.h
     eatwhat.cpp eatwhat.h
     monopoly.cpp monopoly.h
+    weather.cpp weather.h
 )
 set_target_properties(app PROPERTIES
     CXX_STANDARD 17)

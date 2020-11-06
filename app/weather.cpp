@@ -1,19 +1,22 @@
 #include <vector>
 #include <string>
 #include <sstream>
-#include <curl/curl.h>
-#include <nlohmann/json.hpp>
+#include <regex>
+#include <filesystem>
 
 #include "weather.h"
-#include "cqp.h"
 
-#include "utils/string_util.h"
-#include "utils/encoding.h"
+#include <curl/curl.h>
+#include <nlohmann/json.hpp>
+#include <yaml-cpp/yaml.h>
 
-#define PCRE2_CODE_UNIT_WIDTH 8
-#include <pcre2/pcre2.h>
+#include "common/dbconn.h"
+#include "utils/logger.h"
+#include "mirai/api.h"
+#include "mirai/msg.h"
 
-using namespace weather;
+namespace weather
+{
 
 bool inQuery = false;
 
@@ -32,250 +35,220 @@ size_t perform_write(void* buffer, size_t size, size_t count, void* stream)
     return newsize;
 }
 
+int curl_get(const std::string& url, std::string& content, int timeout_sec = 5)
+{
+    if (inQuery)
+    {
+        content = "API is busy";
+        return -2;
+    }
+
+    inQuery = true;
+
+    CURL* curl = curl_easy_init();
+    if (!curl)
+    {
+        content = "curl init failed";
+        inQuery = false;
+        return -1;
+    }
+
+    curl_buffer curlbuf;
+    curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, perform_write);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &curlbuf);
+    curl_easy_setopt(curl, CURLOPT_TIMEOUT, timeout_sec);
+    memset(curlbuf.content, 0, CURL_MAX_WRITE_SIZE);
+
+    if (int ret; CURLE_OK != (ret = curl_easy_perform(curl)))
+    {
+        using namespace std::string_literals;
+        switch (ret)
+        {
+        case CURLE_OPERATION_TIMEDOUT:
+            content = "ÁΩëÁªúËøûÊé•Ë∂ÖÊó∂";
+            break;
+            
+        default:
+            content = "ÁΩëÁªúËøûÊé•Â§±Ë¥•("s + std::to_string(ret) + ")";
+            break;
+        }
+        inQuery = false;
+        curl_easy_cleanup(curl);
+        return ret;
+    }
+
+    content = std::string(curlbuf.content, curlbuf.length);
+    inQuery = false;
+    return CURLE_OK;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+namespace weathercn
+{
+int TIMEOUT_SEC = 1;
+SQLite db("weathercn_city.db", "weather");
+std::string getReqUrl(const std::string& name)
+{
+    auto ret = db.query("select id from cityid where name=?", 1, { name });
+    if (ret.empty()) return "";
+    std::string id = std::any_cast<std::string>(ret[0][0]);
+
+    char buf[128];
+    snprintf(buf, sizeof(buf)-1,
+        "http://t.weather.sojson.com/api/weather/city/%s",
+        id.c_str());
+    return buf;
+}
+}
+
+namespace openweather
+{
+std::string APIKEY;
+int TIMEOUT_SEC = 5;
+std::string getReqUrl(const std::string& name)
+{
+    char buf[128];
+    snprintf(buf, sizeof(buf)-1,
+        "https://api.openweathermap.org/data/2.5/weather?q=%s&appid=%s",
+        name.c_str(),
+        APIKEY.c_str());
+    return buf;
+}
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+/*
 std::string success(::int64_t, ::int64_t, std::vector<std::string>& args, const char*)
 {
     std::stringstream ss;
     ss <<
         args[1] << "," << args[0] << ": " <<
         args[2] << ", " <<
-        args[3] << "°„C (" <<  args[4]<< "°„C~" << args[5] << "°„C), " <<
+        args[3] << "¬∞C (" <<  args[4]<< "¬∞C~" << args[5] << "¬∞C), " <<
         args[6] << "%";
     return ss.str();
 }
+*/
 
-command weather::msgDispatcher(const json& body)
+enum class commands : size_t {
+    _,
+    ÂÖ®ÁêÉÂ§©Ê∞î,
+    ÂõΩÂÜÖÂ§©Ê∞î
+};
+const std::vector<std::pair<std::regex, commands>> commands_regex
 {
-    command c;
-    //std::vector<std::string> args;
+    {std::regex(R"(^weather +(.+)$)", std::regex::optimize | std::regex::extended | std::regex::icase), commands::ÂÖ®ÁêÉÂ§©Ê∞î},
+    {std::regex(R"(^(.+) +weather$)", std::regex::optimize | std::regex::extended | std::regex::icase), commands::ÂÖ®ÁêÉÂ§©Ê∞î},
+    {std::regex(R"(^(.+) *Â§©Ê∞î$)", std::regex::optimize | std::regex::extended), commands::ÂõΩÂÜÖÂ§©Ê∞î},
+    {std::regex(R"(^(.+) *Â§©Ê∞£$)", std::regex::optimize | std::regex::extended), commands::ÂõΩÂÜÖÂ§©Ê∞î},
+    {std::regex(R"(^Â§©Ê∞î +(.+)$)", std::regex::optimize | std::regex::extended), commands::ÂõΩÂÜÖÂ§©Ê∞î},
+    {std::regex(R"(^Â§©Ê∞£ +(.+)$)", std::regex::optimize | std::regex::extended), commands::ÂõΩÂÜÖÂ§©Ê∞î},
+};
+
+void msgCallback(const json& body)
+{
+    auto query = mirai::messageChainToStr(body);
+    if (query.empty()) return;
+
+    commands c = commands::_;
     std::string city;
-    for (const auto& [regstr, cmd] : commands_regex)
+    for (const auto& [re, cmd]: commands_regex)
     {
-        int errcode;
-        size_t erroffset;
-        unsigned char* tableptr;
-        auto* pcre2 = pcre2_compile((PCRE2_SPTR8)regstr.c_str(), PCRE2_ZERO_TERMINATED, PCRE2_CASELESS, &errcode, &erroffset, NULL);
-        pcre2_match_data* mdata = pcre2_match_data_create_from_pattern(pcre2, NULL);
-        int m = pcre2_match(pcre2, (PCRE2_SPTR8)msg, PCRE2_ZERO_TERMINATED, 0, 0, mdata, NULL);
-        if (m > 0)
+        std::smatch res;
+        if (std::regex_match(query, res, re))
         {
-            /*
-            size_t plen = 0;
-            pcre2_pattern_info(pcre2, PCRE2_INFO_CAPTURECOUNT, &plen);
-            for (size_t i = 1; i < plen; ++i)
-            {
-                PCRE2_UCHAR* str;
-                PCRE2_SIZE strlen;
-                if (pcre2_substring_get_bynumber(mdata, i, &str, &strlen) == 0)
-                {
-                    addLogDebug("weather", (char*)str);
-                    args.push_back((char*)str);
-                    pcre2_substring_free(str);
-                }
-                else
-                    args.push_back("");
-            }
-            */
-            PCRE2_UCHAR* str = NULL;
-            PCRE2_SIZE strlen;
-            if (pcre2_substring_get_byname(mdata, (PCRE2_SPTR8)"city", &str, &strlen) == 0 && str)
-            {
-                city = std::string((char*)str);
-                switch (cmd)
-                {
-                case commands::»´«ÚÃÏ∆¯:
-                    c = weather_global(city);
-                    break;
-                case commands::π˙ƒ⁄ÃÏ∆¯:
-                    c = weather_cn(city);
-                    break;
-                default:
-                    break;
-                }
-                pcre2_substring_free(str);
-            }
+            c = cmd;
+            city = res[1].str();
+            break;
         }
-        pcre2_match_data_free(mdata);
     }
-    
-    auto args = mirai::messageChainToArgs(body, 2);
-    if (args.size() < 1)
-        return command();
+    if (c == commands::_) return;
 
-    auto query = mirai::messageChainToArgs(body);
-    if (query.empty()) return command();
+    auto m = mirai::parseMsgMetadata(body);
 
-    if (inQuery)
+    switch (c)
     {
-        command c;
-        c.func = [](::int64_t, ::int64_t, std::vector<std::string>&, const char*)
-        {
-            return "API is busy";
-        };
-        return c;
+    case commands::ÂÖ®ÁêÉÂ§©Ê∞î:
+        weather_global(m, city);
+        break;
+    case commands::ÂõΩÂÜÖÂ§©Ê∞î:
+        weather_cn(m, city);
+        break;
+    default:
+        break;
     }
-
-    if ((args[0] == "ÃÏ∆¯" || args[0] == "ÃÏö‚") && utf82gbk(args[1]) != args[1])
-        return weather_cn(args[1]);
-    else if (args.size() >= 2)
-        return weather_global(args[1]);
-
-    return command();
 }
 
-command weather::weather_global(const std::string& city)
+void weather_global(const mirai::MsgMetadata& m, const std::string& city)
 {
-    command c;
-    CURL* curl = NULL;
-
-    inQuery = true;
-    std::string name = city;
-    curl = curl_easy_init();
-    if (!curl)
-    {
-        c.func = [](::int64_t, ::int64_t, std::vector<std::string>&, const char*)
-        {
-            return "curl init failed";
-        };
-        inQuery = false;
-        return c;
-    }
-
     //auto url = seniverse::getReqUrl(name);
-    auto url = openweather::getReqUrl(name);
-
-    curl_buffer curlbuf;
-    curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, perform_write);
-    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &curlbuf);
-    curl_easy_setopt(curl, CURLOPT_TIMEOUT, 5);
-    memset(curlbuf.content, 0, CURL_MAX_WRITE_SIZE);
-    if (int ret; CURLE_OK != (ret = curl_easy_perform(curl)))
+    auto url = openweather::getReqUrl(city);
+    std::string buf;
+    if (CURLE_OK != curl_get(url, buf, openweather::TIMEOUT_SEC))
     {
-        switch (ret)
-        {
-        case CURLE_OPERATION_TIMEDOUT:
-            c.func = [ret](::int64_t, ::int64_t, std::vector<std::string>&, const char*)
-            {
-                return "Õ¯¬Á¡¨Ω”≥¨ ±";
-            };
-            break;
-        default:
-            c.func = [ret](::int64_t, ::int64_t, std::vector<std::string>&, const char*)
-            {
-                using namespace std::string_literals;
-                return "Õ¯¬Á¡¨Ω” ß∞‹("s + std::to_string(ret) + ")";
-            };
-            break;
-        }
-        inQuery = false;
-        curl_easy_cleanup(curl);
-        return c;
+        mirai::sendMsgRespStr(m, buf);
+        return;
     }
 
-    curl_easy_cleanup(curl);
-
-    inQuery = false;
-
-    nlohmann::json json = nlohmann::json::parse(curlbuf.content);
+    nlohmann::json json = nlohmann::json::parse(buf);
     try
     {
         if (json.contains("cod") && json["cod"] == 200 && json.contains("coord"))
         {
-            c.args.push_back(json["sys"]["country"]);
-            c.args.push_back(json["name"]);
-            c.args.push_back(json["weather"][0]["main"]);
-            c.args.push_back(std::to_string(int(std::round(json["main"]["temp"] - 273.15))));
-            c.args.push_back(std::to_string(int(std::round(json["main"]["temp_min"] - 273.15))));
-            c.args.push_back(std::to_string(int(std::round(json["main"]["temp_max"] - 273.15))));
-            c.args.push_back(std::to_string(int(std::round(json["main"]["humidity"] + 0))));
-            c.c = commands::»´«ÚÃÏ∆¯;
-            c.func = [](::int64_t, ::int64_t, std::vector<std::string>& args, const char*)
-            {
-                std::stringstream ss;
-                ss <<
-                    args[1] << ", " << args[0] << ": " <<
-                    args[2] << ", " <<
-                    args[3] << "°„C (" << args[4] << "°„C~" << args[5] << "°„C), " <<
-                    args[6] << "%";
-                return ss.str();
-            };
+            std::vector<std::string> args;
+            args.push_back(json["sys"]["country"]);
+            args.push_back(json["name"]);
+            args.push_back(json["weather"][0]["main"]);
+            args.push_back(std::to_string(int(std::round(json["main"]["temp"].get<double>() - 273.15))));
+            args.push_back(std::to_string(int(std::round(json["main"]["temp_min"].get<double>() - 273.15))));
+            args.push_back(std::to_string(int(std::round(json["main"]["temp_max"].get<double>() - 273.15))));
+            args.push_back(std::to_string(int(std::round(json["main"]["humidity"].get<double>() + 0))));
+
+            std::stringstream ss;
+            ss <<
+                args[1] << ", " << args[0] << ": " <<
+                args[2] << ", " <<
+                args[3] << "¬∞C (" << args[4] << "¬∞C~" << args[5] << "¬∞C), " <<
+                args[6] << "%";
+            
+            mirai::sendMsgRespStr(m, ss.str().c_str());
         }
         else throw std::exception();
     }
     catch (...)
     {
-        c.args.clear();
+        std::stringstream ss;
+        ss << "ËØ∑Ê±ÇÂ§±Ë¥•Ôºö";
         if (json.contains("cod") && json.contains("message"))
-            c.args.push_back(json["message"]);
+            ss << json["message"].get<std::string>();
         else
-            c.args.push_back("unknown");
-        c.func = [](::int64_t, ::int64_t, std::vector<std::string>& args, const char*)
-        {
-            return "«Î«Û ß∞‹£∫" + args[0];
-        };
+            ss << "unknown";
+        mirai::sendMsgRespStr(m, ss.str().c_str());
     }
-
-    return c;
 }
 
-command weather::weather_cn(const std::string& city)
+void weather_cn(const mirai::MsgMetadata& m, const std::string& name)
 {
-    command c;
     CURL* curl = NULL;
 
-    std::string name = gbk2utf8(city);
     auto url = weathercn::getReqUrl(name);
     if (url.empty())
     {
-        c.func = [](::int64_t, ::int64_t, std::vector<std::string>&, const char*)
-        {
-            return "Œ¥’“µΩ∏√≥« –";
-        };
-        return c;
+        mirai::sendMsgRespStr(m, "Êú™ÊâæÂà∞ËØ•ÂüéÂ∏Ç");
+        return;
     }
 
-    inQuery = true;
-    curl = curl_easy_init();
-    if (!curl)
+    std::string buf;
+    if (CURLE_OK != curl_get(url, buf, weathercn::TIMEOUT_SEC))
     {
-        c.func = [](::int64_t, ::int64_t, std::vector<std::string>&, const char*)
-        {
-            return "curl init failed";
-        };
-        inQuery = false;
-        return c;
+        mirai::sendMsgRespStr(m, buf);
+        return;
     }
 
-    curl_buffer curlbuf;
-    curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, perform_write);
-    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &curlbuf);
-    curl_easy_setopt(curl, CURLOPT_TIMEOUT, 5);
-    memset(curlbuf.content, 0, CURL_MAX_WRITE_SIZE);
-    if (int ret; CURLE_OK != (ret = curl_easy_perform(curl)))
-    {
-        switch (ret)
-        {
-        case CURLE_OPERATION_TIMEDOUT:
-            c.func = [ret](::int64_t, ::int64_t, std::vector<std::string>&, const char*)
-            {
-                return "Õ¯¬Á¡¨Ω”≥¨ ±";
-            };
-            break;
-        default:
-            c.func = [ret](::int64_t, ::int64_t, std::vector<std::string>&, const char*)
-            {
-                using namespace std::string_literals;
-                return "Õ¯¬Á¡¨Ω” ß∞‹("s + std::to_string(ret) + ")";
-            };
-            break;
-        }
-        inQuery = false;
-        curl_easy_cleanup(curl);
-        return c;
-    }
-
-    nlohmann::json json = nlohmann::json::parse(curlbuf.content);
+    nlohmann::json json = nlohmann::json::parse(buf);
     try
     {
         if (json.contains("cityInfo"))
@@ -283,74 +256,82 @@ command weather::weather_cn(const std::string& city)
             int ibuf;
             double dbuf;
             char buf[16];
-            c.args.push_back(utf82gbk(json["cityInfo"]["parent"]));
-            c.args.push_back(utf82gbk(json["cityInfo"]["city"]));
-            c.args.push_back(json["data"]["wendu"]);
-            c.args.push_back(json["data"]["shidu"]);
+            std::vector<std::string> args;
+
+            args.push_back(json["cityInfo"]["parent"]);
+            args.push_back(json["cityInfo"]["city"]);
+            args.push_back(json["data"]["wendu"]);
+            args.push_back(json["data"]["shidu"]);
 
             dbuf = json["data"]["pm25"];
-            sprintf_s(buf, "%.1f", dbuf);
-            c.args.push_back(buf);
+            snprintf(buf, sizeof(buf)-1, "%.1f", dbuf);
+            args.push_back(buf);
 
             dbuf = json["data"]["pm10"];
-            sprintf_s(buf, "%.1f", dbuf);
-            c.args.push_back(buf);
+            snprintf(buf, sizeof(buf)-1, "%.1f", dbuf);
+            args.push_back(buf);
 
-            c.args.push_back(utf82gbk(json["data"]["forecast"][0]["type"]));
-            c.args.push_back(utf82gbk(json["data"]["forecast"][0]["low"]));
-            c.args.push_back(utf82gbk(json["data"]["forecast"][0]["high"]));
+            args.push_back(json["data"]["forecast"][0]["type"]);
+            args.push_back(json["data"]["forecast"][0]["low"]);
+            args.push_back(json["data"]["forecast"][0]["high"]);
 
             ibuf = json["data"]["forecast"][0]["aqi"];
-            sprintf_s(buf, "%d", ibuf);
-            c.args.push_back(buf);
+            snprintf(buf, sizeof(buf)-1, "%d", ibuf);
+            args.push_back(buf);
 
-            c.c = commands::π˙ƒ⁄ÃÏ∆¯;
+            std::stringstream ss;
+            ss << args[0] << " " << args[1] << " " << args[6] << std::endl <<
+                "Ê∏©Â∫¶Ôºö" << args[2] << "‚ÑÉÔºà" << args[7] << "Ôºå" << args[8] << "Ôºâ " << std::endl <<
+                "ÊπøÂ∫¶Ôºö" << args[3] << std::endl <<
+                "PM2.5: " << args[4] << std::endl << 
+                "PM10: " << args[5] << std::endl << 
+                "AQI: " << args[9];
+
+            int aqi = atoi(args[9].c_str());
+            if (0 <= aqi && aqi <= 50)
+                ss << " ‰∏ÄÁ∫ßÔºà‰ºòÔºâ";
+            else if (51 <= aqi && aqi <= 100)
+                ss << " ‰∫åÁ∫ßÔºàËâØÔºâ";
+            else if (101 <= aqi && aqi <= 150)
+                ss << " ‰∏âÁ∫ßÔºàËΩªÂ∫¶Ê±°ÊüìÔºâ";
+            else if (151 <= aqi && aqi <= 200)
+                ss << " ÂõõÁ∫ßÔºà‰∏≠Â∫¶Ê±°ÊüìÔºâ";
+            else if (201 <= aqi && aqi <= 300)
+                ss << " ‰∫îÁ∫ßÔºàÈáçÂ∫¶Ê±°ÊüìÔºâ";
+            else if (301 <= aqi)
+                ss << " ÂÖ≠Á∫ßÔºà‰∏•ÈáçÊ±°ÊüìÔºâ";
+            else
+                ss << " undefinedÔºàÔºüÔºâ";
+
+            mirai::sendMsgRespStr(m, ss.str().c_str());
         }
         else throw std::exception();
     }
     catch (...)
     {
-        c.args.clear();
-        addLog(LOG_WARNING, "weather", url.c_str());
-        c.func = [](::int64_t, ::int64_t, std::vector<std::string>&, const char*)
-        {
-            return "ÃÏ∆¯Ω‚Œˆ ß∞‹";
-        };
-        inQuery = false;
-        return c;
+        mirai::sendMsgRespStr(m, "Â§©Ê∞îËß£ÊûêÂ§±Ë¥•");
     }
+}
 
-    curl_easy_cleanup(curl);
-    inQuery = false;
-
-    c.func = [](::int64_t, ::int64_t, std::vector<std::string>& args, const char*)
+int init(const char* yaml)
+{
+    std::filesystem::path cfgPath(yaml);
+    if (!std::filesystem::is_regular_file(cfgPath))
     {
-        std::stringstream ss;
-        ss << args[0] << " " << args[1] << " " << args[6] << std::endl <<
-            "Œ¬∂»£∫" << args[2] << "°Ê£®" << args[7] << "£¨" << args[8] << "£© " << std::endl <<
-            " ™∂»£∫" << args[3] << std::endl <<
-            "PM2.5: " << args[4] << std::endl << 
-            "PM10: " << args[5] << std::endl << 
-            "AQI: " << args[9];
+        addLog(LOG_ERROR, "weather", "weather config file %s not found", std::filesystem::absolute(cfgPath).c_str());
+        return -1;
+    }
+    addLog(LOG_INFO, "weather", "Loading weather config from %s", std::filesystem::absolute(cfgPath).c_str());
 
-        int aqi = atoi(args[9].c_str());
-        if (0 <= aqi && aqi <= 50)
-            ss << " “ªº∂£®”≈£©";
-        else if (51 <= aqi && aqi <= 100)
-            ss << " ∂˛º∂£®¡º£©";
-        else if (101 <= aqi && aqi <= 150)
-            ss << " »˝º∂£®«·∂»Œ€»æ£©";
-        else if (151 <= aqi && aqi <= 200)
-            ss << " Àƒº∂£®÷–∂»Œ€»æ£©";
-        else if (201 <= aqi && aqi <= 300)
-            ss << " ŒÂº∂£®÷ÿ∂»Œ€»æ£©";
-        else if (301 <= aqi)
-            ss << " ¡˘º∂£®—œ÷ÿŒ€»æ£©";
-        else
-            ss << " undefined£®£ø£©";
+    YAML::Node cfg = YAML::LoadFile(yaml);
 
-        return ss.str();
-    };
+    // ÈÖçÁΩÆ
+    openweather::APIKEY = cfg["openweather_apikey"].as<std::string>();
+    openweather::TIMEOUT_SEC = cfg["openweather_timeout"].as<int>();
+    weathercn::TIMEOUT_SEC = cfg["weathercn_timeout"].as<int>();
+    
+    addLog(LOG_INFO, "weather", "Config loaded");
 
-    return c;
+    return 0;
+}
 }

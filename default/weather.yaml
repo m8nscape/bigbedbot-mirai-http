@@ -1,0 +1,3 @@
+openweather_apikey: 00000000000000000000000000000000
+openweather_timeout: 10
+weathercn_timeout: 1
