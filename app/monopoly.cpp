@@ -310,7 +310,7 @@ void msgCallback(const json& body)
     }
 
     time_t t = time(nullptr);
-    bool adrenaline = t > user_stat[m.qqid].adrenaline_expire_time;
+    bool adrenaline = t <= user_stat[m.qqid].adrenaline_expire_time;
     if (!adrenaline)
     {
         auto [enough, stamina, rtime] = user::plist[m.qqid].modifyStamina(-1);
