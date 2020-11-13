@@ -19,9 +19,11 @@ void init();
 class Group
 {
 public:
-    int64_t group_id;
-	int64_t flags;
-    std::map<int64_t, mirai::group_member_info> members;
+    int64_t group_id = -1;
+protected:
+	int64_t flags = 0;
+public:
+    std::map<int64_t, mirai::group_member_info> members{};
 
 	static const int64_t MASK_P = 1 << 0;
 	static const int64_t MASK_EAT = 1 << 1;

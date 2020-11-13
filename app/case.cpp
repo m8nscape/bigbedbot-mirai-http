@@ -437,8 +437,7 @@ void msgDispatcher(const json& body)
 
     auto m = mirai::parseMsgMetadata(body);
 
-    if (!grp::groups[m.groupid].getFlag(grp::Group::MASK_P)
-        || !grp::groups[m.groupid].getFlag(grp::Group::MASK_CASE))
+    if (!grp::groups[m.groupid].getFlag(grp::Group::MASK_P | grp::Group::MASK_CASE))
         return;
 
     json resp;

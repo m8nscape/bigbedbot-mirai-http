@@ -502,6 +502,9 @@ void msgDispatcher(const json& body)
         return;
     }
 
+    if (!grp::groups[m.groupid].getFlag(grp::Group::MASK_EAT))
+        return;
+
     switch (c)
     {
     case commands::吃什么:

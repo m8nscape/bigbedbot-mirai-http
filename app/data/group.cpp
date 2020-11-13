@@ -26,7 +26,7 @@ void LoadListFromDb()
         Group g;
         g.group_id = std::any_cast<int64_t>(row[0]);
         
-        g.flags = std::any_cast<int64_t>(row[1]);
+        g.setFlag(std::any_cast<int64_t>(row[1]));
 
         groups[g.group_id] = g;
     }
@@ -54,7 +54,7 @@ void Group::setFlag(int64_t mask, bool set)
 
 bool Group::getFlag(int64_t mask)
 {
-    return flags & mask;
+    return (mask == -1) || ((flags & mask) == mask);
 }
 
 void Group::updateMembers()
@@ -290,7 +290,7 @@ void broadcastMsg(const char* msg, int64_t flag)
     for (auto& [id, g] : grp::groups)
     {
         //CQ_sendGroupMsg(ac, group, msg);
-        if (!g.members.empty() && ((g.flags & flag) || flag == -1))
+        if (!g.members.empty() && g.getFlag(flag))
             g.sendMsg(msg);
     }
 }
