@@ -78,7 +78,7 @@ json 开箱(::int64_t group, ::int64_t qq, std::vector<std::string> args)
 
     if (p.getKeyCount() >= 1)
     {
-        p.modifyBoxCount(-1);
+        p.modifyKeyCount(-1);
     }
     else if (p.getCurrency() >= FEE_PER_CASE)
     {
