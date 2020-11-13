@@ -270,6 +270,10 @@ void groupMsgCallback(const json& body)
 
 std::string selfUnsmoke(int64_t qq)
 {
+    // update smoke status
+    if (qq != botLoginQQId && qq != 10000 && qq != 1000000)
+        updateSmokeTimeList(qq);
+
     if (smokeTimeInGroups.find(qq) == smokeTimeInGroups.end() || smokeTimeInGroups[qq].empty())
         return "你么得被烟啊";
 
