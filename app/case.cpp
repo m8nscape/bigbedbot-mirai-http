@@ -215,7 +215,6 @@ json 开红箱(::int64_t group, ::int64_t qq, std::vector<std::string> args)
     if (!enough)
         return not_enough_stamina(qq, rtime);
     
-    p.modifyCurrency(-OPEN_RUN_SP2_COST);
     p.modifyStamina(-OPEN_RUN_SP2_STAMINA, true);
 
     json resp = R"({ "messageChain": [] })"_json;
@@ -228,9 +227,9 @@ json 开红箱(::int64_t group, ::int64_t qq, std::vector<std::string> args)
 
     std::vector<int> case_counts(CASE_TYPES.size(), 0);
     int count = 0;
-    int cost = 0;
+    int cost = OPEN_RUN_SP2_COST;
     int res = 0;
-    int64_t pee = p.getCurrency();
+    int64_t pee = p.getCurrency() - cost;
     case_detail reward;
     do {
         ++count;
@@ -295,22 +294,21 @@ json 开黄箱(::int64_t group, ::int64_t qq, std::vector<std::string> args)
     if (!enough)
         return not_enough_stamina(qq, rtime);
     
-    p.modifyCurrency(-OPEN_RUN_SP1_COST);
     p.modifyStamina(-user::MAX_STAMINA, true);
 
     json resp = R"({ "messageChain": [] })"_json;
     json& r = resp["messageChain"];
     std::stringstream ss;
     r.push_back(mirai::buildMessageAt(qq));
-    ss << "消耗" << OPEN_RUN_SP2_COST << "个批和" << user::MAX_STAMINA << "点体力发动技能！\n";
+    ss << "消耗" << OPEN_RUN_SP1_COST << "个批和" << user::MAX_STAMINA << "点体力发动技能！\n";
     r.push_back(mirai::buildMessagePlain(ss.str()));
     ss.str("");
 
     std::vector<int> case_counts(CASE_TYPES.size(), 0);
     int count = 0;
-    int cost = 0;
+    int cost = OPEN_RUN_SP1_COST;
     int res = 0;
-    int64_t pee = p.getCurrency();
+    int64_t pee = p.getCurrency() - cost;
     case_detail reward;
     do {
         ++count;
