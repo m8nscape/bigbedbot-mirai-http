@@ -40,7 +40,7 @@ std::vector<chance> chanceList;
 struct flags
 {
     time_t  freeze_assets_expire_time = 0;
-    time_t  adrenaline_expire_time = LONG_MAX;
+    time_t  adrenaline_expire_time = 0;
     bool    chaos = false;
     bool    skip_mul_all_currency_sub1 = false;
 
