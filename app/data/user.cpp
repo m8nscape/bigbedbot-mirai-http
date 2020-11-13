@@ -55,9 +55,10 @@ pdata::resultStamina pdata::getStamina(bool extra) const
     return { true, stamina, stamina_recovery_time - t};
 }
 
-pdata::resultStamina pdata::modifyStamina(int cost, bool extra)
+pdata::resultStamina pdata::modifyStamina(int delta, bool extra)
 {
     int stamina = getStamina(false).staminaAfterUpdate;
+    int cost = -delta;
 
     bool enough = false;
 

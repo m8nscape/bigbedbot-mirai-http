@@ -66,10 +66,10 @@ void mute_bot(int64_t qqid, int64_t groupid, double x) { smoke::nosmoking(groupi
 void mute_random(int64_t qqid, int64_t groupid, double x, int64_t& target) { target = get_random_registered_member(groupid); smoke::nosmoking(groupid, target, round(x)); }
 void give_key(int64_t qqid, double x) { pd[qqid].modifyKeyCount(round(x)); }
 void give_currency(int64_t qqid, double x) { pd[qqid].modifyCurrency(round(x)); }
-void give_stamina(int64_t qqid, double x) { pd[qqid].modifyStamina(-round(x)); }
-void give_stamina_extra(int64_t qqid, double x) { pd[qqid].modifyStamina(-round(x), true); }
-void set_stamina(int64_t qqid, double x) { pd[qqid].modifyStamina(pd[qqid].modifyStamina(0).staminaAfterUpdate); pd[qqid].modifyStamina(-round(x)); }
-void mul_currency(int64_t qqid, double x) { pd[qqid].modifyCurrency(round(pd[qqid].getCurrency() * x) - pd[qqid].getCurrency()); }
+void give_stamina(int64_t qqid, double x) { pd[qqid].modifyStamina(round(x)); }
+void give_stamina_extra(int64_t qqid, double x) { pd[qqid].modifyStamina(round(x), true); }
+void set_stamina(int64_t qqid, double x) { int s = pd[qqid].modifyStamina(0).staminaAfterUpdate; pd[qqid].modifyStamina(-s); pd[qqid].modifyStamina(round(x)); }
+void mul_currency(int64_t qqid, double x) { int64_t c = pd[qqid].getCurrency(); pd[qqid].modifyCurrency(round(c * x) - c); }
 void give_all_key(int64_t groupid, double x) { do_all(groupid, std::bind(give_key, _1, _3), x); }
 void give_all_currency(int64_t groupid, double x) { do_all(groupid, std::bind(give_currency, _1, _3), x); }
 void give_all_currency_range(int64_t groupid, double x, double y) { do_all(groupid, [](int64_t qqid, int64_t groupid, double x, double y) {pd[qqid].modifyCurrency(randInt(round(x), round(y))); }, x, y); }
@@ -313,7 +313,7 @@ void msgCallback(const json& body)
     bool adrenaline = t > user_stat[m.qqid].adrenaline_expire_time;
     if (!adrenaline)
     {
-        auto [enough, stamina, rtime] = user::plist[m.qqid].modifyStamina(1);
+        auto [enough, stamina, rtime] = user::plist[m.qqid].modifyStamina(-1);
         if (!enough)
         {
             mirai::sendMsgResp(m, not_enough_stamina(m.qqid, rtime));

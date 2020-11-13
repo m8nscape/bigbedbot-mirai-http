@@ -161,7 +161,7 @@ command msgDispatcher(const json& body)
             else ss << CQ_At(qq) << "£¬¹§Ï²Äã¿ª³öÁË";
             ss << pool_draw.casePartName(reward);
 
-			p.modifyStamina(1, true);
+			p.modifyStamina(-1, true);
 			p.modifyCurrency(+reward.worth - pool_draw.getTypeCost(type));
 
             // drop

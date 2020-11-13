@@ -48,7 +48,7 @@ public:
 		time_t	fullRecoverTime;
 	};
 	resultStamina getStamina(bool extra) const;
-	resultStamina modifyStamina(int cost = 0, bool extra = false);
+	resultStamina modifyStamina(int delta = 0, bool extra = false);
 	resultStamina testStamina(int cost = 0) const;
 
 	int64_t getCurrency() const { return currency; }
