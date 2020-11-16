@@ -5,6 +5,7 @@
 #include <vector>
 #include <map>
 #include <future>
+#include <exception>
 
 #include "util.h"
 #include "utils/logger.h"
@@ -337,9 +338,22 @@ int procRecvMsgEntry(const json& v)
     if (RecvMsgTypeMap.find(type) != RecvMsgTypeMap.end())
     {
         RecvMsgType e = RecvMsgTypeMap.at(type);
-        for (const auto& cb: eventCallbacks[e])
+        for (size_t i = 0; i < eventCallbacks[e].size(); ++i)
         {
-            cb(v);
+            try
+            {
+                eventCallbacks[e][i](v);
+            }
+            catch (std::exception &e)
+            {
+                addLog(LOG_ERROR, "api", 
+                    "Exception occurred: %s at callback %u of %s\n"
+                    "----------Message Begin----------\n"
+                    "%s\n"
+                    "----------Message End------------", 
+                    e.what(), i, type.c_str(), v.dump().c_str());
+                throw(e);
+            }
         }
         return 0;
     }
