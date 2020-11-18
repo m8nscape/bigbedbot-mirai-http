@@ -73,7 +73,7 @@ const std::vector<std::pair<std::regex, commands>> private_commands_regex
 std::map<int64_t, int64_t> groupLastTalkedMember;
 
 std::string nosmokingWrapper(int64_t qq, int64_t group, int64_t target, int64_t duration_min);
-void 禁烟(const mirai::MsgMetadata& m, int64_t target_qqid, int64_t duration)
+void 禁烟(const mirai::MsgMetadata& m, int64_t target, int64_t duration)
 {
     if (grp::groups[m.groupid].haveMember(botLoginQQId))
         if (grp::groups[m.groupid].members[botLoginQQId].permission == mirai::group_member_permission::MEMBER) 
@@ -96,13 +96,6 @@ void 禁烟(const mirai::MsgMetadata& m, int64_t target_qqid, int64_t duration)
         mirai::sendGroupMsgStr(m.groupid, "您抽烟倒着抽？");
         return;
     }
-
-    // smoke last member if req without target
-    int64_t target = 0;
-    if (target_qqid == 0)
-        target = groupLastTalkedMember[m.groupid];
-    else
-        target = target_qqid;
 
     auto resp = nosmokingWrapper(m.qqid, m.groupid, target, duration);
     if (!resp.empty())
@@ -222,6 +215,24 @@ void updateSmokeTimeList(int64_t qqid)
     }
 }
 
+int64_t getTarget(int64_t groupid, const std::string& s)
+{
+    if (s.empty())
+        return 0;
+    
+    // find by group
+    if (grp::groups.find(groupid) == grp::groups.end())
+        return 0;
+    if (int64_t id = grp::groups.at(groupid).getMember(s.c_str()); id != 0)
+        return id;
+    
+    // find by config
+    if (int64_t id = user::getUser(s); id != 0)
+        return id;
+
+    return 0;
+}
+
 void groupMsgCallback(const json& body)
 {
     auto m = mirai::parseMsgMetadata(body);
@@ -234,7 +245,7 @@ void groupMsgCallback(const json& body)
     if (query.empty()) return;
 
     commands c = commands::_;
-    int64_t target_qqid = 0;
+    int64_t target_qqid = -1;
     int64_t duration = 0;
     for (const auto& [re, cmd]: group_commands_regex)
     {
@@ -242,7 +253,7 @@ void groupMsgCallback(const json& body)
         if (std::regex_match(query, res, re))
         {
             c = cmd;
-            target_qqid = res[2].str().empty() ? 0 : user::getUser(res[2].str());
+            target_qqid = getTarget(m.groupid, res[2].str());
             char* duration_strtoll_endptr;
             duration = std::strtoll(res[3].str().c_str(), &duration_strtoll_endptr, 10);
             if (*duration_strtoll_endptr) duration = LLONG_MIN;
@@ -250,6 +261,10 @@ void groupMsgCallback(const json& body)
         }
     }
     if (c == commands::_) return;
+    
+    // smoke last member if req without target
+    if (target_qqid == -1) 
+        target_qqid = groupLastTalkedMember[m.groupid];
 
     grp::newGroupIfNotExist(m.groupid);
 

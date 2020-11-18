@@ -39,9 +39,9 @@ public:
 
 public:
     void updateMembers();
-    bool haveMember(int64_t qq);
-    int64_t getMember(const char* name);
-    void sendMsg(const char* msg);
+    bool haveMember(int64_t qq) const;
+    int64_t getMember(const char* name) const;
+    void sendMsg(const char* msg) const;
     Group() = default;
     Group(int64_t id) : group_id(id) {}
 };

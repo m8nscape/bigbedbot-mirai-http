@@ -80,14 +80,14 @@ void Group::updateMembers()
     addLog(LOG_INFO, "grp", buf);
 }
 
-bool Group::haveMember(int64_t qq)
+bool Group::haveMember(int64_t qq) const
 {
     return members.find(qq) != members.end();
 }
 
-int64_t Group::getMember(const char* name)
+int64_t Group::getMember(const char* name) const
 {
-    for (auto& [m, v] : members)
+    for (const auto& [m, v] : members)
     {
         // qqid
         std::string qqid_s = std::to_string(v.qqid);
@@ -106,7 +106,7 @@ int64_t Group::getMember(const char* name)
     return 0;
 }
 
-void Group::sendMsg(const char* msg)
+void Group::sendMsg(const char* msg) const
 {
     mirai::sendGroupMsgStr(group_id, std::string(msg));
 }
