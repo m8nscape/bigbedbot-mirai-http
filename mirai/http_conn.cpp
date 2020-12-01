@@ -4,7 +4,7 @@
 
 #include "utils/logger.h"
 
-namespace mirai::conn
+namespace mirai::http
 {
 
 const char* HOST = "localhost";

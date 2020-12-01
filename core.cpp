@@ -10,6 +10,7 @@
 #include "app/data/group.h"
 
 #include "mirai/http_conn.h"
+#include "mirai/ws_conn.h"
 #include "mirai/api.h"
 #include "mirai/util.h"
 
@@ -21,6 +22,8 @@ namespace core
 
 std::string authKey;
 bool botStarted = false;
+bool useWebsocket = true;
+
 bool isBotStarted() {return botStarted;}
 
 int initialize()
@@ -64,9 +67,12 @@ int config()
     addLog(LOG_INFO, "core", "Loading config from %s", std::filesystem::absolute(cfgPath).c_str());
     YAML::Node cfg = YAML::LoadFile(cfgFile);
     authKey = cfg["authkey"].as<std::string>();
-    mirai::conn::set_port(cfg["port"].as<unsigned short>());
+    unsigned short port = cfg["port"].as<unsigned short>();
+    mirai::http::set_port(port);
+    mirai::ws::set_port(port);
     botLoginQQId = cfg["qq"].as<int64_t>();
     rootQQId = cfg["qq_root"].as<int64_t>();
+    useWebsocket = cfg["use_ws"].as<bool>();
     return 0;
 }
 
@@ -93,7 +99,12 @@ int init_app_and_start()
 
     // start threads
     startTimedEvent();
-    mirai::startMsgPoll();
+
+    // listen events
+    if (useWebsocket)
+        mirai::connectMsgWebSocket();
+    else
+        mirai::startMsgPoll();
     
     return 0;
 }
@@ -107,7 +118,10 @@ int shutdown()
         user::db.transactionStop();
         grp::db.transactionStop();
         botStarted = false;
-        mirai::stopMsgPoll();
+        if (useWebsocket) 
+            mirai::disconnectMsgWebSocket();
+        else
+            mirai::stopMsgPoll();
         stopTimedEvent();
     }
 

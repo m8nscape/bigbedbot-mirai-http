@@ -7,6 +7,9 @@ authkey: INITKEY111111
 # port: mirai-http-api设置的监听端口，请求将发送至http://localhost:port
 port: 23456
 
+# use_ws: 使用websocket获取事件、消息等
+use_ws: true
+
 # qq: 机器人qq号，必须是mirai已登录的账号
 qq: 1234567890
 

@@ -1,5 +1,6 @@
 #include "api.h"
 #include "http_conn.h"
+#include "ws_conn.h"
 
 #include <sstream>
 #include <vector>
@@ -25,7 +26,7 @@ int auth(const char* auth_key)
 
     std::promise<int> p;
     std::future<int> f = p.get_future();
-	conn::POST("/auth", body, 
+	http::POST("/auth", body, 
 		[&p](const json& v) -> int
 		{
             int resp = 0;
@@ -66,7 +67,7 @@ int verify()
 
     std::promise<int> p;
     std::future<int> f = p.get_future();
-	conn::POST("/verify", body, 
+	http::POST("/verify", body, 
 		[&p](const json& v) -> int
 		{
             int resp = 0;
@@ -159,7 +160,7 @@ int sendTempMsg(int64_t qqid, int64_t groupid, const json& messageChain, int64_t
     if (quotemsgid) obj["quote"] = quotemsgid;
     obj["messageChain"] = messageChain.at("messageChain");
 
-    return conn::POST("/sendTempMessage", obj, sendMsgCallback);
+    return http::POST("/sendTempMessage", obj, sendMsgCallback);
 }
 
 int sendFriendMsgStr(int64_t qqid, const std::string& msg, int64_t quotemsgid)
@@ -190,7 +191,7 @@ int sendFriendMsg(int64_t qqid, const json& messageChain, int64_t quotemsgid)
     if (quotemsgid) obj["quote"] = quotemsgid;
     obj["messageChain"] = messageChain.at("messageChain");
 
-    return conn::POST("/sendFriendMessage", obj, sendMsgCallback);
+    return http::POST("/sendFriendMessage", obj, sendMsgCallback);
 }
 
 int sendGroupMsgStr(int64_t groupid, const std::string& msg, int64_t quotemsgid)
@@ -220,7 +221,7 @@ int sendGroupMsg(int64_t groupid, const json& messageChain, int64_t quotemsgid)
     if (quotemsgid) obj["quote"] = quotemsgid;
     obj["messageChain"] = messageChain.at("messageChain");
 
-    return conn::POST("/sendGroupMessage", obj, sendMsgCallback);
+    return http::POST("/sendGroupMessage", obj, sendMsgCallback);
 }
 
 int recallMsg(int64_t msgid)
@@ -229,7 +230,7 @@ int recallMsg(int64_t msgid)
     json obj;
     obj["sessionKey"] = std::string(sessionKey);
     obj["target"] = msgid;
-    int ret = conn::POST("/recall", obj, sendMsgCallback);
+    int ret = http::POST("/recall", obj, sendMsgCallback);
     return ret;
 }
 
@@ -244,11 +245,11 @@ int mute(int64_t qqid, int64_t groupid, int time_sec)
     if (time_sec != 0)
     {
         obj["time"] = time_sec;
-        int ret = conn::POST("/mute", obj, sendMsgCallback);
+        int ret = http::POST("/mute", obj, sendMsgCallback);
     }
     else
     {
-        int ret = conn::POST("/unmute", obj, sendMsgCallback);
+        int ret = http::POST("/unmute", obj, sendMsgCallback);
     }
     return ret;
 }
@@ -263,7 +264,7 @@ group_member_info getGroupMemberInfo(int64_t groupid, int64_t qqid)
 
     std::promise<int> p;
     std::future<int> f = p.get_future();
-    conn::GET(path.str(), 
+    http::GET(path.str(), 
         [&](const json& body)
         {
             if (body.empty()) return -1;
@@ -297,7 +298,7 @@ std::vector<group_member_info> getGroupMemberList(int64_t groupid)
     std::vector<group_member_info> l;
     std::promise<int> p;
     std::future<int> f = p.get_future();
-    conn::GET(path.str(), 
+    http::GET(path.str(), 
         [&](const json& body)
         {
             for (const auto& m: body)
@@ -393,7 +394,7 @@ void startMsgPoll()
             path << "/fetchMessage?sessionKey=" << sessionKey << "&count=" << POLLING_QUANTITY;
             std::promise<int> p;
             std::future<int> f = p.get_future();
-            conn::GET(path.str(), 
+            http::GET(path.str(), 
                 [&p](const json& v) -> int
                 {
                     if (v.contains("data"))
@@ -426,5 +427,21 @@ void stopMsgPoll()
     }
 }
 
+void connectMsgWebSocket()
+{
+    std::stringstream path;
+    path << "/all?sessionKey=" << sessionKey;
+    ws::setRecvCallback([](const std::string& msg)
+    {
+        procRecvMsgEntry(json::parse(msg));
+    });
+
+    ws::connect(path.str());
+}
+
+void disconnectMsgWebSocket()
+{
+    ws::disconnect();
+}
 
 }

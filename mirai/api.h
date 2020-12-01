@@ -128,5 +128,7 @@ const int POLLING_QUANTITY = 10;
 
 void startMsgPoll();
 void stopMsgPoll();
+void connectMsgWebSocket();
+void disconnectMsgWebSocket();
 
 }

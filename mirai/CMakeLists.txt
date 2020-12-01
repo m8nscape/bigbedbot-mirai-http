@@ -4,6 +4,7 @@ add_library(mirai-api STATIC
     util.cpp util.h 
     msg.cpp msg.h 
     http_conn.cpp http_conn.h 
+    ws_conn.cpp ws_conn.h
     api.cpp api.h
 )
 target_include_directories(mirai-api
