@@ -61,8 +61,8 @@ enum class commands : size_t {
 };
 const std::vector<std::pair<std::regex, commands>> group_commands_regex
 {
-    {std::regex("^禁(言|烟|菸|煙)([^\\s]*) ([^\\s]*)$", std::regex::optimize | std::regex::extended), commands::禁烟},
-    {std::regex("^(接近|解禁)([^\\s]*) ([^\\s]*)$", std::regex::optimize | std::regex::extended), commands::解禁},
+    {std::regex("^禁(言|烟|菸|煙)([^\\s]*)( |　)+([^\\s]*)$", std::regex::optimize | std::regex::extended), commands::禁烟},
+    {std::regex("^(接近|解禁)([^\\s]+)()()$", std::regex::optimize | std::regex::extended), commands::解禁},
 };
 
 const std::vector<std::pair<std::regex, commands>> private_commands_regex
@@ -237,6 +237,9 @@ void groupMsgCallback(const json& body)
 {
     auto m = mirai::parseMsgMetadata(body);
 
+    int64_t m1target = groupLastTalkedMember[m.groupid];
+    groupLastTalkedMember[m.groupid] = m.qqid;
+
     // update smoke status
     if (m.qqid != botLoginQQId && m.qqid != 10000 && m.qqid != 1000000)
         updateSmokeTimeList(m.qqid);
@@ -253,19 +256,20 @@ void groupMsgCallback(const json& body)
         if (std::regex_match(query, res, re))
         {
             c = cmd;
-            target_qqid = getTarget(m.groupid, res[2].str());
+            
+            if (!res[2].str().empty())
+                target_qqid = getTarget(m.groupid, res[2].str());
+            else
+                target_qqid = m1target;
+            
             char* duration_strtoll_endptr;
-            duration = std::strtoll(res[3].str().c_str(), &duration_strtoll_endptr, 10);
+            duration = std::strtoll(res[4].str().c_str(), &duration_strtoll_endptr, 10);
             if (*duration_strtoll_endptr) duration = LLONG_MIN;
             break;
         }
     }
     if (c == commands::_) return;
     
-    // smoke last member if req without target
-    if (target_qqid == -1) 
-        target_qqid = groupLastTalkedMember[m.groupid];
-
     grp::newGroupIfNotExist(m.groupid);
 
     switch (c)
@@ -280,7 +284,6 @@ void groupMsgCallback(const json& body)
         break;
     }
 
-    groupLastTalkedMember[m.groupid] = m.qqid;
 }
 
 std::string selfUnsmoke(int64_t qq)
