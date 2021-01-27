@@ -1,5 +1,12 @@
 #include <sstream>
+
+#if __GNUC__ >= 8
 #include <filesystem>
+namespace fs = std::filesystem;
+#else
+#include <experimental/filesystem>
+namespace fs = std::experimental::filesystem;
+#endif
 
 #include "case.h"
 #include "data/group.h"
@@ -67,7 +74,7 @@ json not_enough_stamina(int64_t qq, time_t rtime)
 }
 
 
-json 开箱(::int64_t group, ::int64_t qq, std::vector<std::string> args)
+json OPEN_1(::int64_t group, ::int64_t qq, std::vector<std::string> args)
 {
     if (plist.find(qq) == plist.end()) 
         return not_registered(qq);
@@ -117,7 +124,7 @@ json 开箱(::int64_t group, ::int64_t qq, std::vector<std::string> args)
     return resp;
 }
 
-json 开箱10(::int64_t group, ::int64_t qq, std::vector<std::string> args)
+json OPEN_10(::int64_t group, ::int64_t qq, std::vector<std::string> args)
 {
     if (plist.find(qq) == plist.end())
         return not_registered(qq);
@@ -198,7 +205,7 @@ json 开箱10(::int64_t group, ::int64_t qq, std::vector<std::string> args)
     return resp;
 }
 
-json 开红箱(::int64_t group, ::int64_t qq, std::vector<std::string> args)
+json OPEN_R(::int64_t group, ::int64_t qq, std::vector<std::string> args)
 {
     if (plist.find(qq) == plist.end())
         return not_registered(qq);
@@ -277,7 +284,7 @@ json 开红箱(::int64_t group, ::int64_t qq, std::vector<std::string> args)
     //ss << "你还有" << stamina << "点体力，";
 }
 
-json 开黄箱(::int64_t group, ::int64_t qq, std::vector<std::string> args)
+json OPEN_Y(::int64_t group, ::int64_t qq, std::vector<std::string> args)
 {
     if (plist.find(qq) == plist.end())
         return not_registered(qq);
@@ -333,7 +340,7 @@ json 开黄箱(::int64_t group, ::int64_t qq, std::vector<std::string> args)
 
 
     r.push_back(mirai::buildMessageAt(qq));
-    ss << "破产了，开了" << count << "个箱子也没能开出红箱，"
+    ss << "破产了，开了" << count << "个箱子也没能开出黄箱，"
         << "本次净收益" << pee - p.getCurrency() << "个批";
     r.push_back(mirai::buildMessagePlain(ss.str()));
 
@@ -344,7 +351,7 @@ json 开黄箱(::int64_t group, ::int64_t qq, std::vector<std::string> args)
     //ss << "你还有" << stamina << "点体力，";
 }
 
-json 开箱endless(::int64_t group, ::int64_t qq, std::vector<std::string> args)
+json OPEN_ENDLESS(::int64_t group, ::int64_t qq, std::vector<std::string> args)
 {
     json resp = R"({ "messageChain": [] })"_json;
     json& r = resp["messageChain"];
@@ -411,18 +418,18 @@ case commands::开箱endless:
 
 const std::map<std::string, commands> commands_str
 {
-    {"开箱", commands::开箱},
-    {"開箱", commands::开箱},  //繁體化
-    {"开箱十连", commands::开箱10},
-    {"開箱十連", commands::开箱10},  //繁體化
-    {"开黄箱", commands::开黄箱},
-    {"開黃箱", commands::开黄箱},  //繁體化
-    {"开红箱", commands::开红箱},
-    {"開紅箱", commands::开红箱},  //繁體化
-    {"开箱梭哈", commands::开箱endless},
-    {"开箱照破", commands::开箱endless},  //梭哈在FF14的翻译是[照破]
-    {"開箱梭哈", commands::开箱endless},  //繁體化
-    {"開箱照破", commands::开箱endless},  //繁體化
+    {"开箱", commands::OPEN_1},
+    {"開箱", commands::OPEN_1},  //繁體化
+    {"开箱十连", commands::OPEN_10},
+    {"開箱十連", commands::OPEN_10},  //繁體化
+    {"开黄箱", commands::OPEN_Y},
+    {"開黃箱", commands::OPEN_Y},  //繁體化
+    {"开红箱", commands::OPEN_R},
+    {"開紅箱", commands::OPEN_R},  //繁體化
+    {"开箱梭哈", commands::OPEN_ENDLESS},
+    {"开箱照破", commands::OPEN_ENDLESS},  //梭哈在FF14的翻译是[照破]
+    {"開箱梭哈", commands::OPEN_ENDLESS},  //繁體化
+    {"開箱照破", commands::OPEN_ENDLESS},  //繁體化
 
 };
 void msgDispatcher(const json& body)
@@ -441,20 +448,20 @@ void msgDispatcher(const json& body)
     json resp;
     switch (commands_str.at(cmd))
     {
-    case commands::开箱:
-        resp = 开箱(m.groupid, m.qqid, query);
+    case commands::OPEN_1:
+        resp = OPEN_1(m.groupid, m.qqid, query);
         break;
-    case commands::开箱10:
-        resp = 开箱10(m.groupid, m.qqid, query);
+    case commands::OPEN_10:
+        resp = OPEN_10(m.groupid, m.qqid, query);
         break;
-    case commands::开红箱:
-        resp = 开红箱(m.groupid, m.qqid, query);
+    case commands::OPEN_R:
+        resp = OPEN_R(m.groupid, m.qqid, query);
         break;
-    case commands::开黄箱:
-        resp = 开黄箱(m.groupid, m.qqid, query);
+    case commands::OPEN_Y:
+        resp = OPEN_Y(m.groupid, m.qqid, query);
         break;
-    case commands::开箱endless:
-        resp = 开箱endless(m.groupid, m.qqid, query);
+    case commands::OPEN_ENDLESS:
+        resp = OPEN_ENDLESS(m.groupid, m.qqid, query);
         break;
     default: 
         break;
@@ -487,13 +494,13 @@ const case_detail& draw_case(double p)
 
 int loadCfg(const char* yaml)
 {
-    std::filesystem::path cfgPath(yaml);
-    if (!std::filesystem::is_regular_file(cfgPath))
+    fs::path cfgPath(yaml);
+    if (!fs::is_regular_file(cfgPath))
     {
-        addLog(LOG_ERROR, "case", "Case config file %s not found", std::filesystem::absolute(cfgPath).c_str());
+        addLog(LOG_ERROR, "case", "Case config file %s not found", fs::absolute(cfgPath).c_str());
         return -1;
     }
-    addLog(LOG_INFO, "case", "Loading case config from %s", std::filesystem::absolute(cfgPath).c_str());
+    addLog(LOG_INFO, "case", "Loading case config from %s", fs::absolute(cfgPath).c_str());
 
     YAML::Node cfg = YAML::LoadFile(yaml);
 

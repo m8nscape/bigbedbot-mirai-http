@@ -52,4 +52,5 @@ endif()
 
 if (UNIX OR MINGW)
     target_link_libraries(bbb PRIVATE -lpthread)
+    target_link_libraries(bbb PRIVATE -lstdc++fs)
 endif()

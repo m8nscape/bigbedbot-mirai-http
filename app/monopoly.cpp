@@ -1,6 +1,13 @@
 #include "monopoly.h"
 
+#if __GNUC__ >= 8
 #include <filesystem>
+namespace fs = std::filesystem;
+#else
+#include <experimental/filesystem>
+namespace fs = std::experimental::filesystem;
+#endif
+
 #include <functional>
 #include <map>
 #include <list>
@@ -149,13 +156,13 @@ int64_t get_random_registered_member(int64_t groupid)
 
 int init(const char* yaml)
 {
-    std::filesystem::path cfgPath(yaml);
-    if (!std::filesystem::is_regular_file(cfgPath))
+    fs::path cfgPath(yaml);
+    if (!fs::is_regular_file(cfgPath))
     {
-        addLog(LOG_ERROR, "monopoly", "chance list file %s not found", std::filesystem::absolute(cfgPath).c_str());
+        addLog(LOG_ERROR, "monopoly", "chance list file %s not found", fs::absolute(cfgPath).c_str());
         return -1;
     }
-    addLog(LOG_INFO, "monopoly", "Loading chance events from %s", std::filesystem::absolute(cfgPath).c_str());
+    addLog(LOG_INFO, "monopoly", "Loading chance events from %s", fs::absolute(cfgPath).c_str());
 
     YAML::Node cfg = YAML::LoadFile(yaml);
     chance::total_prob = 0.0;

@@ -13,11 +13,11 @@ using nlohmann::json;
 void init(const char* cfg_yml);
 
 enum class commands : size_t {
-	开箱,
-	开箱10,
-	开黄箱,
-	开红箱,
-	开箱endless,
+	OPEN_1,
+	OPEN_10,
+	OPEN_Y,
+	OPEN_R,
+	OPEN_ENDLESS,
 };
 
 void msgDispatcher(const json& body);

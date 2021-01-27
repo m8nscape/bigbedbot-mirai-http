@@ -1,5 +1,12 @@
 #include <sstream>
+
+#if __GNUC__ >= 8
 #include <filesystem>
+namespace fs = std::filesystem;
+#else
+#include <experimental/filesystem>
+namespace fs = std::experimental::filesystem;
+#endif
 
 #include "user.h"
 #include "group.h"
@@ -269,7 +276,7 @@ json draw_p(int64_t qq, int64_t base, int64_t bonus, int64_t daily_remain)
     return std::move(resp);
 }
 
-json 开通(int64_t qq)
+json REG(int64_t qq)
 {
     if (plist.find(qq) != plist.end()) 
         return std::move(already_registered(qq));
@@ -277,14 +284,14 @@ json 开通(int64_t qq)
     return std::move(registered(qq, INITIAL_BALANCE));
 }
 
-json 开通提示(int64_t qq)
+json REG_HINT(int64_t qq)
 {
     if (plist.find(qq) != plist.end()) 
         return std::move(already_registered(qq));
     return std::move(register_notify());
 }
 
-json 余额(int64_t qq)
+json BALANCE(int64_t qq)
 {
     if (plist.find(qq) == plist.end()) 
         return std::move(not_registered(qq));
@@ -293,7 +300,7 @@ json 余额(int64_t qq)
     return std::move(currency(qq, p.getCurrency(), p.getKeyCount(), stamina, rtime));
 }
 
-json 领批(int64_t qq, int64_t group)
+json DRAW_P(int64_t qq, int64_t group)
 {
     if (plist.find(qq) == plist.end()) 
         return std::move(not_registered(qq));
@@ -338,25 +345,25 @@ json 领批(int64_t qq, int64_t group)
 
 const std::map<std::string, commands> commands_str
 {
-    {"开通", commands::开通提示},
-    {"开通菠菜", commands::开通提示},
-    {"给我开通菠菜", commands::开通提示},
-    {"注册", commands::开通提示},
-    {"注册菠菜", commands::开通提示},
-    {"我要注册菠菜", commands::开通提示},
-    {"我要开通菠菜", commands::开通},
-    {"余额", commands::余额},
-    {"领批", commands::领批},
+    {"开通", commands::REG_HINT},
+    {"开通菠菜", commands::REG_HINT},
+    {"给我开通菠菜", commands::REG_HINT},
+    {"注册", commands::REG_HINT},
+    {"注册菠菜", commands::REG_HINT},
+    {"我要注册菠菜", commands::REG_HINT},
+    {"我要开通菠菜", commands::REG},
+    {"余额", commands::BALANCE},
+    {"领批", commands::DRAW_P},
 
-    {"開通", commands::开通提示},  //繁體化
-    {"開通菠菜", commands::开通提示},  //繁體化
-    {"給我開通菠菜", commands::开通提示},  //繁體化
-    {"註冊", commands::开通提示},  //繁體化
-    {"註冊菠菜", commands::开通提示},  //繁體化
-    {"我要註冊菠菜", commands::开通提示},  //繁體化
-    {"我要開通菠菜", commands::开通},  //繁體化
-    {"餘額", commands::余额},  //繁體化
-    {"領批", commands::领批},  //繁體化
+    {"開通", commands::REG_HINT},  //繁體化
+    {"開通菠菜", commands::REG_HINT},  //繁體化
+    {"給我開通菠菜", commands::REG_HINT},  //繁體化
+    {"註冊", commands::REG_HINT},  //繁體化
+    {"註冊菠菜", commands::REG_HINT},  //繁體化
+    {"我要註冊菠菜", commands::REG_HINT},  //繁體化
+    {"我要開通菠菜", commands::REG},  //繁體化
+    {"餘額", commands::BALANCE},  //繁體化
+    {"領批", commands::DRAW_P},  //繁體化
 };
 
 void msgCallback(const json& body)
@@ -375,17 +382,17 @@ void msgCallback(const json& body)
     json resp;
     switch (commands_str.at(cmd))
     {
-    case commands::开通提示:
-        resp = 开通提示(m.qqid);
+    case commands::REG_HINT:
+        resp = REG_HINT(m.qqid);
         break;
-    case commands::开通:
-        resp = 开通(m.qqid);
+    case commands::REG:
+        resp = REG(m.qqid);
         break;
-    case commands::余额:
-        resp = 余额(m.qqid);
+    case commands::BALANCE:
+        resp = BALANCE(m.qqid);
         break;
-    case commands::领批:
-        resp = 领批(m.qqid, m.groupid);
+    case commands::DRAW_P:
+        resp = DRAW_P(m.qqid, m.groupid);
         break;
     default: 
         break;
@@ -400,13 +407,13 @@ void msgCallback(const json& body)
 std::map<std::string, int64_t> USER_ALIAS;
 int loadUserAlias(const char* yaml)
 {
-    std::filesystem::path cfgPath(yaml);
-    if (!std::filesystem::is_regular_file(cfgPath))
+    fs::path cfgPath(yaml);
+    if (!fs::is_regular_file(cfgPath))
     {
-        addLog(LOG_ERROR, "user", "Alias config file %s not found", std::filesystem::absolute(cfgPath).c_str());
+        addLog(LOG_ERROR, "user", "Alias config file %s not found", fs::absolute(cfgPath).c_str());
         return -1;
     }
-    addLog(LOG_INFO, "user", "Loading alias config from %s", std::filesystem::absolute(cfgPath).c_str());
+    addLog(LOG_INFO, "user", "Loading alias config from %s", fs::absolute(cfgPath).c_str());
 
     YAML::Node cfg = YAML::LoadFile(yaml);
     unsigned c = 0;

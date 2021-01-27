@@ -2,7 +2,14 @@
 #include <string>
 #include <sstream>
 #include <regex>
+
+#if __GNUC__ >= 8
 #include <filesystem>
+namespace fs = std::filesystem;
+#else
+#include <experimental/filesystem>
+namespace fs = std::experimental::filesystem;
+#endif
 
 #include "weather.h"
 
@@ -135,17 +142,17 @@ std::string success(::int64_t, ::int64_t, std::vector<std::string>& args, const 
 
 enum class commands : size_t {
     _,
-    全球天气,
-    国内天气
+    WEATHER_GLOBAL,
+    WEATHER_CN
 };
 const std::vector<std::pair<std::regex, commands>> commands_regex
 {
-    {std::regex(R"(^weather +(.+)$)", std::regex::optimize | std::regex::extended | std::regex::icase), commands::全球天气},
-    {std::regex(R"(^(.+) +weather$)", std::regex::optimize | std::regex::extended | std::regex::icase), commands::全球天气},
-    {std::regex(R"(^(.+) *天气$)", std::regex::optimize | std::regex::extended), commands::国内天气},
-    {std::regex(R"(^(.+) *天氣$)", std::regex::optimize | std::regex::extended), commands::国内天气},
-    {std::regex(R"(^天气 +(.+)$)", std::regex::optimize | std::regex::extended), commands::国内天气},
-    {std::regex(R"(^天氣 +(.+)$)", std::regex::optimize | std::regex::extended), commands::国内天气},
+    {std::regex(R"(^weather +(.+)$)", std::regex::optimize | std::regex::extended | std::regex::icase), commands::WEATHER_GLOBAL},
+    {std::regex(R"(^(.+) +weather$)", std::regex::optimize | std::regex::extended | std::regex::icase), commands::WEATHER_GLOBAL},
+    {std::regex(R"(^(.+) *天气$)", std::regex::optimize | std::regex::extended), commands::WEATHER_CN},
+    {std::regex(R"(^(.+) *天氣$)", std::regex::optimize | std::regex::extended), commands::WEATHER_CN},
+    {std::regex(R"(^天气 +(.+)$)", std::regex::optimize | std::regex::extended), commands::WEATHER_CN},
+    {std::regex(R"(^天氣 +(.+)$)", std::regex::optimize | std::regex::extended), commands::WEATHER_CN},
 };
 
 void msgCallback(const json& body)
@@ -171,10 +178,10 @@ void msgCallback(const json& body)
 
     switch (c)
     {
-    case commands::全球天气:
+    case commands::WEATHER_GLOBAL:
         weather_global(m, city);
         break;
-    case commands::国内天气:
+    case commands::WEATHER_CN:
         weather_cn(m, city);
         break;
     default:
@@ -315,13 +322,13 @@ void weather_cn(const mirai::MsgMetadata& m, const std::string& name)
 
 int init(const char* yaml)
 {
-    std::filesystem::path cfgPath(yaml);
-    if (!std::filesystem::is_regular_file(cfgPath))
+    fs::path cfgPath(yaml);
+    if (!fs::is_regular_file(cfgPath))
     {
-        addLog(LOG_ERROR, "weather", "weather config file %s not found", std::filesystem::absolute(cfgPath).c_str());
+        addLog(LOG_ERROR, "weather", "weather config file %s not found", fs::absolute(cfgPath).c_str());
         return -1;
     }
-    addLog(LOG_INFO, "weather", "Loading weather config from %s", std::filesystem::absolute(cfgPath).c_str());
+    addLog(LOG_INFO, "weather", "Loading weather config from %s", fs::absolute(cfgPath).c_str());
 
     YAML::Node cfg = YAML::LoadFile(yaml);
 

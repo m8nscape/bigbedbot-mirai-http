@@ -123,7 +123,7 @@ command msgDispatcher(const json& body)
     c.args = query;
     switch (c.c = commands_str[cmd])
     {
-    case commands::开箱:
+    case commands::DRAW:
         c.func = [](::int64_t group, ::int64_t qq, std::vector<std::string> args, std::string raw) -> std::string
         {
             if (plist.find(qq) == plist.end()) return std::string(CQ_At(qq)) + "，你还没有开通菠菜";
@@ -223,13 +223,13 @@ void stopEvent()
 
 case_pool loadCfg(const char* yaml)
 {
-	std::filesystem::path cfgPath(yaml);
-	if (!std::filesystem::is_regular_file(cfgPath))
+	fs::path cfgPath(yaml);
+	if (!fs::is_regular_file(cfgPath))
 	{
-		addLog(LOG_ERROR, "eventcase", "Case config file %s not found", std::filesystem::absolute(cfgPath));
+		addLog(LOG_ERROR, "eventcase", "Case config file %s not found", fs::absolute(cfgPath));
 		return -1;
 	}
-	addLog(LOG_INFO, "eventcase", "Loading case config from %s", std::filesystem::absolute(cfgPath));
+	addLog(LOG_INFO, "eventcase", "Loading case config from %s", fs::absolute(cfgPath));
 
 	YAML::Node cfg = YAML::LoadFile(cfgPath);
 

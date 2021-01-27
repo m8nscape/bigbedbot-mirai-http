@@ -2,7 +2,14 @@
 
 #include <curl/curl.h>
 #include <yaml-cpp/yaml.h>
+
+#if __GNUC__ >= 8
 #include <filesystem>
+namespace fs = std::filesystem;
+#else
+#include <experimental/filesystem>
+namespace fs = std::experimental::filesystem;
+#endif
 
 #include "core.h"
 
@@ -58,13 +65,13 @@ int initialize()
 int config()
 {
     const char* cfgFile = "./config/config.yaml";
-    std::filesystem::path cfgPath(cfgFile);
-    if (!std::filesystem::is_regular_file(cfgPath))
+    fs::path cfgPath(cfgFile);
+    if (!fs::is_regular_file(cfgPath))
     {
-        addLog(LOG_ERROR, "core", "Config file %s not found", std::filesystem::absolute(cfgPath));
+        addLog(LOG_ERROR, "core", "Config file %s not found", fs::absolute(cfgPath));
         return -1;
     }
-    addLog(LOG_INFO, "core", "Loading config from %s", std::filesystem::absolute(cfgPath).c_str());
+    addLog(LOG_INFO, "core", "Loading config from %s", fs::absolute(cfgPath).c_str());
     YAML::Node cfg = YAML::LoadFile(cfgFile);
     authKey = cfg["authkey"].as<std::string>();
     unsigned short port = cfg["port"].as<unsigned short>();

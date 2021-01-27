@@ -55,25 +55,25 @@ using user::plist;
 
 enum class commands : size_t {
     _, 
-    禁烟,
-    解禁,
-    接近我,
+    SMOKE,
+    UNSMOKE,
+    UNSMOKE_SELF,
 };
 const std::vector<std::pair<std::regex, commands>> group_commands_regex
 {
-    {std::regex("^禁(言|烟|菸|煙)([^\\s]*)( |　)+([^\\s]*)$", std::regex::optimize | std::regex::extended), commands::禁烟},
-    {std::regex("^(接近|解禁)([^\\s]+)()()$", std::regex::optimize | std::regex::extended), commands::解禁},
+    {std::regex("^禁(言|烟|菸|煙)([^\\s]*)( |　)+([^\\s]*)$", std::regex::optimize | std::regex::extended), commands::SMOKE},
+    {std::regex("^(接近|解禁)([^\\s]+)()()$", std::regex::optimize | std::regex::extended), commands::UNSMOKE},
 };
 
 const std::vector<std::pair<std::regex, commands>> private_commands_regex
 {
-    {std::regex("^(接近|解禁)(我)?$", std::regex::optimize | std::regex::extended), commands::接近我},
+    {std::regex("^(接近|解禁)(我)?$", std::regex::optimize | std::regex::extended), commands::UNSMOKE_SELF},
 };
 
 std::map<int64_t, int64_t> groupLastTalkedMember;
 
 std::string nosmokingWrapper(int64_t qq, int64_t group, int64_t target, int64_t duration_min);
-void 禁烟(const mirai::MsgMetadata& m, int64_t target, int64_t duration)
+void SMOKE(const mirai::MsgMetadata& m, int64_t target, int64_t duration)
 {
     if (grp::groups[m.groupid].haveMember(botLoginQQId))
         if (grp::groups[m.groupid].members[botLoginQQId].permission == mirai::group_member_permission::MEMBER) 
@@ -183,7 +183,7 @@ std::string nosmokingWrapper(int64_t qq, int64_t group, int64_t target, int64_t 
     }
 }
 
-void 群聊解禁(const mirai::MsgMetadata& m, int64_t target_qqid)
+void GROUP_UNSMOKE(const mirai::MsgMetadata& m, int64_t target_qqid)
 {
     if (grp::groups[m.groupid].haveMember(botLoginQQId))
         if (grp::groups[m.groupid].members[botLoginQQId].permission == mirai::group_member_permission::MEMBER) 
@@ -274,11 +274,11 @@ void groupMsgCallback(const json& body)
 
     switch (c)
     {
-    case commands::禁烟:
-        禁烟(m, target_qqid, duration);
+    case commands::SMOKE:
+        SMOKE(m, target_qqid, duration);
         break;
-    case commands::解禁:
-        群聊解禁(m, target_qqid);
+    case commands::UNSMOKE:
+        GROUP_UNSMOKE(m, target_qqid);
         break;
     default:
         break;
@@ -372,7 +372,7 @@ void privateMsgCallback(const json& body)
     std::string resp;
     switch (c)
     {
-    case commands::接近我:
+    case commands::UNSMOKE_SELF:
         resp = selfUnsmoke(m.qqid);
         break;
     default:

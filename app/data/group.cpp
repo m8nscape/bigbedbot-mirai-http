@@ -129,7 +129,7 @@ int newGroupIfNotExist(int64_t id)
     return 0;
 }
 
-std::string 开启(::int64_t group, ::int64_t qq, std::vector<std::string> args)
+std::string ENABLE(::int64_t group, ::int64_t qq, std::vector<std::string> args)
 {
     mirai::group_member_permission p;
     if (grp::groups[group].haveMember(qq))
@@ -190,7 +190,7 @@ std::string 开启(::int64_t group, ::int64_t qq, std::vector<std::string> args)
     return "你开个锤子？";
 }
 
-std::string 关闭(::int64_t group, ::int64_t qq, std::vector<std::string> args)
+std::string DISABLE(::int64_t group, ::int64_t qq, std::vector<std::string> args)
 {
     mirai::group_member_permission p;
     if (grp::groups[group].haveMember(qq))
@@ -272,11 +272,11 @@ void msgDispatcher(const json& body)
     std::string resp;
     if (cmd.substr(0, strlen("开启")) == "开启")
     {
-        resp = 开启(m.groupid, m.qqid, query);
+        resp = ENABLE(m.groupid, m.qqid, query);
     }
     else if (cmd.substr(0, strlen("关闭")) == "关闭")
     {
-        resp = 关闭(m.groupid, m.qqid, query);
+        resp = DISABLE(m.groupid, m.qqid, query);
     }
 
     if (!resp.empty())

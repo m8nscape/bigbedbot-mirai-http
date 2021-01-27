@@ -73,11 +73,11 @@ const int INITIAL_BALANCE = 200;
 using nlohmann::json;
 enum class commands : size_t
 {
-	开通提示,
-	开通,
-	余额,
-	领批,
-	生批,
+	REG_HINT,
+	REG,
+	BALANCE,
+	DRAW_P,
+	GEN_P,
 };
 
 void msgCallback(const json& body);

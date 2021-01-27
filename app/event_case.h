@@ -43,7 +43,7 @@ public:
 };
 
 enum class commands : size_t {
-    开箱
+    DRAW
 };
 typedef std::function<std::string(::int64_t, ::int64_t, std::vector<std::string>&, const char*)> callback;
 //typedef std::string(*callback)(::int64_t, ::int64_t, std::vector<std::string>);
@@ -56,8 +56,8 @@ struct command
 
 inline std::map<std::string, commands> commands_str
 {
-    {"活动开箱", commands::开箱},
-    {"活動開箱", commands::开箱}  //繁體化
+    {"活动开箱", commands::DRAW},
+    {"活動開箱", commands::DRAW}  //繁體化
 };
 command msgDispatcher(const json& body);
 

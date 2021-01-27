@@ -221,11 +221,11 @@ inline int64_t getDrinkIdx(const std::string& name = "")
 
 ///////////////////////////////////////////////////////////////////////////////
 
-const json 無 = MSG_LINE("無");
+const json ret_none = MSG_LINE("無");
 
-json 吃什么(::int64_t group, ::int64_t qq, std::vector<std::string> args)
+json EATWHAT(::int64_t group, ::int64_t qq, std::vector<std::string> args)
 {
-    if (getFoodIdx() == 0) return 無;
+    if (getFoodIdx() == 0) return ret_none;
 
     food f;
     getFood(f);
@@ -237,9 +237,9 @@ json 吃什么(::int64_t group, ::int64_t qq, std::vector<std::string> args)
     return resp;
 }
 
-json 喝什么(::int64_t group, ::int64_t qq, std::vector<std::string> args)
+json DRINKWHAT(::int64_t group, ::int64_t qq, std::vector<std::string> args)
 {
-    if (getDrinkIdx() == 0) return 無;
+    if (getDrinkIdx() == 0) return ret_none;
 
     drink d;
     getDrink(d);
@@ -251,9 +251,9 @@ json 喝什么(::int64_t group, ::int64_t qq, std::vector<std::string> args)
     return resp;
 }
 
-json 吃什么十连(::int64_t group, ::int64_t qq, std::vector<std::string> args)
+json EATWHAT10(::int64_t group, ::int64_t qq, std::vector<std::string> args)
 {
-    if (getFoodIdx() == 0) return 無;
+    if (getFoodIdx() == 0) return ret_none;
 
     json resp = mirai::MSG_TEMPLATE;
     json& r = resp["messageChain"];
@@ -295,7 +295,7 @@ CheckFoodResult checkFood(const std::string& r)
     return CheckFoodResult::OK;
 }
 
-std::string 加菜(::int64_t group, ::int64_t qq, const std::string& r)
+std::string ADDFOOD(::int64_t group, ::int64_t qq, const std::string& r)
 {
     switch (checkFood(r))
     {
@@ -326,7 +326,7 @@ std::string 加菜(::int64_t group, ::int64_t qq, const std::string& r)
     return ss.str();
 }
 
-std::string 删菜(::int64_t group, ::int64_t qq, const std::string& r)
+std::string DELFOOD(::int64_t group, ::int64_t qq, const std::string& r)
 {
     if (!grp::groups[group].haveMember(qq))
         return "你删个锤子？";
@@ -347,7 +347,7 @@ std::string 删菜(::int64_t group, ::int64_t qq, const std::string& r)
     return ss.str();
 }
 
-std::string 加饮料(::int64_t group, ::int64_t qq, const std::string& r)
+std::string ADDDRINK(::int64_t group, ::int64_t qq, const std::string& r)
 {
     if (!grp::groups[group].haveMember(qq))
         return "不是群主不给加";
@@ -384,7 +384,7 @@ std::string 加饮料(::int64_t group, ::int64_t qq, const std::string& r)
     return ss.str();
 }
 
-std::string 删饮料(::int64_t group, ::int64_t qq, const std::string& r)
+std::string DELDRINK(::int64_t group, ::int64_t qq, const std::string& r)
 {
     if (!grp::groups[group].haveMember(qq))
         return "你删个锤子？";
@@ -405,12 +405,12 @@ std::string 删饮料(::int64_t group, ::int64_t qq, const std::string& r)
     return ss.str();
 }
 
-std::string 菜单(::int64_t group, ::int64_t qq, std::vector<std::string> args)
+std::string MENU(::int64_t group, ::int64_t qq, std::vector<std::string> args)
 {
     int64_t count = getFoodIdx();
     if (!count) return "无";
 
-    return "菜单暂时不可用！";
+    return "MENU暂时不可用！";
     /*
     // defuault: last 9 entries
     size_t range_min = (count <= 9) ? 0 : (count - 9);
@@ -453,37 +453,37 @@ std::string 菜单(::int64_t group, ::int64_t qq, std::vector<std::string> args)
 }
 
 enum class commands: size_t {
-    吃什么,
-    喝什么,
-    吃什么十连,
-    加菜,
-	删菜,
-	加饮料,
-	删饮料,
-    菜单,
-    删库,
+    EATWHAT,
+    DRINKWHAT,
+    EATWHAT10,
+    ADDFOOD,
+	DELFOOD,
+	ADDDRINK,
+	DELDRINK,
+    MENU,
+    DROPTABLE,
 };
 
 const std::map<std::string, commands> commands_str
 {
-    {"吃什么", commands::吃什么},
-    {"吃什麼", commands::吃什么},   //繁體化
-    {"喝什么", commands::喝什么},
-    {"喝什麼", commands::喝什么},   //繁體化
-    {"吃什么十连", commands::吃什么十连},
-    {"吃什麼十連", commands::吃什么十连},   //繁體化
-    {"加菜", commands::加菜},
-    {"加菜", commands::加菜},   //繁體化
-	{"减菜", commands::删菜},
-    {"減菜", commands::删菜},   //繁體化
-	{"删菜", commands::删菜},
-    {"刪菜", commands::删菜},   //繁體化
-	{"加饮料", commands::加饮料},
-    {"加飲料", commands::加饮料},   //繁體化
-	{"删饮料", commands::删饮料},
-    {"刪飲料", commands::删饮料},   //繁體化
-    {"菜单", commands::菜单},
-    {"菜單", commands::菜单},   //繁體化
+    {"吃什么", commands::EATWHAT},
+    {"吃什麼", commands::EATWHAT},   //繁體化
+    {"喝什么", commands::DRINKWHAT},
+    {"喝什麼", commands::DRINKWHAT},   //繁體化
+    {"吃什么十连", commands::EATWHAT10},
+    {"吃什麼十連", commands::EATWHAT10},   //繁體化
+    {"加菜", commands::ADDFOOD},
+    {"加菜", commands::ADDFOOD},   //繁體化
+	{"减菜", commands::DELFOOD},
+    {"減菜", commands::DELFOOD},   //繁體化
+	{"删菜", commands::DELFOOD},
+    {"刪菜", commands::DELFOOD},   //繁體化
+	{"加饮料", commands::ADDDRINK},
+    {"加飲料", commands::ADDDRINK},   //繁體化
+	{"删饮料", commands::DELDRINK},
+    {"刪飲料", commands::DELDRINK},   //繁體化
+    {"菜单", commands::MENU},
+    {"菜單", commands::MENU},   //繁體化
     //{"drop", commands::删库},
 };
 
@@ -507,33 +507,33 @@ void msgDispatcher(const json& body)
 
     switch (c)
     {
-    case commands::吃什么:
-        mirai::sendMsgResp(m, 吃什么(m.groupid, m.qqid, query));
+    case commands::EATWHAT:
+        mirai::sendMsgResp(m, EATWHAT(m.groupid, m.qqid, query));
         break;
-    case commands::喝什么:
-        mirai::sendMsgResp(m, 喝什么(m.groupid, m.qqid, query));
+    case commands::DRINKWHAT:
+        mirai::sendMsgResp(m, DRINKWHAT(m.groupid, m.qqid, query));
         break;
-    case commands::吃什么十连:
-        mirai::sendMsgResp(m, 吃什么十连(m.groupid, m.qqid, query));
+    case commands::EATWHAT10:
+        mirai::sendMsgResp(m, EATWHAT10(m.groupid, m.qqid, query));
         break;
-    case commands::加菜:
+    case commands::ADDFOOD:
         if (query.size() > 1)
-            mirai::sendMsgRespStr(m, 加菜(m.groupid, m.qqid, query[1]));
+            mirai::sendMsgRespStr(m, ADDFOOD(m.groupid, m.qqid, query[1]));
         break;
-    case commands::删菜:
+    case commands::DELFOOD:
         if (query.size() > 1)
-            mirai::sendMsgRespStr(m, 删菜(m.groupid, m.qqid, query[1]));
+            mirai::sendMsgRespStr(m, DELFOOD(m.groupid, m.qqid, query[1]));
         break;
-    case commands::加饮料:
+    case commands::ADDDRINK:
         if (query.size() > 1)
-            mirai::sendMsgRespStr(m, 加饮料(m.groupid, m.qqid, query[1]));
+            mirai::sendMsgRespStr(m, ADDDRINK(m.groupid, m.qqid, query[1]));
         break;
-    case commands::删饮料:
+    case commands::DELDRINK:
         if (query.size() > 1)
-            mirai::sendMsgRespStr(m, 删饮料(m.groupid, m.qqid, query[1]));
+            mirai::sendMsgRespStr(m, DELDRINK(m.groupid, m.qqid, query[1]));
         break;
-    case commands::菜单:
-        mirai::sendMsgRespStr(m, 菜单(m.groupid, m.qqid, query));
+    case commands::MENU:
+        mirai::sendMsgRespStr(m, MENU(m.groupid, m.qqid, query));
         break;
     default: 
         break;
