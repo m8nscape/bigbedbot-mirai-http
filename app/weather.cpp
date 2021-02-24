@@ -94,20 +94,30 @@ int curl_get(const std::string& url, std::string& content, int timeout_sec = 5)
 
 namespace weathercn
 {
-int TIMEOUT_SEC = 1;
+int TIMEOUT_SEC = 5;
 SQLite db("weathercn_city.db", "weather");
-std::string getReqUrl(const std::string& name)
+
+std::string getCityId(const std::string& name)
 {
     auto ret = db.query("select id from cityid where name=?", 1, { name });
     if (ret.empty()) return "";
-    std::string id = std::any_cast<std::string>(ret[0][0]);
+    return std::any_cast<std::string>(ret[0][0]);
+}
 
+// https://www.sojson.com/blog/305.html
+std::string getReqUrl(const std::string& id)
+{
     char buf[128];
     snprintf(buf, sizeof(buf)-1,
-        "http://t.weather.sojson.com/api/weather/city/%s",
+        "http://t.weather.itboy.net/api/weather/city/%s",
         id.c_str());
     return buf;
 }
+
+// 1.接口每8小时更新一次，机制是  CDN  缓存8小时更新一次。注意：“自己做缓存，因为你每请求我一次，我就是有费用的，又拍云 CDN加速回源是按次收费，你可以了解下”。
+std::map<std::string, std::pair<time_t, std::string>> api_buf;
+const time_t BUF_VALID_DURATION = 8 * 60 * 60;
+
 }
 
 namespace openweather
@@ -239,23 +249,45 @@ void weather_global(const mirai::MsgMetadata& m, const std::string& city)
 
 void weather_cn(const mirai::MsgMetadata& m, const std::string& name)
 {
-    CURL* curl = NULL;
+    using namespace weathercn;
 
-    auto url = weathercn::getReqUrl(name);
-    if (url.empty())
+    auto id = getCityId(name);
+    if (id.empty())
     {
-        mirai::sendMsgRespStr(m, "未找到该城市");
+        mirai::sendMsgRespStr(m, "未找到城市对应的ID");
         return;
     }
 
+    // get data from buffer if not expired
+    time_t time_req = time(NULL);
     std::string buf;
-    if (CURLE_OK != curl_get(url, buf, weathercn::TIMEOUT_SEC))
+    if (api_buf.find(id) != api_buf.end())
+    {
+        auto [time_buf, data] = api_buf.at(id);
+        if (time_req - time_buf < BUF_VALID_DURATION)
+        {
+            mirai::sendMsgRespStr(m, data.c_str());
+            return;
+        }
+    }
+    
+    auto url = getReqUrl(id);
+    if (CURLE_OK != curl_get(url, buf, TIMEOUT_SEC))
     {
         mirai::sendMsgRespStr(m, buf);
         return;
     }
+    
+    // data is not started with '{', likely 302
+    if (!buf.empty() && buf[0] != '{')
+    {
+        mirai::sendMsgRespStr(m, "数据返回格式错误");
+        return;
+    }
 
+    // parse data
     nlohmann::json json = nlohmann::json::parse(buf);
+    //addLog(LOG_INFO, "weather", buf.c_str());
     try
     {
         if (json.contains("cityInfo"))
@@ -311,6 +343,9 @@ void weather_cn(const mirai::MsgMetadata& m, const std::string& name)
                 ss << " undefined（？）";
 
             mirai::sendMsgRespStr(m, ss.str().c_str());
+            
+            // save to buffer
+            api_buf[id] = {time_req, ss.str()};
         }
         else throw std::exception();
     }
