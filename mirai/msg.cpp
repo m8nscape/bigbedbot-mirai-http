@@ -22,19 +22,19 @@ MsgMetadata parseMsgMetadata(const json& v)
     {
         const json& s = v.at("messageChain").at("Source");
         meta.msgid = s.at("id").get<int>();
-        meta.time = s.at("time").get<int>();
+        meta.time = s.at("time").get<int64_t>();
     }
 
     if (v.contains("sender"))
     {
         const json& s = v.at("sender");
         if (s.contains("id"))
-            meta.qqid = s.at("id").get<int>();
+            meta.qqid = s.at("id").get<int64_t>();
         if (s.contains("group"))
         {
             const json& g = s.at("group");
             if (g.contains("id"))
-                meta.groupid = g.at("id").get<int>();
+                meta.groupid = g.at("id").get<int64_t>();
         }
     }
 
