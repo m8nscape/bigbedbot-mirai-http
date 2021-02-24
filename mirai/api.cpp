@@ -27,7 +27,7 @@ int auth(const char* auth_key)
     std::promise<int> p;
     std::future<int> f = p.get_future();
 	http::POST("/auth", body, 
-		[&p](const json& v) -> int
+		[&p](const char* t, const json& b, const json& v) -> int
 		{
             int resp = 0;
             if (v.contains("code"))
@@ -68,7 +68,7 @@ int verify()
     std::promise<int> p;
     std::future<int> f = p.get_future();
 	http::POST("/verify", body, 
-		[&p](const json& v) -> int
+		[&p](const char* t, const json& b, const json& v) -> int
 		{
             int resp = 0;
             if (v.contains("code"))
@@ -97,11 +97,13 @@ int verify()
     return f.get();
 }
 
-int sendMsgCallback(const json& v)
+int sendMsgCallback(const char* target, const json& body, const json& v)
 {
     if (!v.contains("code"))
     {
         addLog(LOG_WARNING, "api", "msg failed with unknown reason");
+        addLog(LOG_WARNING, "api", "\nSend: %s\n%s", target ? target : "", body.empty() ? body.dump().c_str() : "");
+        addLog(LOG_WARNING, "api", "\nRecv:\n%s", v.dump().c_str());
         return 1;
     }
     int code = v.at("code");
@@ -115,6 +117,8 @@ int sendMsgCallback(const json& v)
     if (code != 0)
     {
         addLog(LOG_WARNING, "api", "msg failed with code %d: %s", code, msg.c_str());
+        addLog(LOG_WARNING, "api", "\nSend: %s\n%s", target ? target : "", body.empty() ? body.dump().c_str() : "");
+        addLog(LOG_WARNING, "api", "\nRecv:\n%s", v.dump().c_str());
         return code;
     }
 
@@ -265,7 +269,7 @@ group_member_info getGroupMemberInfo(int64_t groupid, int64_t qqid)
     std::promise<int> p;
     std::future<int> f = p.get_future();
     http::GET(path.str(), 
-        [&](const json& body)
+        [&](const char* t, const json& b, const json& body)
         {
             if (body.empty()) return -1;
 
@@ -299,7 +303,7 @@ std::vector<group_member_info> getGroupMemberList(int64_t groupid)
     std::promise<int> p;
     std::future<int> f = p.get_future();
     http::GET(path.str(), 
-        [&](const json& body)
+        [&](const char* t, const json& b, const json& body)
         {
             for (const auto& m: body)
             {
@@ -395,7 +399,7 @@ void startMsgPoll()
             std::promise<int> p;
             std::future<int> f = p.get_future();
             http::GET(path.str(), 
-                [&p](const json& v) -> int
+                [&p](const char* t, const json& b, const json& v) -> int
                 {
                     if (v.contains("data"))
                     {

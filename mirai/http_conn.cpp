@@ -17,6 +17,8 @@ void set_port(unsigned short port)
 
 const json respFailBody = R"({"code": -1})"_json;
 
+using namespace std::string_literals;
+
 // Performs an HTTP GET and prints the response
 class session : public std::enable_shared_from_this<session>
 {
@@ -26,7 +28,9 @@ class session : public std::enable_shared_from_this<session>
     http::request<http::string_body> req_;
     http::response<http::string_body> res_;
 
-    std::function<int(const json&)> callback;
+    std::function<int(const char*, const json&, const json&)> callback;
+    std::string target;
+    json body;
 
 public:
     // Resolver and socket require an io_context
@@ -43,10 +47,11 @@ public:
         char const* host,
         char const* port,
         char const* target,
-        std::function<int(const json&)> cb,
+        std::function<int(const char*, const json&, const json&)> cb,
         int version = 10)
     {
         callback = cb;
+        this->target = "GET "s + target;
 
         // Set up an HTTP GET request message
         req_.version(version);
@@ -73,10 +78,12 @@ public:
         char const* port,
         char const* target,
         json const& body,
-        std::function<int(const json&)> cb,
+        std::function<int(const char*, const json&, const json&)> cb,
         int version = 10)
     {
         callback = cb;
+        this->target = "POST "s + target;
+        this->body = body;
 
         // Set up an HTTP POST request message
         req_.version(version);
@@ -111,7 +118,7 @@ public:
     {
         if(ec)
         {
-            callback(respFailBody);
+            callback(target.c_str(), body, respFailBody);
             return;
         }
 
@@ -131,7 +138,7 @@ public:
     {
         if(ec)
         {
-            callback(respFailBody);
+            callback(target.c_str(), body, respFailBody);
             return;
         }
 
@@ -153,7 +160,7 @@ public:
 
         if(ec)
         {
-            callback(respFailBody);
+            callback(target.c_str(), body, respFailBody);
             return;
         }
         
@@ -175,12 +182,12 @@ public:
 
         if(ec)
         {
-            callback(respFailBody);
+            callback(target.c_str(), body, respFailBody);
             return;
         }
 
         // callback
-        callback(json::parse(res_.body()));
+        callback(target.c_str(), body, json::parse(res_.body()));
 
         // Gracefully close the socket
         socket_.shutdown(tcp::socket::shutdown_both, ec);
@@ -188,7 +195,7 @@ public:
         // not_connected happens sometimes so don't bother reporting it.
         if(ec && ec != boost::system::errc::not_connected)
         {
-            callback(respFailBody);
+            callback(target.c_str(), body, respFailBody);
             return;
         }
 
@@ -197,32 +204,32 @@ public:
 };
 
 static unsigned get_count = 0;
-int GET(const std::string& target, std::function<int(const json&)> callback)
+int GET(const std::string& target, std::function<int(const char*, const json&, const json&)> callback)
 {
     unsigned c = ++get_count;
     net::io_context ioc;
     //addLogDebug("http", "GET[%u] %s", c, target.c_str());
     std::make_shared<session>(ioc)->GET(HOST, PORT, target.c_str(), 
-        [c, &callback](const json& j)
+        [c, &callback](const char* t, const json& b, const json& j)
         {
             //addLogDebug("http", "GET[%u] resp %s", c, j.dump().c_str());
-            return callback(j);
+            return callback(t, b, j);
         }, 11);
     ioc.run();
     return 0;
 }
 
 static int post_count = 0;
-int POST(const std::string& target, const json& body, std::function<int(const json&)> callback)
+int POST(const std::string& target, const json& body, std::function<int(const char*, const json&, const json&)> callback)
 {
     unsigned c = ++post_count;
     net::io_context ioc;
     //addLogDebug("http", "POST[%u] %s %s", c, target.c_str(), body.dump().c_str());
     std::make_shared<session>(ioc)->POST(HOST, PORT, target.c_str(), body, 
-        [c, &callback](const json& j)
+        [c, &callback](const char* t, const json& b, const json& j)
         {
             //addLogDebug("http", "POST[%u] resp %s", c, j.dump().c_str());
-            return callback(j);
+            return callback(t, b, j);
         }, 11);
     ioc.run();
     return 0;
