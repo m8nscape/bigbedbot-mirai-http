@@ -349,4 +349,67 @@ void msgCallback(const json& body)
         }
     }
 }
+
+// draft
+void choukasuoha(const json& body)
+{
+    auto query = mirai::messageChainToArgs(body);
+    if (query.empty()) return;
+    if (query[0] != "抽卡梭哈") return;
+
+    auto m = mirai::parseMsgMetadata(body);
+
+    if (!grp::groups[m.groupid].getFlag(grp::Group::MASK_P | grp::Group::MASK_MONOPOLY))
+        return;
+
+    if (user::plist.find(m.qqid) == user::plist.end()) 
+    {
+        mirai::sendMsgResp(m, not_registered(m.qqid));
+        return;
+    }
+
+    std::thread([&]()
+    {
+        while (user::plist[m.qqid].testStamina(1).enough && !smoke::isSmoking(m.qqid, m.groupid))
+        {
+            time_t t = time(nullptr);
+            bool adrenaline = t <= user_stat[m.qqid].adrenaline_expire_time;
+            if (!adrenaline)
+            {
+                auto [enough, stamina, rtime] = user::plist[m.qqid].modifyStamina(-1);
+                if (!enough)
+                {
+                    mirai::sendMsgResp(m, not_enough_stamina(m.qqid, rtime));
+                    return;
+                }
+            }
+
+            if (user_stat[m.qqid].chaos)
+            {
+                user_stat[m.qqid].chaos = false;
+                size_t idx = randInt(0, chanceList.size() - 1);
+                doChance(m, chanceList[idx], adrenaline);
+            }
+            else
+            {
+                auto prob = randReal(0, chance::total_prob);
+                double p = 0.0;
+                for (const auto& c : chanceList)
+                {
+                    p += c.prob;
+                    if (prob < p)
+                    {
+                        doChance(m, c, adrenaline);
+                        break;
+                    }
+                }
+            }
+
+            // interval
+            using namespace std::chrono_literals;
+            std::this_thread::sleep_for(200ms);
+        }
+    }).detach();
+
+}
 }

@@ -49,6 +49,21 @@ RetVal nosmoking(int64_t group, int64_t target, int duration_min)
     return RetVal::OK;
 }
 
+bool isSmoking(int64_t qqid, int64_t groupid)
+{
+    if (smokeTimeInGroups.find(qqid) == smokeTimeInGroups.end() || smokeTimeInGroups[qqid].empty())
+        return false;
+    
+    if (smoke::smokeTimeInGroups[qqid].find(groupid) != smoke::smokeTimeInGroups[qqid].end())
+    {
+        time_t t = time(nullptr);
+        if (t <= smoke::smokeTimeInGroups[qqid][groupid])
+            return true;
+    }
+    
+    return false;
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 
 using user::plist;
@@ -208,10 +223,18 @@ void updateSmokeTimeList(int64_t qqid)
     {
         time_t t = time(nullptr);
         std::list<int64_t> expired;
-        for (auto& g : smoke::smokeTimeInGroups[qqid])
-            if (t > g.second) expired.push_back(g.first);
-        for (auto& g : expired)
-            smoke::smokeTimeInGroups.erase(g);
+
+        // 保存到时间的群
+        for (auto& [groupid, expire] : smoke::smokeTimeInGroups[qqid])
+            if (t > expire) expired.push_back(groupid);
+
+        // 对成员去掉到时间的群
+        for (auto& groupid : expired)
+            smoke::smokeTimeInGroups[qqid].erase(groupid);
+
+        // 如果全部解禁，去掉该成员
+        if (smoke::smokeTimeInGroups[qqid].empty())
+            smoke::smokeTimeInGroups.erase(qqid);
     }
 }
 
@@ -241,8 +264,7 @@ void groupMsgCallback(const json& body)
     groupLastTalkedMember[m.groupid] = m.qqid;
 
     // update smoke status
-    if (m.qqid != botLoginQQId && m.qqid != 10000 && m.qqid != 1000000)
-        updateSmokeTimeList(m.qqid);
+    smoke::smokeTimeInGroups[m.qqid].erase(m.groupid);
 
     auto query = mirai::messageChainToStr(body);
     if (query.empty()) return;
