@@ -266,6 +266,9 @@ void groupMsgCallback(const json& body)
     // update smoke status
     smoke::smokeTimeInGroups[m.qqid].erase(m.groupid);
 
+    if (!grp::groups[m.groupid].getFlag(grp::Group::MASK_P | grp::Group::MASK_SMOKE))
+        return;
+
     auto query = mirai::messageChainToStr(body);
     if (query.empty()) return;
 
