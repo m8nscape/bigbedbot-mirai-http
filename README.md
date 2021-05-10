@@ -36,13 +36,19 @@ git clone https://github.com/yaasdf/bigbedbot-mirai-http
 git submodule update --init --recursive
 ```
 
-
 # Build
 Linux
 ```shell
 mkdir build
-cmake -S . -B build/RelWithDebInfo -DCMAKE_BUILD_TYPE=RelWithDebInfo
-cmake --build build/RelWithDebInfo
+cmake -S . -B build/Release -DCMAKE_BUILD_TYPE=Release
+cmake --build build/Release
+```
+
+Now support debugging with console
+```shell
+mkdir build
+cmake -S . -B build/Debug -DCMAKE_BUILD_TYPE=Debug
+cmake --build build/Debug
 ```
 
 # Install

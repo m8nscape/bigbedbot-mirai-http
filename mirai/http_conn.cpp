@@ -203,6 +203,7 @@ public:
     }
 };
 
+#ifdef NDEBUG
 static unsigned get_count = 0;
 int GET(const std::string& target, std::function<int(const char*, const json&, const json&)> callback)
 {
@@ -234,5 +235,71 @@ int POST(const std::string& target, const json& body, std::function<int(const ch
     ioc.run();
     return 0;
 }
+
+#else
+static const json SUCCESS_RETURN = R"({"code": 0})"_json;
+static const json MEMBERINFO_BODY = R"({
+    "name": "foo",
+    "nick": "bar",
+    "specialTitle": "bruh"
+})"_json;
+static const json MEMBERLIST_BODY = R"([
+  {
+    "id":11111,
+    "memberName":"",
+    "permission":"OWNER",
+    "group":{
+        "id":111111,
+        "name":"group",
+        "permission": "ADMINISTRATOR"
+    }
+  },
+  {
+    "id":12345678,
+    "memberName":"card",
+    "permission":"MEMBER",
+    "group":{
+        "id":111111,
+        "name":"group",
+        "permission": "ADMINISTRATOR"
+    }
+  },
+  {
+    "id":888888,
+    "memberName":"",
+    "permission":"ADMINISTRATOR",
+    "group":{
+        "id":111111,
+        "name":"group",
+        "permission": "ADMINISTRATOR"
+    }
+  }
+])"_json;
+int GET(const std::string& target, std::function<int(const char*, const json&, const json&)> callback)
+{
+    addLogDebug("http", "GET %s", target.c_str());
+    if (target.substr(0, 11) == "/memberInfo")
+    {
+        callback(target.c_str(), json(), MEMBERINFO_BODY);
+    }
+    else if (target.substr(0, 11) == "/memberList")
+    {
+        callback(target.c_str(), json(), MEMBERLIST_BODY);
+    }
+    else
+    {
+        callback(target.c_str(), json(), SUCCESS_RETURN);
+    }
+    return 0;
+}
+
+int POST(const std::string& target, const json& body, std::function<int(const char*, const json&, const json&)> callback)
+{
+    addLogDebug("http", "POST %s %s", target.c_str(), body.dump().c_str());
+    callback(target.c_str(), body, SUCCESS_RETURN);
+    return 0;
+}
+#endif
+
 
 }

@@ -123,6 +123,7 @@ struct group_member_info
 group_member_info getGroupMemberInfo(int64_t groupid, int64_t qqid);
 std::vector<group_member_info> getGroupMemberList(int64_t groupid);
 
+#ifdef NDEBUG
 const int POLLING_INTERVAL_MS = 1000;
 const int POLLING_QUANTITY = 10;
 
@@ -130,5 +131,9 @@ void startMsgPoll();
 void stopMsgPoll();
 void connectMsgWebSocket();
 void disconnectMsgWebSocket();
+
+#else
+void consoleInputHandle();
+#endif
 
 }

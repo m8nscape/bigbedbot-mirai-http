@@ -77,9 +77,15 @@ int config()
     unsigned short port = cfg["port"].as<unsigned short>();
     mirai::http::set_port(port);
     mirai::ws::set_port(port);
+#ifdef NDEBUG
     botLoginQQId = cfg["qq"].as<int64_t>();
     rootQQId = cfg["qq_root"].as<int64_t>();
     useWebsocket = cfg["use_ws"].as<bool>();
+#else
+    botLoginQQId = 888888;
+    rootQQId = 12345678;
+    useWebsocket = false;
+#endif
     return 0;
 }
 
@@ -107,11 +113,15 @@ int init_app_and_start()
     // start threads
     startTimedEvent();
 
+#ifdef NDEBUG
     // listen events
     if (useWebsocket)
         mirai::connectMsgWebSocket();
     else
         mirai::startMsgPoll();
+#else
+    std::thread([](){mirai::consoleInputHandle(); core::shutdown();}).detach();
+#endif
     
     return 0;
 }
@@ -125,10 +135,12 @@ int shutdown()
         user::db.transactionStop();
         grp::db.transactionStop();
         botStarted = false;
+#ifdef NDEBUG
         if (useWebsocket) 
             mirai::disconnectMsgWebSocket();
         else
             mirai::stopMsgPoll();
+#endif
         stopTimedEvent();
     }
 

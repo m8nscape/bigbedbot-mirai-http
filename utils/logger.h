@@ -31,7 +31,7 @@ const BashColors LOG_DEBUG = BashColors::Cyan;
 
 void addLog(BashColors c, const char* tag, const char* fmt, ...);
 
-#ifdef _DEBUG
+#ifdef NDEBUG
 #define addLogDebug(tag, fmt, ...)
 #else
 #define addLogDebug(tag, fmt, ...) addLog(LOG_DEBUG, tag, fmt, ##__VA_ARGS__)

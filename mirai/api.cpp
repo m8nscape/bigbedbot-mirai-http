@@ -7,6 +7,10 @@
 #include <map>
 #include <future>
 #include <exception>
+#ifdef NDEBUG
+#else
+#include <functional>
+#endif
 
 #include "util.h"
 #include "utils/logger.h"
@@ -17,6 +21,8 @@ namespace mirai
 char sessionKey[64]{0};
 
 using nlohmann::json;
+
+#ifdef NDEBUG
 
 int auth(const char* auth_key)
 {
@@ -97,6 +103,41 @@ int verify()
     return f.get();
 }
 
+#else
+
+int auth(const char* auth_key)
+{
+    addLog(LOG_INFO, "api", "auth stub");
+    return 0;
+}
+
+int verify()
+{
+	addLog(LOG_INFO, "api", "verify stub");
+    return 0;
+}
+
+#endif
+
+std::string messageChainToPrintStr(const json& m)
+{
+    if (!m.contains("messageChain")) return "";
+
+    const json& mc = m.at("messageChain");
+    if (mc.empty()) return "";
+
+    const json& b = mc.at(0);
+    if (!b.contains("type")) return "";
+    if (b.at("type") != "Plain") return "(messageChain)";
+
+    std::string s = b.at("text");
+    s = s.substr(0, s.find_first_of('\n'));
+    if (mc.size() > 1) 
+        return s + "...";
+    else 
+        return s;
+}
+
 int sendMsgCallback(const char* target, const json& body, const json& v)
 {
     if (!v.contains("code"))
@@ -155,7 +196,7 @@ int sendTempMsgStr(int64_t qqid, int64_t groupid, const std::string& msg, int64_
 
 int sendTempMsg(int64_t qqid, int64_t groupid, const json& messageChain, int64_t quotemsgid)
 {
-    addLogDebug("api", "Send temp msg to %lld @ %lld: (messagechain)", qqid, groupid);
+    addLogDebug("api", "Send temp msg to %lld @ %lld: %s", qqid, groupid, messageChainToPrintStr(messageChain).c_str());
 
     json obj;
     obj["sessionKey"] = std::string(sessionKey);
@@ -187,7 +228,7 @@ int sendFriendMsgStr(int64_t qqid, const std::string& msg, int64_t quotemsgid)
 
 int sendFriendMsg(int64_t qqid, const json& messageChain, int64_t quotemsgid)
 {
-    addLogDebug("api", "Send private msg to %lld: (messagechain)", qqid);
+    addLogDebug("api", "Send private msg to %lld: %s", qqid, messageChainToPrintStr(messageChain).c_str());
 
     json obj;
     obj["sessionKey"] = std::string(sessionKey);
@@ -218,7 +259,7 @@ int sendGroupMsgStr(int64_t groupid, const std::string& msg, int64_t quotemsgid)
 
 int sendGroupMsg(int64_t groupid, const json& messageChain, int64_t quotemsgid)
 {
-    addLogDebug("api", "Send group msg to %lld: (messagechain)", groupid);
+    addLogDebug("api", "Send group msg to %lld: %s", groupid, messageChainToPrintStr(messageChain).c_str());
     json obj;
     obj["sessionKey"] = std::string(sessionKey);
     obj["target"] = groupid;
@@ -374,6 +415,7 @@ int regEventProc(RecvMsgType evt, MessageProc cb)
     return 0;
 }
 
+#ifdef NDEBUG
 
 std::shared_ptr<std::thread> msg_poll_thread = nullptr;
 
@@ -447,5 +489,128 @@ void disconnectMsgWebSocket()
 {
     ws::disconnect();
 }
+
+#else
+
+enum class ConsoleState
+{
+    EXIT,
+    CMD,
+    PRIVATE,
+    TEMP,
+    GROUP
+};
+
+void consoleInputHandle_CMD(const std::string& s);
+ConsoleState fsmState = ConsoleState::CMD;
+std::function<void(const std::string&)> cb = std::bind(consoleInputHandle_CMD, std::placeholders::_1);
+
+void consoleInputHandle_PRIVATE(const std::string& s)
+{
+    if (s[0] == 'q')
+    {
+        fsmState = ConsoleState::CMD;
+        cb = std::bind(consoleInputHandle_CMD, std::placeholders::_1);
+        return;
+    }
+    
+    json body;
+    body["type"] = "FriendMessage";
+    body["messageChain"] = R"([{"type": "Plain", "text": ""}])"_json;
+    body["messageChain"][0]["text"] = s;
+    body["sender"] = R"({"id": 12345678, "nickname": "nick", "remark": ""})"_json;
+
+    procRecvMsgEntry(body);
+}
+void consoleInputHandle_TEMP(const std::string& s)
+{
+    if (s[0] == 'q')
+    {
+        fsmState = ConsoleState::CMD;
+        cb = std::bind(consoleInputHandle_CMD, std::placeholders::_1);
+        return;
+    }
+
+    json body;
+    body["type"] = "TempMessage";
+    body["messageChain"] = R"([{"type": "Plain", "text": ""}])"_json;
+    body["messageChain"][0]["text"] = s;
+    body["sender"] = R"({"id": 12345678, "memberName": "card", "permission": "MEMBER", "group": {"id": 111111, "name": "group", "permission": "ADMINISTRATOR"}})"_json;
+    
+    procRecvMsgEntry(body);
+}
+void consoleInputHandle_GROUP(const std::string& s)
+{
+    if (s[0] == 'q')
+    {
+        fsmState = ConsoleState::CMD;
+        cb = std::bind(consoleInputHandle_CMD, std::placeholders::_1);
+        return;
+    }
+
+    json body;
+    body["type"] = "GroupMessage";
+    body["messageChain"] = R"([{"type": "Plain", "text": ""}])"_json;
+    body["messageChain"][0]["text"] = s;
+    body["sender"] = R"({"id": 12345678, "memberName": "card", "permission": "MEMBER", "group": {"id": 111111, "name": "group", "permission": "ADMINISTRATOR"}})"_json;
+    
+    procRecvMsgEntry(body);
+}
+void consoleInputHandle_CMD(const std::string& s)
+{
+    switch (s[0])
+    {
+        case 'q': 
+            fsmState = ConsoleState::EXIT; 
+            break;
+        case '1': 
+            fsmState = ConsoleState::PRIVATE;
+            cb = std::bind(consoleInputHandle_PRIVATE, std::placeholders::_1);
+            break;
+        case '2': 
+            fsmState = ConsoleState::TEMP;
+            cb = std::bind(consoleInputHandle_TEMP, std::placeholders::_1);
+            break;
+        case '3': 
+            fsmState = ConsoleState::GROUP;
+            cb = std::bind(consoleInputHandle_GROUP, std::placeholders::_1);
+            break;
+        default: 
+            break;
+    }
+}
+
+void consoleInputHandle()
+{
+    std::cout << "--------------------------------------------------------------------------" << std::endl;
+    std::cout << "You are running in Debug mode. | Bot qqid: 888888 / Console qqid: 12345678 " << std::endl;
+    while (fsmState != ConsoleState::EXIT)
+    {
+        switch (fsmState)
+        {
+            case ConsoleState::CMD: 
+                std::cout << "Choose Command | q: exit | 1: private msg | 2: temp msg | 3: group msg" << std::endl; 
+                break;
+            case ConsoleState::PRIVATE: 
+                std::cout << "Private Msg: "; 
+                break;
+            case ConsoleState::TEMP: 
+                std::cout << "Temp Msg: "; 
+                break;
+            case ConsoleState::GROUP: 
+                std::cout << "Group Msg: "; 
+                break;
+            default:
+                break;
+        }
+        std::string buf;
+        std::getline(std::cin, buf);
+        if (buf.empty()) continue;
+        cb(buf);    
+    }
+}
+//procRecvMsgEntry()
+
+#endif
 
 }
