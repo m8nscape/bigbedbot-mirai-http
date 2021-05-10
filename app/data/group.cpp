@@ -1,4 +1,7 @@
 #include "group.h"
+
+#include <sstream>
+
 #include "utils/logger.h"
 
 #include "mirai/msg.h"
@@ -251,6 +254,32 @@ std::string DISABLE(::int64_t group, ::int64_t qq, std::vector<std::string> args
     return "你关个锤子？";
 }
 
+std::string QUERY_FLAGS(::int64_t group, ::int64_t qq, std::vector<std::string> args)
+{
+    mirai::group_member_permission p;
+    if (grp::groups[group].haveMember(qq))
+        p = grp::groups[group].members[qq].permission;
+
+    if (qq == rootQQId
+        || p == mirai::group_member_permission::ADMINISTRATOR 
+        || p == mirai::group_member_permission::OWNER)
+    {
+        auto& g = groups[group];
+        std::stringstream ss;
+        ss << "批: " << (g.getFlag(Group::MASK_P) ? "Y" : "N") << std::endl;
+        ss << "吃什么: " << (g.getFlag(Group::MASK_EAT) ? "Y" : "N") << std::endl;
+        //ss << "翻批: " << (g.getFlag(Group::MASK_GAMBOL) ? "Y" : "N") << std::endl;
+        ss << "抽卡: " << (g.getFlag(Group::MASK_MONOPOLY) ? "Y" : "N") << std::endl;
+        ss << "禁烟: " << (g.getFlag(Group::MASK_SMOKE) ? "Y" : "N") << std::endl;
+        ss << "开箱: " << (g.getFlag(Group::MASK_CASE) ? "Y" : "N") << std::endl;
+        //ss << "活动开箱: " << (g.getFlag(Group::MASK_EVENT_CASE) ? "Y" : "N") << std::endl;
+        ss << "领批: " << (g.getFlag(Group::MASK_DAILYP) ? "Y" : "N") << std::endl;
+        ss << "启动公告: " << (g.getFlag(Group::MASK_BOOT_ANNOUNCE) ? "Y" : "N");
+        return ss.str();
+    }
+    return "就你也想看权限？";
+}
+
 void msgDispatcher(const json& body)
 {
     auto query = mirai::messageChainToArgs(body);
@@ -270,13 +299,17 @@ void msgDispatcher(const json& body)
     
     auto cmd = query[0];
     std::string resp;
-    if (cmd.substr(0, strlen("开启")) == "开启")
+    if (cmd.substr(0, sizeof("开启")-1) == "开启")
     {
         resp = ENABLE(m.groupid, m.qqid, query);
     }
-    else if (cmd.substr(0, strlen("关闭")) == "关闭")
+    else if (cmd.substr(0, sizeof("关闭")-1) == "关闭")
     {
         resp = DISABLE(m.groupid, m.qqid, query);
+    }
+    else if (cmd.substr(0, sizeof("权限")-1) == "权限")
+    {
+        resp = QUERY_FLAGS(m.groupid, m.qqid, query);
     }
 
     if (!resp.empty())
