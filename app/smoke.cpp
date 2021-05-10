@@ -41,11 +41,18 @@ RetVal nosmoking(int64_t group, int64_t target, int duration_min)
     
     if (duration_min == 0)
     {
-        smokeTimeInGroups[target].erase(group);
+        if (smokeTimeInGroups.find(target) != smokeTimeInGroups.end() && 
+            smokeTimeInGroups[target].find(group) != smokeTimeInGroups[target].end())
+        {
+            smokeTimeInGroups[target].erase(group);
+            addLogDebug("smoke", "Removed %lld @ %lld from smoking list", target, group);
+        }
         return RetVal::ZERO_DURATION;
     }
 
-    smokeTimeInGroups[target][group] = time(nullptr) + int64_t(duration_min) * 60;
+    time_t t = time(nullptr) + int64_t(duration_min) * 60;
+    smokeTimeInGroups[target][group] = t;
+    addLogDebug("smoke", "Added %lld @ %lld until %ld to smoking list", target, group, t);
     return RetVal::OK;
 }
 
@@ -210,7 +217,7 @@ void GROUP_UNSMOKE(const mirai::MsgMetadata& m, int64_t target_qqid)
         return;
     }
 
-    if (RetVal::OK == nosmoking(m.groupid, target_qqid, 0))
+    if (RetVal::ZERO_DURATION == nosmoking(m.groupid, target_qqid, 0))
         mirai::sendGroupMsgStr(m.groupid, "解禁了");
     else
         mirai::sendGroupMsgStr(m.groupid, "解禁失败");
@@ -230,11 +237,17 @@ void updateSmokeTimeList(int64_t qqid)
 
         // 对成员去掉到时间的群
         for (auto& groupid : expired)
+        {
             smoke::smokeTimeInGroups[qqid].erase(groupid);
+            addLogDebug("smoke", "Removed %lld @ %lld from smoking list", qqid, groupid);
+        }
 
         // 如果全部解禁，去掉该成员
         if (smoke::smokeTimeInGroups[qqid].empty())
+        {
             smoke::smokeTimeInGroups.erase(qqid);
+            addLogDebug("smoke", "Removed %lld from all smoking list", qqid);
+        }
     }
 }
 
@@ -263,8 +276,13 @@ void groupMsgCallback(const json& body)
     int64_t m1target = groupLastTalkedMember[m.groupid];
     groupLastTalkedMember[m.groupid] = m.qqid;
 
-    // update smoke status
-    smoke::smokeTimeInGroups[m.qqid].erase(m.groupid);
+    // one must not being smoked if it is still able to talk
+    if (smoke::smokeTimeInGroups.find(m.qqid) != smoke::smokeTimeInGroups.end() &&
+         smoke::smokeTimeInGroups[m.qqid].find(m.groupid) != smoke::smokeTimeInGroups[m.qqid].end())
+    {
+        smoke::smokeTimeInGroups[m.qqid][m.groupid] = 0;
+    }
+    updateSmokeTimeList(m.qqid);
 
     if (!grp::groups[m.groupid].getFlag(grp::Group::MASK_P | grp::Group::MASK_SMOKE))
         return;
