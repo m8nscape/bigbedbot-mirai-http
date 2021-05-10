@@ -31,6 +31,9 @@ namespace monopoly
 
 using namespace std::placeholders;
 
+std::map<int64_t, std::map<int64_t, time_t>> starveFloodCtrlExpire;
+const int STARVE_FLOOD_CTRL_DURATION = 5; // introduce 5s cooldown if stamina runs out
+
 using func = std::function<void(int64_t qqid, int64_t groupid, int64_t& target)>;
 
 struct chance
@@ -321,9 +324,18 @@ void msgCallback(const json& body)
     if (!adrenaline)
     {
         auto [enough, stamina, rtime] = user::plist[m.qqid].modifyStamina(-1);
-        if (!enough)
+        if (enough)
         {
-            mirai::sendMsgResp(m, not_enough_stamina(m.qqid, rtime));
+            starveFloodCtrlExpire[m.groupid][m.qqid] = 0;
+        }
+        else
+        {
+            // flood control
+            if (starveFloodCtrlExpire[m.groupid][m.qqid] == 0 || starveFloodCtrlExpire[m.groupid][m.qqid] < t)
+            {
+                mirai::sendMsgResp(m, not_enough_stamina(m.qqid, rtime));
+                starveFloodCtrlExpire[m.groupid][m.qqid] = t + STARVE_FLOOD_CTRL_DURATION;
+            }
             return;
         }
     }
