@@ -75,5 +75,6 @@
         "regex": "cpp",
         "shared_mutex": "cpp"
     },
-    "files.autoGuessEncoding": true
+    "files.autoGuessEncoding": true,
+    "cmake.buildDirectory": "${workspaceFolder}/build/${buildType}"
 }
