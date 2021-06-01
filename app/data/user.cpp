@@ -59,7 +59,13 @@ pdata::resultStamina pdata::getStamina(bool extra) const
     time_t last = stamina_recovery_time;
     int stamina = MAX_STAMINA;
     if (last > t) stamina -= (last - t) / STAMINA_TIME + !!((last - t) % STAMINA_TIME);
+    if (extra) stamina += stamina_extra;
     return { true, stamina, stamina_recovery_time - t};
+}
+
+int pdata::getExtraStamina() const
+{
+    return stamina_extra;
 }
 
 pdata::resultStamina pdata::modifyStamina(int delta, bool extra)
@@ -221,7 +227,7 @@ json registered(int64_t qq, int64_t balance)
     return std::move(resp);
 }
 
-json currency(int64_t qq, int64_t c, int64_t key, int stamina, time_t rtime)
+json currency(int64_t qq, int64_t c, int64_t key, int stamina, time_t rtime, int stamina_extra = 0)
 {
     json resp = R"({ "messageChain": [] })"_json;
     resp["messageChain"].push_back(mirai::buildMessageAt(qq));
@@ -229,7 +235,10 @@ json currency(int64_t qq, int64_t c, int64_t key, int stamina, time_t rtime)
     ss << "，你的余额为" << c << "个批，" << key << "把钥匙\n";
     resp["messageChain"].push_back(mirai::buildMessagePlain(ss.str()));
     ss.str("");
-    ss << "你还有" << stamina << "点体力";
+    if (stamina_extra > 0)
+        ss << "你还有" << stamina << "(+" << stamina_extra << ")点体力";
+    else
+        ss << "你还有" << stamina << "点体力";
     if (stamina < user::MAX_STAMINA)
         ss << "，回满还需" << rtime / (60 * 60) << "小时" << rtime / 60 % 60 << "分钟";
     resp["messageChain"].push_back(mirai::buildMessagePlain(ss.str()));
@@ -296,8 +305,8 @@ json BALANCE(int64_t qq)
     if (plist.find(qq) == plist.end()) 
         return std::move(not_registered(qq));
     auto &p = plist[qq];
-    auto[enough, stamina, rtime] = p.getStamina(0);
-    return std::move(currency(qq, p.getCurrency(), p.getKeyCount(), stamina, rtime));
+    auto[enough, stamina, rtime] = p.getStamina(false);
+    return std::move(currency(qq, p.getCurrency(), p.getKeyCount(), stamina, rtime, p.getExtraStamina()));
 }
 
 json DRAW_P(int64_t qq, int64_t group)

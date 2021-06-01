@@ -48,6 +48,7 @@ public:
 		time_t	fullRecoverTime;
 	};
 	resultStamina getStamina(bool extra) const;
+	int getExtraStamina() const;
 	resultStamina modifyStamina(int delta = 0, bool extra = false);
 	resultStamina testStamina(int cost = 0) const;
 

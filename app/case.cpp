@@ -296,7 +296,7 @@ json OPEN_Y(::int64_t group, ::int64_t qq, std::vector<std::string> args)
     if (p.getCurrency() < OPEN_RUN_SP1_COST)
         return not_enough_currency(qq);
 
-    auto[enough, stamina, rtime] = p.testStamina(OPEN_RUN_SP2_STAMINA);
+    auto[enough, stamina, rtime] = p.testStamina(user::MAX_STAMINA);
 
     if (!enough)
         return not_enough_stamina(qq, rtime);
