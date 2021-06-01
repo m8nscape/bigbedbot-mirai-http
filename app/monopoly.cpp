@@ -134,8 +134,8 @@ void do_all(int64_t groupid, efunc f, double x, double y)
                 continue;
             }
         }
-
-        f(qqid, groupid, x, y);
+        if (user::plist.find(qqid) != user::plist.end())
+            f(qqid, groupid, x, y);
     }
 }
 
