@@ -61,7 +61,7 @@ public:
 	void modifyDrawTime(time_t time);
 	void modifyKeyCount(int64_t delta);
 
-	void createAccount(int64_t qq, int64_t initialBalance);
+	int createAccount(int64_t qq, int64_t initialBalance);
 
 };
 

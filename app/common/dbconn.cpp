@@ -135,8 +135,7 @@ int SQLite::exec(const char* zsql, std::initializer_list<std::any> args)
         sprintf(msg, "%s %s: %s", "exec", zsql, errmsg());
         addLog(LOG_ERROR, logGrp, msg);
     }
-    sqlite3_finalize(stmt);
-    return SQLITE_OK;
+    return sqlite3_finalize(stmt);
 }
 
 void SQLite::transactionStart()

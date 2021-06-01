@@ -186,11 +186,11 @@ void pdata::modifyKeyCount(int64_t c)
     db.exec("UPDATE pee SET keys=? WHERE qqid=?", { key_count, qq });
 }
 
-void pdata::createAccount(int64_t qqid, int64_t c)
+int pdata::createAccount(int64_t qqid, int64_t c)
 {
     qq = qqid;
     currency = c;
-    db.exec("INSERT INTO pee(qqid, currency, cases, dailytime, keys) VALUES(? , ? , ? , ? , ?)",
+    return db.exec("INSERT INTO pee(qqid, currency, cases, dailytime, keys) VALUES(? , ? , ? , ? , ?)",
         { qq, currency, 0, 0, 0 });
 }
 
@@ -224,6 +224,13 @@ json registered(int64_t qq, int64_t balance)
     std::stringstream ss;
     ss << "，你可以开始开箱了，送给你" << balance << "个批";
     resp["messageChain"].push_back(mirai::buildMessagePlain(ss.str()));
+    return std::move(resp);
+}
+
+json register_fail()
+{
+    json resp = R"({ "messageChain": [] })"_json;
+    resp["messageChain"].push_back(mirai::buildMessagePlain("开通失败，请联系管理员，，"));
     return std::move(resp);
 }
 
@@ -289,7 +296,10 @@ json REG(int64_t qq)
 {
     if (plist.find(qq) != plist.end()) 
         return std::move(already_registered(qq));
-    plist[qq].createAccount(qq, INITIAL_BALANCE);
+    if (plist[qq].createAccount(qq, INITIAL_BALANCE))
+    {
+        return std::move(register_fail());
+    }
     return std::move(registered(qq, INITIAL_BALANCE));
 }
 
