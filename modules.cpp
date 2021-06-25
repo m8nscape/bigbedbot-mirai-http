@@ -33,7 +33,7 @@ void init_modules()
     eatwhat::foodCreateTable();
     eatwhat::drinkCreateTable();
     addTimedEventEveryMin(std::bind(&SQLite::commit, &eatwhat::db, true));
-    //eat::foodLoadListFromDb();
+    eatwhat::foodLoadListFromDb();
     //eat::updateSteamGameList();
     
     // app: monopoly

@@ -1,4 +1,5 @@
 #include <sstream>
+#include <list>
 #include "eatwhat.h"
 
 #include "data/group.h"
@@ -7,6 +8,8 @@
 #include "mirai/msg.h"
 
 namespace eatwhat {
+
+std::vector<food> foodList;
 
 std::string food::to_string(int64_t group)
 {
@@ -42,6 +45,7 @@ std::string food::to_string(int64_t group)
 
 inline int addFood(food& f)
 {
+    // insert into db
     const char query[] = "INSERT INTO food(name, adder, qq) VALUES (?,?,?)";
     int ret;
     switch (f.offererType)
@@ -57,13 +61,17 @@ inline int addFood(food& f)
         return 1;
     }
 
-    //foodList.push_back(f);
+    // insert into cached list
+    foodList.push_back(f);
+
     addLog(LOG_INFO, "eat", "Added food %s", f.name.c_str());
     return 0;
 }
 
 int getFood(food& f)
 {
+    /*
+    // get from db
     const char query[] = "SELECT * FROM food ORDER BY RANDOM() limit 1";
     auto list = db.query(query, 4);
     if (list.empty()) return 1;
@@ -87,12 +95,20 @@ int getFood(food& f)
     }
 
     return 0;
+    */
 
-    //return foodList[randInt(0, foodList.size() - 1)];
+    // get from cached list
+    if (foodList.empty()) return 1;
+    std::vector<food> tmpList{foodList.begin(), foodList.end()};
+    std::random_shuffle(tmpList.begin(), tmpList.end());
+    f = tmpList[0];
+    return 0;
 }
 
 int getFood10(food(&f)[10])
 {
+    /*
+    // get from db
     const char query[] = "SELECT * FROM food ORDER BY RANDOM() limit 10";
     auto list = db.query(query, 4);
     size_t idx = 0;
@@ -120,19 +136,41 @@ int getFood10(food(&f)[10])
     }
 
     return idx;
+    */
 
-    //return foodList[randInt(0, foodList.size() - 1)];
+    // get from cached list
+    std::vector<food> tmpList{foodList.begin(), foodList.end()};
+    std::random_shuffle(tmpList.begin(), tmpList.end());
+    size_t upper_bound = std::min(10ul, tmpList.size());
+    for (size_t i = 0; i < upper_bound; ++i)
+    {
+        f[i] = tmpList[i];
+    }
+    return upper_bound;
 }
 
 
 int delFood(const std::string& name)
 {
+    // del from db
     const char query[] = "DELETE FROM food WHERE name=?";
     int ret = db.exec(query, { name });
     if (ret != SQLITE_OK)
     {
         addLog(LOG_ERROR, "eat", "Deleting food %s failed (%s)", name.c_str(), db.errmsg());
         return 1;
+    }
+
+    // del from cached list
+    int count = 0;
+    for (auto it = foodList.begin(); it != foodList.end();)
+    {
+        auto tmpIt = it++;
+        if (tmpIt->name == name)
+        {
+            ++count;
+            foodList.erase(tmpIt);
+        }
     }
 
     addLog(LOG_INFO, "eat", "Deleted food %s", name.c_str());
@@ -401,8 +439,8 @@ std::string MENU(::int64_t group, ::int64_t qq, std::vector<std::string> args)
     int64_t count = getFoodIdx();
     if (!count) return "无";
 
-    return "MENU暂时不可用！";
-    /*
+    //return "MENU暂时不可用！";
+    
     // defuault: last 9 entries
     size_t range_min = (count <= 9) ? 0 : (count - 9);
     size_t range_max = (count <= 9) ? (count - 1) : (range_min + 8);
@@ -440,7 +478,7 @@ std::string MENU(::int64_t group, ::int64_t qq, std::vector<std::string> args)
     }
 
     return ret.str();
-    */
+    
 }
 
 enum class commands: size_t {
@@ -544,18 +582,20 @@ void foodCreateTable()
          )") != SQLITE_OK)
         addLog(LOG_ERROR, "eat", db.errmsg());
 }
-/*
+
 void foodLoadListFromDb()
 {
     auto list = db.query("SELECT * FROM food", 4);
     for (auto& row : list)
     {
         food f;
-        f.name = utf82gbk(std::any_cast<std::string>(row[1]));
+        //f.name = utf82gbk(std::any_cast<std::string>(row[1]));
+        f.name = std::any_cast<std::string>(row[1]);
         if (row[2].has_value())
         {
             f.offererType = f.NAME;
-            f.offerer.name = utf82gbk(std::any_cast<std::string>(row[2]));
+            //f.offerer.name = utf82gbk(std::any_cast<std::string>(row[2]));
+            f.offerer.name = std::any_cast<std::string>(row[2]);
         }
         else if (row[3].has_value())
         {
@@ -570,7 +610,6 @@ void foodLoadListFromDb()
     sprintf(msg, "added %u foods", foodList.size());
     addLogDebug("eat", msg);
 }
-*/
 
 
 void drinkCreateTable()

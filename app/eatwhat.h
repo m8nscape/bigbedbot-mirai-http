@@ -27,7 +27,7 @@ struct food
 };
 //inline std::vector<food> foodList;
 void foodCreateTable();
-//void foodLoadListFromDb();
+void foodLoadListFromDb();
 
 struct drink
 {
