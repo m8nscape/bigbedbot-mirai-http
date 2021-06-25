@@ -49,7 +49,7 @@ void peeLoadFromDb()
         plist[qq] = { qq, p1, p2, p3, p4 };
     }
     char msg[128];
-    sprintf(msg, "added %u users", plist.size());
+    sprintf(msg, "added %lu users", plist.size());
     addLogDebug("pee", msg);
 }
 

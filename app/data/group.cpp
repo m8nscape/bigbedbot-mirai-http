@@ -34,7 +34,7 @@ void LoadListFromDb()
         groups[g.group_id] = g;
     }
     char msg[128];
-    sprintf(msg, "added %u groups", groups.size());
+    sprintf(msg, "added %lu groups", groups.size());
     addLogDebug("grp", msg);
 }
 
@@ -50,7 +50,7 @@ void Group::setFlag(int64_t mask, bool set)
     if (ret != SQLITE_OK)
     {
         char buf[64];
-        sprintf(buf, "update flag error: id=%lld, flags=%lld", group_id, flags);
+        sprintf(buf, "update flag error: id=%ld, flags=%ld", group_id, flags);
         addLog(LOG_ERROR, "grp", buf);
     }
 }
@@ -63,14 +63,14 @@ bool Group::getFlag(int64_t mask)
 void Group::updateMembers()
 {
     char buf[64];
-    sprintf(buf, "updating members for group %lld", group_id);
+    sprintf(buf, "updating members for group %ld", group_id);
     addLog(LOG_INFO, "grp", buf);
 
     auto members_tmp = mirai::getGroupMemberList(group_id);
     if (members_tmp.empty())
     {
         char buf[64];
-        sprintf(buf, "updating members for group %lld error", group_id);
+        sprintf(buf, "updating members for group %ld error", group_id);
         addLog(LOG_ERROR, "grp", buf);
         return;
     }
@@ -79,7 +79,7 @@ void Group::updateMembers()
     for (const auto& m: members_tmp)
         members[m.qqid] = m;
 
-    sprintf(buf, "updated %u members", members.size());
+    sprintf(buf, "updated %lu members", members.size());
     addLog(LOG_INFO, "grp", buf);
 }
 
@@ -125,7 +125,7 @@ int newGroupIfNotExist(int64_t id)
         if (ret != SQLITE_OK)
         {
             char buf[128];
-            sprintf(buf, "insert group error: id=%lld", id);
+            sprintf(buf, "insert group error: id=%ld", id);
             addLog(LOG_ERROR, "grp", buf);
         }
     }

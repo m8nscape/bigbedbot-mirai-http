@@ -607,7 +607,7 @@ void foodLoadListFromDb()
         foodList.push_back(f);
     }
     char msg[128];
-    sprintf(msg, "added %u foods", foodList.size());
+    sprintf(msg, "added %lu foods", foodList.size());
     addLogDebug("eat", msg);
 }
 
