@@ -64,4 +64,6 @@ int newGroupIfNotExist(int64_t id);
 void msgDispatcher(const json& body);
 
 void broadcastMsg(const char* msg, int64_t flags = -1);
+
+bool checkPermission(int64_t group, int64_t qq, mirai::group_member_permission perm, bool checkRoot);
 }

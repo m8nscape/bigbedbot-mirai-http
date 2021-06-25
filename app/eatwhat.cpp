@@ -328,10 +328,7 @@ std::string ADDFOOD(::int64_t group, ::int64_t qq, const std::string& r)
 
 std::string DELFOOD(::int64_t group, ::int64_t qq, const std::string& r)
 {
-    if (!grp::groups[group].haveMember(qq))
-        return "你删个锤子？";
-        
-    if (grp::groups[group].members[qq].permission == mirai::group_member_permission::MEMBER)
+    if (!grp::checkPermission(group, qq, mirai::group_member_permission::MEMBER, true))
         return "你删个锤子？";
 
     if (r.empty()) return "空气不能吃的";
@@ -349,10 +346,7 @@ std::string DELFOOD(::int64_t group, ::int64_t qq, const std::string& r)
 
 std::string ADDDRINK(::int64_t group, ::int64_t qq, const std::string& r)
 {
-    if (!grp::groups[group].haveMember(qq))
-        return "不是群主不给加";
-
-    if (grp::groups[group].members[qq].permission != mirai::group_member_permission::OWNER)
+    if (grp::checkPermission(group, qq, mirai::group_member_permission::OWNER, true))
         return "不是群主不给加";
         
     switch (checkFood(r))
@@ -386,10 +380,7 @@ std::string ADDDRINK(::int64_t group, ::int64_t qq, const std::string& r)
 
 std::string DELDRINK(::int64_t group, ::int64_t qq, const std::string& r)
 {
-    if (!grp::groups[group].haveMember(qq))
-        return "你删个锤子？";
-
-    if (grp::groups[group].members[qq].permission != mirai::group_member_permission::OWNER)
+    if (grp::checkPermission(group, qq, mirai::group_member_permission::OWNER, true))
         return "你删个锤子？";
 
     if (r.empty()) return "空气不能喝的";

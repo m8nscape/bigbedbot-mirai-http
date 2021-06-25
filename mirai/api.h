@@ -8,8 +8,11 @@
 
 namespace mirai
 {
-int auth(const char* auth_key);
-int verify();
+int testConnection();
+    
+void setAuthKey(const std::string& auth_key);
+std::string getSessionKey();
+int registerApp();
 
 using nlohmann::json;
 
@@ -108,14 +111,17 @@ int regEventProc(RecvMsgType evt, MessageProc cb);
 
 enum class group_member_permission
 {
-    MEMBER = 0,
-    ADMINISTRATOR = 1,
-    OWNER = 2,
+    NO_GROUP = 0,
+    NO_MEMBER,
+    MEMBER,
+    ADMINISTRATOR,
+    OWNER,
+    ROOT
 };
 struct group_member_info
 {
     int64_t qqid = 0;
-    group_member_permission permission = group_member_permission::MEMBER;
+    group_member_permission permission = group_member_permission::NO_GROUP;
     int muteTimestamp = 0;
     std::string nameCard;
     std::string specialTitle;

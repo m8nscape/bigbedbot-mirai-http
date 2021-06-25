@@ -18,14 +18,59 @@
 
 namespace mirai
 {
-char sessionKey[64]{0};
-
 using nlohmann::json;
+
+int testConnection()
+{
+    std::promise<int> p;
+    std::future<int> f = p.get_future();
+	http::GET("/about",
+		[&p](const char* t, const json& b, const json& v) -> int
+		{
+            int resp = 0;
+            if (v.contains("code"))
+            {
+                if ((resp = v.at("code").get<int>()) == 0)
+                {
+                    resp = 0;
+                }
+                else
+                {
+                    resp = v.at("code").get<int>();
+                }
+            }
+            else
+            {
+                resp = -1;
+            }
+
+            p.set_value(resp);
+			return resp;
+		}
+    );
+    f.wait();
+    return f.get();
+}
+
+std::string authKey = "auth_key_stub";
+std::string sessionKey = "session_key_stub";
+
+void setAuthKey(const std::string& auth_key)
+{
+    authKey = auth_key;
+}
+
+std::string getSessionKey()
+{
+    return sessionKey;
+}
 
 #ifdef NDEBUG
 
-int auth(const char* auth_key)
+int auth()
 {
+    const char* auth_key = authKey.c_str();
+
 	addLog(LOG_INFO, "api", "Authenciating with auth key [%s]...", auth_key);
     json body;
     body["authKey"] = std::string(auth_key);
@@ -41,7 +86,7 @@ int auth(const char* auth_key)
                 if ((resp = v.at("code").get<int>()) == 0)
                 {
                     // save sessionKey
-                    strncpy(sessionKey, v.at("session").get<std::string>().c_str(), sizeof(sessionKey));
+                    sessionKey = v.at("session").get<std::string>();
                     addLog(LOG_INFO, "api", "Got session key [%s]", sessionKey);
                 }
                 else
@@ -66,9 +111,9 @@ int auth(const char* auth_key)
 
 int verify()
 {
-	addLog(LOG_INFO, "api", "Verifying with session key [%s]...", sessionKey);
+	addLog(LOG_INFO, "api", "Verifying with session key [%s]...", sessionKey.c_str());
     json body;
-    body["sessionKey"] = std::string(sessionKey);
+    body["sessionKey"] = getSessionKey();
     body["qq"] = botLoginQQId;
 
     std::promise<int> p;
@@ -105,7 +150,7 @@ int verify()
 
 #else
 
-int auth(const char* auth_key)
+int auth()
 {
     addLog(LOG_INFO, "api", "auth stub");
     return 0;
@@ -118,6 +163,23 @@ int verify()
 }
 
 #endif
+
+int registerApp()
+{
+    if (mirai::auth() != 0)
+    {
+        addLog(LOG_ERROR, "api", "Auth failed!");
+        return -1;
+    }
+
+    if (mirai::verify() != 0)
+    {
+        addLog(LOG_ERROR, "api", "Verify failed!");
+        return -2;
+    }
+
+    return 0;
+}
 
 std::string messageChainToPrintStr(const json& m)
 {
@@ -199,7 +261,7 @@ int sendTempMsg(int64_t qqid, int64_t groupid, const json& messageChain, int64_t
     addLogDebug("api", "Send temp msg to %lld @ %lld: %s", qqid, groupid, messageChainToPrintStr(messageChain).c_str());
 
     json obj;
-    obj["sessionKey"] = std::string(sessionKey);
+    obj["sessionKey"] = getSessionKey();
     obj["qq"] = qqid;
     obj["group"] = groupid;
     if (quotemsgid) obj["quote"] = quotemsgid;
@@ -231,7 +293,7 @@ int sendFriendMsg(int64_t qqid, const json& messageChain, int64_t quotemsgid)
     addLogDebug("api", "Send private msg to %lld: %s", qqid, messageChainToPrintStr(messageChain).c_str());
 
     json obj;
-    obj["sessionKey"] = std::string(sessionKey);
+    obj["sessionKey"] = getSessionKey();
     obj["target"] = qqid;
     if (quotemsgid) obj["quote"] = quotemsgid;
     obj["messageChain"] = messageChain.at("messageChain");
@@ -261,7 +323,7 @@ int sendGroupMsg(int64_t groupid, const json& messageChain, int64_t quotemsgid)
 {
     addLogDebug("api", "Send group msg to %lld: %s", groupid, messageChainToPrintStr(messageChain).c_str());
     json obj;
-    obj["sessionKey"] = std::string(sessionKey);
+    obj["sessionKey"] = getSessionKey();
     obj["target"] = groupid;
     if (quotemsgid) obj["quote"] = quotemsgid;
     obj["messageChain"] = messageChain.at("messageChain");
@@ -273,7 +335,7 @@ int recallMsg(int64_t msgid)
 {
     addLogDebug("api", "Recall msg %lld", msgid);
     json obj;
-    obj["sessionKey"] = std::string(sessionKey);
+    obj["sessionKey"] = getSessionKey();
     obj["target"] = msgid;
     int ret = http::POST("/recall", obj, sendMsgCallback);
     return ret;
@@ -283,7 +345,7 @@ int mute(int64_t qqid, int64_t groupid, int time_sec)
 {
     addLogDebug("api", "Mute %lld @ %lld for %ds", qqid, groupid, time_sec);
     json obj;
-    obj["sessionKey"] = std::string(sessionKey);
+    obj["sessionKey"] = getSessionKey();
     obj["target"] = groupid;
     obj["memberId"] = qqid;
     int ret;
@@ -305,7 +367,7 @@ group_member_info getGroupMemberInfo(int64_t groupid, int64_t qqid)
     addLogDebug("api", "Get member info for %lld @ %lld", qqid, groupid);
     auto g = group_member_info();
     std::stringstream path;
-    path << "/memberInfo?sessionKey=" << sessionKey << "&target=" << groupid << "&memberId=" << qqid;
+    path << "/memberInfo?sessionKey=" << getSessionKey() << "&target=" << groupid << "&memberId=" << qqid;
 
     std::promise<int> p;
     std::future<int> f = p.get_future();
@@ -338,7 +400,7 @@ std::vector<group_member_info> getGroupMemberList(int64_t groupid)
 {
     addLogDebug("api", "Get member list for group %lld", groupid);
     std::stringstream path;
-    path << "/memberList?sessionKey=" << sessionKey << "&target=" << groupid;
+    path << "/memberList?sessionKey=" << getSessionKey() << "&target=" << groupid;
 
     std::vector<group_member_info> l;
     std::promise<int> p;
@@ -358,6 +420,7 @@ std::vector<group_member_info> getGroupMemberList(int64_t groupid)
                     const auto& p = m.at("permission");
                     if (p == "ADMINISTRATOR") g.permission = group_member_permission::ADMINISTRATOR;
                     else if (p == "OWNER") g.permission = group_member_permission::OWNER;
+                    else g.permission = group_member_permission::MEMBER;
                 }
 
                 l.push_back(g);
@@ -437,7 +500,7 @@ void startMsgPoll()
         while (pollingRunning)
         {
             std::stringstream path;
-            path << "/fetchMessage?sessionKey=" << sessionKey << "&count=" << POLLING_QUANTITY;
+            path << "/fetchMessage?sessionKey=" << getSessionKey() << "&count=" << POLLING_QUANTITY;
             std::promise<int> p;
             std::future<int> f = p.get_future();
             http::GET(path.str(), 
@@ -476,7 +539,7 @@ void stopMsgPoll()
 void connectMsgWebSocket()
 {
     std::stringstream path;
-    path << "/all?sessionKey=" << sessionKey;
+    path << "/all?sessionKey=" << getSessionKey();
     ws::setRecvCallback([](const std::string& msg)
     {
         procRecvMsgEntry(json::parse(msg));

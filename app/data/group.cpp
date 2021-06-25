@@ -134,13 +134,7 @@ int newGroupIfNotExist(int64_t id)
 
 std::string ENABLE(::int64_t group, ::int64_t qq, std::vector<std::string> args)
 {
-    mirai::group_member_permission p;
-    if (grp::groups[group].haveMember(qq))
-        p = grp::groups[group].members[qq].permission;
-
-    if (qq == rootQQId
-        || p == mirai::group_member_permission::ADMINISTRATOR 
-        || p == mirai::group_member_permission::OWNER)
+    if (checkPermission(group, qq, mirai::group_member_permission::ADMINISTRATOR, true))
     {
         auto subcmd = args[0].substr(strlen("开启"));
         auto& g = groups[group];
@@ -190,18 +184,13 @@ std::string ENABLE(::int64_t group, ::int64_t qq, std::vector<std::string> args)
             return "本群已开启启动信息";
         }
     }
-    return "你开个锤子？";
+    //return "你开个锤子？";
+    return "";
 }
 
 std::string DISABLE(::int64_t group, ::int64_t qq, std::vector<std::string> args)
 {
-    mirai::group_member_permission p;
-    if (grp::groups[group].haveMember(qq))
-        p = grp::groups[group].members[qq].permission;
-
-    if (qq == rootQQId
-        || p == mirai::group_member_permission::ADMINISTRATOR 
-        || p == mirai::group_member_permission::OWNER)
+    if (checkPermission(group, qq, mirai::group_member_permission::ADMINISTRATOR, true))
     {
         auto subcmd = args[0].substr(strlen("关闭"));
         auto& g = groups[group];
@@ -251,18 +240,13 @@ std::string DISABLE(::int64_t group, ::int64_t qq, std::vector<std::string> args
             return "本群已关闭启动信息";
         }
     }
-    return "你关个锤子？";
+    //return "你关个锤子？";
+    return "";
 }
 
 std::string QUERY_FLAGS(::int64_t group, ::int64_t qq, std::vector<std::string> args)
 {
-    mirai::group_member_permission p;
-    if (grp::groups[group].haveMember(qq))
-        p = grp::groups[group].members[qq].permission;
-
-    if (qq == rootQQId
-        || p == mirai::group_member_permission::ADMINISTRATOR 
-        || p == mirai::group_member_permission::OWNER)
+    if (checkPermission(group, qq, mirai::group_member_permission::ADMINISTRATOR, true))
     {
         auto& g = groups[group];
         std::stringstream ss;
@@ -326,6 +310,21 @@ void broadcastMsg(const char* msg, int64_t flag)
         if (!g.members.empty() && g.getFlag(flag))
             g.sendMsg(msg);
     }
+}
+
+bool checkPermission(int64_t group, int64_t qq, mirai::group_member_permission perm, bool checkRoot = false)
+{
+    // grp::groups[group].members[qq].permission
+    using p = mirai::group_member_permission;
+    if (checkRoot && qq == rootQQId) 
+        return p::ROOT >= perm;
+
+    auto qqPerm = p::NO_GROUP;
+    if (groups.find(group) == groups.end()) qqPerm = p::NO_GROUP;
+    else if (!groups.at(group).haveMember(qq)) qqPerm = p::NO_MEMBER;
+    else qqPerm = grp::groups[group].members[qq].permission;
+
+    return qqPerm >= perm;
 }
 
 void init()

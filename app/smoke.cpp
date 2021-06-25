@@ -24,9 +24,7 @@ RetVal nosmoking(int64_t group, int64_t target, int duration_min)
         // get group info from cache
         if (grp::groups[group].haveMember(target))
         {
-            auto perm = grp::groups[group].members[target].permission;
-            if (perm == mirai::group_member_permission::ADMINISTRATOR
-                || perm == mirai::group_member_permission::OWNER)
+            if (grp::checkPermission(group, target, mirai::group_member_permission::ADMINISTRATOR, false))
                 return RetVal::TARGET_IS_ADMIN;
         }
         else
@@ -97,9 +95,8 @@ std::map<int64_t, int64_t> groupLastTalkedMember;
 std::string nosmokingWrapper(int64_t qq, int64_t group, int64_t target, int64_t duration_min);
 void SMOKE(const mirai::MsgMetadata& m, int64_t target, int64_t duration)
 {
-    if (grp::groups[m.groupid].haveMember(botLoginQQId))
-        if (grp::groups[m.groupid].members[botLoginQQId].permission == mirai::group_member_permission::MEMBER) 
-            return;
+    if (!grp::checkPermission(m.groupid, botLoginQQId, mirai::group_member_permission::ADMINISTRATOR, false))
+        return;
 
     if (plist.find(m.qqid) == plist.end())
     {
@@ -207,9 +204,8 @@ std::string nosmokingWrapper(int64_t qq, int64_t group, int64_t target, int64_t 
 
 void GROUP_UNSMOKE(const mirai::MsgMetadata& m, int64_t target_qqid)
 {
-    if (grp::groups[m.groupid].haveMember(botLoginQQId))
-        if (grp::groups[m.groupid].members[botLoginQQId].permission == mirai::group_member_permission::MEMBER) 
-            return;
+    if (!grp::checkPermission(m.groupid, botLoginQQId, mirai::group_member_permission::ADMINISTRATOR, false))
+        return;
 
     if (target_qqid == 0)
     {
