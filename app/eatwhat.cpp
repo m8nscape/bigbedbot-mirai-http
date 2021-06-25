@@ -165,11 +165,14 @@ int delFood(const std::string& name)
     int count = 0;
     for (auto it = foodList.begin(); it != foodList.end();)
     {
-        auto tmpIt = it++;
-        if (tmpIt->name == name)
+        if (it->name == name)
         {
             ++count;
-            foodList.erase(tmpIt);
+            it = foodList.erase(it);
+        }
+        else
+        {
+            ++it;
         }
     }
 
@@ -372,13 +375,18 @@ std::string DELFOOD(::int64_t group, ::int64_t qq, const std::string& r)
     if (r.empty()) return "空气不能吃的";
 
     int64_t count = getFoodIdx(r);
+
+    std::stringstream ss;
     if (count)
     {
         delFood(r);
+        ss << "已删除" << count << "条" << r;
+    }
+    else
+    {
+        ss << "没有";
     }
 
-    std::stringstream ss;
-    ss << "已删除" << count << "条" << r;
     return ss.str();
 }
 
