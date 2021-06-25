@@ -27,7 +27,6 @@ namespace fs = std::experimental::filesystem;
 namespace core
 {
 
-std::string authKey;
 bool botStarted = false;
 bool useWebsocket = true;
 
@@ -43,16 +42,10 @@ int initialize()
         return -255;
     }
 
-    if (mirai::auth(authKey.c_str()) != 0)
+    if (mirai::registerApp() < 0)
     {
-        addLog(LOG_ERROR, "core", "Auth failed!");
-        return -1;
-    }
-
-    if (mirai::verify() != 0)
-    {
-        addLog(LOG_ERROR, "core", "Verify failed!");
-        return -2;
+        addLog(LOG_ERROR, "core", "Authenticating with mirai core failed. It is possibly that core is not running correctly, or Auth Key is incorrent");
+        return -254;
     }
 
     curl_global_init(CURL_GLOBAL_ALL);
@@ -73,7 +66,7 @@ int config()
     }
     addLog(LOG_INFO, "core", "Loading config from %s", fs::absolute(cfgPath).c_str());
     YAML::Node cfg = YAML::LoadFile(cfgFile);
-    authKey = cfg["authkey"].as<std::string>();
+    mirai::setAuthKey(cfg["authkey"].as<std::string>());
     unsigned short port = cfg["port"].as<unsigned short>();
     mirai::http::set_port(port);
     mirai::ws::set_port(port);

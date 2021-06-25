@@ -5,6 +5,8 @@
 
 #include "ws_conn.h"
 
+#include "core.h"
+#include "api.h"
 #include "utils/logger.h"
 
 namespace mirai::ws
@@ -22,10 +24,11 @@ std::shared_ptr<net::io_context> ioc;
 std::shared_ptr<websocket::stream<tcp::socket>> ws;
 std::function<void(const std::string& msg)> recvCallback{[](const std::string&){}};
 
-bool pollingRunning = false;
-std::promise<int> pollingPromise;
-std::future<int> pollingFuture;
+bool listening = false;
+std::promise<int> listenPromise;
+std::future<int> listenFuture;
 std::shared_ptr<std::thread> msg_poll_thread = nullptr;
+int reconnectTimeout = 5;
 
 int connect(const std::string& path)
 {
@@ -56,11 +59,12 @@ int connect(const std::string& path)
         return -1;
     }
 
-    pollingRunning = true;
-    pollingFuture = pollingPromise.get_future();
+    listening = true;
+    reconnectTimeout = 5;
+    listenFuture = listenPromise.get_future();
     msg_poll_thread = std::make_shared<std::thread>([]
     {
-        while (pollingRunning && ws && ws->is_open())
+        while (listening && ws && ws->is_open())
         {
             beast::flat_buffer buffer;
             try
@@ -71,11 +75,44 @@ int connect(const std::string& path)
             }
             catch (std::exception const& e)
             {
-                addLog(LOG_WARNING, "ws", "Exception occurred while reading: %s", e.what());
+                if (listening)
+                {
+                    addLog(LOG_WARNING, "ws", "Exception occurred while reading: %s", e.what());
+
+                    if (reconnectTimeout > 0)
+                    {
+                        bool reconnectSucceed = false;
+                        while (!reconnectSucceed)
+                        {
+                            addLog(LOG_INFO, "ws", "Reconnecting in %d secounds", reconnectTimeout);
+                            std::this_thread::sleep_for(std::chrono::seconds(reconnectTimeout));
+
+                            reconnectTimeout *= 2;
+                            if (mirai::testConnection() != 0)
+                            {
+                                addLog(LOG_WARNING, "ws", "Test connection failed");
+                                continue;
+                            }
+                        }
+
+                        if (mirai::registerApp() < 0)
+                        {
+                            addLog(LOG_ERROR, "ws", "Authenticating with mirai core failed");
+                            core::shutdown();
+                        }
+#ifdef NDEBUG
+                        std::thread(mirai::connectMsgWebSocket).detach();
+#endif
+                    }
+                    else
+                    {
+                        core::shutdown();
+                    }
+                }
                 break;
             }
         }
-        pollingPromise.set_value(0);
+        listenPromise.set_value(0);
     });
     msg_poll_thread->detach();
 
@@ -84,8 +121,9 @@ int connect(const std::string& path)
 
 int disconnect()
 {
+    listening = false;
     if (ws) ws->close(websocket::close_code::normal);
-    pollingFuture.wait_for(std::chrono::seconds(3));
+    listenFuture.wait_for(std::chrono::seconds(3));
     ws.reset();
     ioc.reset();
     return 0;
