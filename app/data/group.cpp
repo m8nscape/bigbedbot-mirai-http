@@ -312,19 +312,21 @@ void broadcastMsg(const char* msg, int64_t flag)
     }
 }
 
-bool checkPermission(int64_t group, int64_t qq, mirai::group_member_permission perm, bool checkRoot = false)
+bool checkPermission(int64_t group, int64_t qq, mirai::group_member_permission permRequired, bool checkRoot = false)
 {
     // grp::groups[group].members[qq].permission
     using p = mirai::group_member_permission;
     if (checkRoot && qq == rootQQId) 
-        return p::ROOT >= perm;
+        return p::ROOT >= permRequired;
 
     auto qqPerm = p::NO_GROUP;
     if (groups.find(group) == groups.end()) qqPerm = p::NO_GROUP;
     else if (!groups.at(group).haveMember(qq)) qqPerm = p::NO_MEMBER;
-    else qqPerm = grp::groups[group].members[qq].permission;
+    else qqPerm = groups[group].members[qq].permission;
 
-    return qqPerm >= perm;
+    //addLog(LOG_DEBUG, "group", "QQ:%lld Permission:%d Required:%d", qq, (int)qqPerm, (int)permRequired);
+
+    return qqPerm >= permRequired;
 }
 
 void init()

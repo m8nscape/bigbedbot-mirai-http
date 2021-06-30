@@ -392,7 +392,7 @@ std::string DELFOOD(::int64_t group, ::int64_t qq, const std::string& r)
 
 std::string ADDDRINK(::int64_t group, ::int64_t qq, const std::string& r)
 {
-    if (grp::checkPermission(group, qq, mirai::group_member_permission::OWNER, true))
+    if (!grp::checkPermission(group, qq, mirai::group_member_permission::OWNER, true))
         return "不是群主不给加";
         
     switch (checkFood(r))
@@ -426,7 +426,7 @@ std::string ADDDRINK(::int64_t group, ::int64_t qq, const std::string& r)
 
 std::string DELDRINK(::int64_t group, ::int64_t qq, const std::string& r)
 {
-    if (grp::checkPermission(group, qq, mirai::group_member_permission::OWNER, true))
+    if (!grp::checkPermission(group, qq, mirai::group_member_permission::OWNER, true))
         return "你删个锤子？";
 
     if (r.empty()) return "空气不能喝的";

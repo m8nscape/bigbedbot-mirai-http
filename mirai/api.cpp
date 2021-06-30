@@ -410,6 +410,33 @@ std::vector<group_member_info> getGroupMemberList(int64_t groupid)
         {
             for (const auto& m: body)
             {
+                // Add the bot itself to the list, since the list API returns does not contain invoker.
+                bool isInvokerPermissionAdded = false;
+                if (!isInvokerPermissionAdded)
+                {
+                    if (m.contains("group"))
+                    {
+                        const auto& gm = m.at("group");
+                        if (gm.contains("permission"))
+                        {
+                            group_member_info gbot;
+                            gbot.qqid = botLoginQQId;
+                            gbot.nameCard = "";    // TODO set bot namecard
+                            const auto& p = gm.at("permission");
+                            if (p == "ADMINISTRATOR") 
+                                gbot.permission = group_member_permission::ADMINISTRATOR;
+                            else if (p == "OWNER") 
+                                gbot.permission = group_member_permission::OWNER;
+                            else 
+                                gbot.permission = group_member_permission::MEMBER;
+
+                            l.push_back(gbot);
+                            isInvokerPermissionAdded = true;
+                        }
+                    }
+                }
+
+                // add other members
                 group_member_info g;
                 if (m.contains("id"))
                     g.qqid = m.at("id");
@@ -418,9 +445,12 @@ std::vector<group_member_info> getGroupMemberList(int64_t groupid)
                 if (m.contains("permission"))
                 {
                     const auto& p = m.at("permission");
-                    if (p == "ADMINISTRATOR") g.permission = group_member_permission::ADMINISTRATOR;
-                    else if (p == "OWNER") g.permission = group_member_permission::OWNER;
-                    else g.permission = group_member_permission::MEMBER;
+                    if (p == "ADMINISTRATOR") 
+                        g.permission = group_member_permission::ADMINISTRATOR;
+                    else if (p == "OWNER") 
+                        g.permission = group_member_permission::OWNER;
+                    else 
+                        g.permission = group_member_permission::MEMBER;
                 }
 
                 l.push_back(g);
