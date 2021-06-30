@@ -73,7 +73,9 @@
         "valarray": "cpp",
         "fstream": "cpp",
         "regex": "cpp",
-        "shared_mutex": "cpp"
+        "shared_mutex": "cpp",
+        "queue": "cpp",
+        "stack": "cpp"
     },
     "files.autoGuessEncoding": true,
     "cmake.buildDirectory": "${workspaceFolder}/build/${buildType}"

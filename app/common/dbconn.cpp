@@ -40,7 +40,7 @@ std::vector<std::vector<std::any>> SQLite::query(const char* zsql, size_t retSiz
         ++idx;
     }
     char msg[128];
-    sprintf(msg, "query result: %u rows", ret.size());
+    sprintf(msg, "query result: %lu rows", ret.size());
     addLogDebug(logGrp, msg);
     sqlite3_finalize(stmt);
     return ret;
