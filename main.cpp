@@ -3,9 +3,11 @@
 #include <csignal>
 
 #include "core.h"
+#include "utils/logger.h"
 
 void hs_end(int signal)
 {
+    addLog(LOG_ERROR, "SIGNAL", "Received SIGINT/SIGTERM, exiting...");
     core::shutdown();
     std::this_thread::sleep_for(std::chrono::seconds(1));
 }

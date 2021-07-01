@@ -124,6 +124,8 @@ int shutdown()
 {
     if (botStarted)
     {
+        addLog(LOG_INFO, "core", "Stopping");
+
         shutdown_modules();
         user::db.transactionStop();
         grp::db.transactionStop();

@@ -86,7 +86,7 @@ std::vector<std::vector<std::any>> SQLite::query(const char* zsql, size_t retSiz
         ++idx;
     }
     char msg[128];
-    sprintf(msg, "query result: %u rows", ret.size());
+    sprintf(msg, "query result: %lu rows", ret.size());
     addLogDebug(logGrp, msg);
     sqlite3_finalize(stmt);
     return ret;
@@ -158,7 +158,7 @@ void SQLite::transactionStart()
     }
     else
     {
-        //addLogDebug(logGrp, "transaction started");
+        addLogDebug(logGrp, "transaction started");
     }
     sqlite3_finalize(stmt);
 }
@@ -182,7 +182,7 @@ void SQLite::transactionStop()
     }
     else
     {
-        //addLogDebug(logGrp, "transaction finished");
+        addLogDebug(logGrp, "transaction finished");
     }
     sqlite3_finalize(stmt);
 }
