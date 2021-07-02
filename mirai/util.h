@@ -2,8 +2,6 @@
 #include <cstdint>
 #include <string>
 
-#include "api.h"
-
 extern int64_t botLoginQQId;
 extern int64_t rootQQId;
 namespace mirai

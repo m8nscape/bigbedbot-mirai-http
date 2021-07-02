@@ -39,7 +39,6 @@ target_include_directories(bbb
     PRIVATE ${json_INCLUDE_DIR}
     PRIVATE ${yaml-cpp_INCLUDE_DIR}
 )
-
 find_package(CURL CONFIG)
 if (CURL_FOUND)
     set(CURL_LIBRARY CURL::libcurl)

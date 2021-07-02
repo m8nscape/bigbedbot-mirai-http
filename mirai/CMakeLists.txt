@@ -10,6 +10,9 @@ add_library(mirai-api STATIC
 target_include_directories(mirai-api
     PRIVATE ${CMAKE_SOURCE_DIR}
 )
+target_precompile_headers(mirai-api 
+    PRIVATE pch.h
+)
 set_target_properties(mirai-api PROPERTIES
     CXX_STANDARD 17)
 target_link_libraries(mirai-api

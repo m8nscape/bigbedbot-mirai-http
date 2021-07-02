@@ -1,12 +1,8 @@
+#include "pch.h"
 #include "api.h"
 #include "http_conn.h"
 #include "ws_conn.h"
 
-#include <sstream>
-#include <vector>
-#include <map>
-#include <future>
-#include <exception>
 #ifdef NDEBUG
 #else
 #include <functional>

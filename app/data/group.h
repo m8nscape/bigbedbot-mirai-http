@@ -6,6 +6,7 @@
 
 #include "../common/dbconn.h"
 #include "utils/logger.h"
+#include "mirai/api.h"
 #include "mirai/util.h"
 
 #include "nlohmann/json.hpp"

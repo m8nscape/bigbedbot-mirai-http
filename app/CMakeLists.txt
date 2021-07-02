@@ -21,6 +21,9 @@ target_link_libraries(app
 target_include_directories(app 
     PRIVATE ${CMAKE_SOURCE_DIR}
 )
+target_precompile_headers(app
+    PRIVATE pch.h
+)
 
 find_package(SQLite3 CONFIG)
 if (SQLite3_FOUND)

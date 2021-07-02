@@ -5,23 +5,11 @@
 #include <any>
 #include <functional>
 
-#define BOOST_ASIO_DISABLE_CONCEPTS
-#include <boost/beast/core.hpp>
-#include <boost/beast/http.hpp>
-#include <boost/beast/version.hpp>
-#include <boost/asio/connect.hpp>
-#include <boost/asio/ip/tcp.hpp>
-
 #include <nlohmann/json.hpp>
 
 namespace mirai::http
 {
 void set_port(unsigned short port);
-
-namespace beast = boost::beast;     // from <boost/beast.hpp>
-namespace http = beast::http;       // from <boost/beast/http.hpp>
-namespace net = boost::asio;        // from <boost/asio.hpp>
-using tcp = net::ip::tcp;           // from <boost/asio/ip/tcp.hpp>
 
 using nlohmann::json;
 
