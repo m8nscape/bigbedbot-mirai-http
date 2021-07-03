@@ -36,6 +36,7 @@ RetVal nosmoking(int64_t group, int64_t target, int duration_min)
     }
 
     mirai::mute(target, group, duration_min * 60);
+    grp::groups[group].sum_smoke += duration_min;
     
     if (duration_min == 0)
     {
@@ -182,6 +183,7 @@ std::string nosmokingWrapper(int64_t qq, int64_t group, int64_t target, int64_t 
         case r::OK:
         {
             plist[qq].modifyCurrency(-cost);
+            grp::groups[group].sum_spent += cost;
             std::stringstream ss;
             if (qq == target)
                 ss << "？我从来没听过这样的要求，消费" << cost << "个批";

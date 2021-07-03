@@ -163,6 +163,9 @@ command msgDispatcher(const json& body)
 
 			p.modifyStamina(-1, true);
 			p.modifyCurrency(+reward.worth - pool_draw.getTypeCost(type));
+            grp::groups[group].sum_earned += reward.worth;
+            grp::groups[group].sum_spent += pool_draw.getTypeCost(type);
+            grp::groups[group].sum_case += 1;
 
             // drop
             if (randReal() < 0.1)
@@ -176,6 +179,8 @@ command msgDispatcher(const json& body)
                 auto dcase = pool_drop.draw(type);
 				p.modifyCurrency(+dcase.worth);
                 ss << pool_drop.caseFullName(dcase);
+                grp::groups[group].sum_earned += dcase.worth;
+                grp::groups[group].sum_case += 1;
             }
 
             //modifyBoxCount(qq, ++plist[qq].opened_box_count);

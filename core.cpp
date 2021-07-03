@@ -98,6 +98,10 @@ int init_app_and_start()
     grp::init();
     addTimedEventEveryMin(std::bind(&SQLite::commit, &grp::db, true));
     mirai::regEventProc(mirai::RecvMsgType::GroupMessage, user::msgCallback);
+    // 每分钟保存群统计
+    for (auto it = grp::groups.begin(); it != grp::groups.end(); ++it)
+        addTimedEventEveryMin(std::bind(&grp::Group::SaveSumIntoDb, &it->second));
+        
 
     init_modules();
     add_timed_events();
@@ -125,6 +129,9 @@ int shutdown()
     if (botStarted)
     {
         addLog(LOG_INFO, "core", "Stopping");
+
+        for (auto it = grp::groups.begin(); it != grp::groups.end(); ++it)
+            it->second.SaveSumIntoDb();
 
         shutdown_modules();
         user::db.transactionStop();

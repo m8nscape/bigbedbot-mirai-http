@@ -339,6 +339,7 @@ json DRAW_P(int64_t qq, int64_t group)
         remain_daily_bonus -= bonus;
     }
     p.modifyCurrency(FREE_BALANCE_ON_NEW_DAY + bonus);
+    grp::groups[group].sum_earned += FREE_BALANCE_ON_NEW_DAY + bonus;
     p.modifyDrawTime(time(nullptr));
     return std::move(draw_p(qq, FREE_BALANCE_ON_NEW_DAY, bonus, remain_daily_bonus));
 }

@@ -21,6 +21,13 @@ class Group
 {
 public:
     int64_t group_id = -1;
+    int64_t sum_earned = 0;
+    int64_t sum_spent = 0;
+    int64_t sum_case = 0;
+    int64_t sum_card = 0;
+    int64_t sum_eatwhat = 0;
+    int64_t sum_smoke = 0;
+
 protected:
     int64_t flags = 0;
 public:
@@ -45,13 +52,16 @@ public:
     void sendMsg(const char* msg) const;
     Group() = default;
     Group(int64_t id) : group_id(id) {}
+    void LoadSumFromDb();
+    void SaveSumIntoDb();
 };
 
 inline std::map<int64_t, Group> groups;
 
 enum class commands : size_t {
     ACTIVATE,
-    CONFIGURE
+    CONFIGURE,
+    SUMMARY
 };
 typedef std::function<std::string(::int64_t, ::int64_t, std::vector<std::string>&, const char*)> callback;
 struct command

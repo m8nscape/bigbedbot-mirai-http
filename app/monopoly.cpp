@@ -70,21 +70,41 @@ int64_t get_random_registered_member(int64_t groupid);
 
 // events
 auto& pd = user::plist;
-void muted(int64_t qqid, int64_t groupid, double x) { smoke::nosmoking(groupid, qqid, round(x)); }
-void mute_dk(int64_t qqid, int64_t groupid, double x) { smoke::nosmoking(groupid, /*TODO who is dk*/0, round(x)); }
+void muted(int64_t qqid, int64_t groupid, double x) { smoke::nosmoking(groupid, qqid, round(x)); grp::groups[groupid].sum_smoke += round(x);}
+void mute_dk(int64_t qqid, int64_t groupid, double x) { smoke::nosmoking(groupid, /*TODO who is dk*/0, round(x));  grp::groups[groupid].sum_smoke += round(x);}
 void mute_bot(int64_t qqid, int64_t groupid, double x) { smoke::nosmoking(groupid, botLoginQQId, round(x)); }
-void mute_random(int64_t qqid, int64_t groupid, double x, int64_t& target) { target = get_random_registered_member(groupid); smoke::nosmoking(groupid, target, round(x)); }
+void mute_random(int64_t qqid, int64_t groupid, double x, int64_t& target) { target = get_random_registered_member(groupid); smoke::nosmoking(groupid, target, round(x));  grp::groups[groupid].sum_smoke += round(x);}
 void give_key(int64_t qqid, double x) { pd[qqid].modifyKeyCount(round(x)); }
-void give_currency(int64_t qqid, double x) { pd[qqid].modifyCurrency(round(x)); }
+void give_currency(int64_t qqid, int64_t groupid, double x) { pd[qqid].modifyCurrency(round(x));  grp::groups[groupid].sum_earned += round(x);}
 void give_stamina(int64_t qqid, double x) { pd[qqid].modifyStamina(round(x)); }
 void give_stamina_extra(int64_t qqid, double x) { pd[qqid].modifyStamina(round(x), true); }
 void set_stamina(int64_t qqid, double x) { int s = pd[qqid].modifyStamina(0).staminaAfterUpdate; pd[qqid].modifyStamina(-s); pd[qqid].modifyStamina(round(x)); }
-void mul_currency(int64_t qqid, double x) { int64_t c = pd[qqid].getCurrency(); pd[qqid].modifyCurrency(round(c * x) - c); }
+void mul_currency(int64_t qqid, int64_t groupid, double x) 
+{ 
+    if (x < 1 && user_stat[qqid].skip_mul_all_currency_sub1)
+    {
+        user_stat[qqid].skip_mul_all_currency_sub1 = false;
+        return;
+    }
+    int64_t c = pd[qqid].getCurrency(); 
+    int d = round(c * x) - c; 
+    pd[qqid].modifyCurrency(d); 
+    if (d >= 0)
+        grp::groups[groupid].sum_earned += d;
+    else
+        grp::groups[groupid].sum_spent += -d;
+}
 void give_all_key(int64_t groupid, double x) { do_all(groupid, std::bind(give_key, _1, _3), x); }
-void give_all_currency(int64_t groupid, double x) { do_all(groupid, std::bind(give_currency, _1, _3), x); }
-void give_all_currency_range(int64_t groupid, double x, double y) { do_all(groupid, [](int64_t qqid, int64_t groupid, double x, double y) {pd[qqid].modifyCurrency(randInt(round(x), round(y))); }, x, y); }
+void give_all_currency(int64_t groupid, double x) { do_all(groupid, std::bind(give_currency, _1, groupid, _3), x); }
+void give_all_currency_range(int64_t groupid, double x, double y)
+{
+    do_all(groupid, [](int64_t qqid, int64_t groupid, double x, double y)
+    {
+        give_currency(qqid, groupid, randInt(round(x), round(y)));
+    }, x, y);
+}
 void give_all_stamina(int64_t groupid, double x) { do_all(groupid, std::bind(give_stamina, _1, _3), x); }
-void mul_all_currency(int64_t groupid, double x) { do_all(groupid, std::bind(mul_currency, _1, _3), x); }
+void mul_all_currency(int64_t groupid, double x) { do_all(groupid, std::bind(mul_currency, _1, groupid, _3), x); }
 void set_all_stamina(int64_t groupid, double x) { do_all(groupid, std::bind(set_stamina, _1, _3), x); }
 void add_daily_pool(double x) { user::extra_tomorrow += round(x); }
 void get_mul_sub1_skip(int64_t qqid) { user_stat[qqid].skip_mul_all_currency_sub1 = true; }
@@ -214,11 +234,11 @@ int init(const char* yaml)
                 else if (pf == (uintptr_t)mute_bot)             c.cmds.emplace_back(std::bind(mute_bot, _1, _2, x));
                 else if (pf == (uintptr_t)mute_random)          c.cmds.emplace_back(std::bind(mute_random, _1, _2, x, _3));
                 else if (pf == (uintptr_t)give_key)             c.cmds.emplace_back(std::bind(give_key, _1, x));
-                else if (pf == (uintptr_t)give_currency)        c.cmds.emplace_back(std::bind(give_currency, _1, x));
+                else if (pf == (uintptr_t)give_currency)        c.cmds.emplace_back(std::bind(give_currency, _1, _2, x));
                 else if (pf == (uintptr_t)give_stamina)         c.cmds.emplace_back(std::bind(give_stamina, _1, x));
                 else if (pf == (uintptr_t)give_stamina_extra)   c.cmds.emplace_back(std::bind(give_stamina_extra, _1, x));
                 else if (pf == (uintptr_t)set_stamina)          c.cmds.emplace_back(std::bind(set_stamina, _1, x));
-                else if (pf == (uintptr_t)mul_currency)         c.cmds.emplace_back(std::bind(mul_currency, _1, x));
+                else if (pf == (uintptr_t)mul_currency)         c.cmds.emplace_back(std::bind(mul_currency, _1, _2, x));
                 else if (pf == (uintptr_t)give_all_key)         c.cmds.emplace_back(std::bind(give_all_key, _2, x));
                 else if (pf == (uintptr_t)give_all_currency)    c.cmds.emplace_back(std::bind(give_all_currency, _2, x));
                 else if (pf == (uintptr_t)give_all_currency_range) c.cmds.emplace_back(std::bind(give_all_currency_range, _2, x, y));
@@ -271,6 +291,7 @@ void doChance(const mirai::MsgMetadata& m, const chance& c, bool adrenaline)
     {
         cmd(m.qqid, m.groupid, target);
     }
+    grp::groups[m.groupid].sum_card += 1;
 
     // send resp
     json resp = mirai::MSG_TEMPLATE;

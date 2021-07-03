@@ -93,6 +93,7 @@ json OPEN_1(::int64_t group, ::int64_t qq, std::vector<std::string> args)
         if (!enough)
             return not_enough_stamina(qq, rtime);
         p.modifyCurrency(-FEE_PER_CASE);
+        grp::groups[group].sum_spent += FEE_PER_CASE;
         p.modifyStamina(-1, true);
     }
     else
@@ -118,7 +119,9 @@ json OPEN_1(::int64_t group, ::int64_t qq, std::vector<std::string> args)
     r.push_back(mirai::buildMessagePlain(ss.str()));
 
     p.modifyCurrency(reward.worth());
+    grp::groups[group].sum_earned += reward.worth();
     p.modifyBoxCount(+1);
+    grp::groups[group].sum_case += 1;
     //ss << "你还有" << stamina << "点体力，";
 
     return resp;
@@ -144,6 +147,7 @@ json OPEN_10(::int64_t group, ::int64_t qq, std::vector<std::string> args)
             return not_enough_stamina(qq, rtime);
 
         p.modifyCurrency(-FEE_PER_CASE * 10);
+        grp::groups[group].sum_spent += FEE_PER_CASE * 10;
         p.modifyStamina(-10, true);
     }
     else
@@ -200,7 +204,9 @@ json OPEN_10(::int64_t group, ::int64_t qq, std::vector<std::string> args)
     r.push_back(mirai::buildMessagePlain(ss.str()));
 
     p.modifyCurrency(+rc);
+    grp::groups[group].sum_earned += rc;
     p.modifyBoxCount(+10);
+    grp::groups[group].sum_case += 10;
 
     return resp;
 }
@@ -245,6 +251,12 @@ json OPEN_R(::int64_t group, ::int64_t qq, std::vector<std::string> args)
         case_counts[reward.type_idx()]++;
         res += reward.worth();
         pee += reward.worth() - FEE_PER_CASE;
+        if (reward.worth() >= 0)
+            grp::groups[group].sum_earned += reward.worth();
+        else
+            grp::groups[group].sum_spent += -reward.worth();
+        grp::groups[group].sum_spent += FEE_PER_CASE;
+        grp::groups[group].sum_case += 1;
 
         if (reward.type_idx() == SP2_TYPE)
         {
@@ -324,6 +336,12 @@ json OPEN_Y(::int64_t group, ::int64_t qq, std::vector<std::string> args)
         case_counts[reward.type_idx()]++;
         res += reward.worth();
         pee += reward.worth() - FEE_PER_CASE;
+        if (reward.worth() >= 0)
+            grp::groups[group].sum_earned += reward.worth();
+        else
+            grp::groups[group].sum_spent += -reward.worth();
+        grp::groups[group].sum_spent += FEE_PER_CASE;
+        grp::groups[group].sum_case += 1;
 
         if (reward.type_idx() == SP1_TYPE)
         {

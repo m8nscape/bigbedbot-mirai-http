@@ -3,6 +3,8 @@
 #include <sstream>
 
 #include "utils/logger.h"
+#include "utils/rand.h"
+#include "time_evt.h"
 
 #include "mirai/msg.h"
 #include "mirai/api.h"
@@ -16,6 +18,18 @@ void CreateTable()
         "CREATE TABLE IF NOT EXISTS grp( \
             id    INTEGER PRIMARY KEY, \
             flags INTEGER         NOT NULL DEFAULT 0 \
+         )") != SQLITE_OK)
+        addLog(LOG_ERROR, "grp", db.errmsg());
+
+    if (db.exec(
+        "CREATE TABLE IF NOT EXISTS grpsum( \
+            id      INTEGER PRIMARY KEY, \
+            sum_earned  INTEGER         NOT NULL DEFAULT 0, \
+            sum_spent   INTEGER         NOT NULL DEFAULT 0, \
+            sum_case    INTEGER         NOT NULL DEFAULT 0, \
+            sum_card    INTEGER         NOT NULL DEFAULT 0, \
+            sum_eatwhat INTEGER         NOT NULL DEFAULT 0, \
+            sum_smoke   INTEGER         NOT NULL DEFAULT 0 \
          )") != SQLITE_OK)
         addLog(LOG_ERROR, "grp", db.errmsg());
 }
@@ -36,6 +50,65 @@ void LoadListFromDb()
     char msg[128];
     sprintf(msg, "added %lu groups", groups.size());
     addLogDebug("grp", msg);
+
+    // update for new table
+    for (const auto& g: groups)
+    {
+        int64_t id = g.first;
+        const char query1[] = "INSERT OR IGNORE INTO grpsum(id) VALUES (?)";
+        auto ret = db.exec(query1, { id });
+        if (ret != SQLITE_OK)
+        {
+            char buf[128];
+            sprintf(buf, "insert group summary error: id=%ld", id);
+            addLog(LOG_ERROR, "grp", buf);
+        }
+    }
+
+}
+
+void Group::LoadSumFromDb()
+{
+    auto list = db.query("SELECT * FROM grpsum WHERE id = ?", 7, {group_id});
+    for (auto& row : list)
+    {
+        auto id = std::any_cast<int64_t>(row[0]);
+        if (id == group_id)
+        {
+            sum_earned = std::any_cast<int64_t>(row[1]);
+            sum_spent = std::any_cast<int64_t>(row[2]);
+            sum_case = std::any_cast<int64_t>(row[3]);
+            sum_card = std::any_cast<int64_t>(row[4]);
+            sum_eatwhat = std::any_cast<int64_t>(row[5]);
+            sum_smoke = std::any_cast<int64_t>(row[6]);
+            break;
+        }
+    }
+}
+void Group::SaveSumIntoDb()
+{
+    auto ret = db.exec("UPDATE grpsum SET \
+sum_earned=?, \
+sum_spent=?, \
+sum_case=?, \
+sum_card=?, \
+sum_eatwhat=?, \
+sum_smoke=? \
+WHERE id=?", {
+    sum_earned,
+    sum_spent,
+    sum_case,
+    sum_card,
+    sum_eatwhat,
+    sum_smoke,
+    group_id
+});
+    if (ret != SQLITE_OK)
+    {
+        char buf[64];
+        sprintf(buf, "update summary error: id=%ld", group_id);
+        addLog(LOG_ERROR, "grp", buf);
+    }
 }
 
 void Group::setFlag(int64_t mask, bool set)
@@ -128,6 +201,17 @@ int newGroupIfNotExist(int64_t id)
             sprintf(buf, "insert group error: id=%ld", id);
             addLog(LOG_ERROR, "grp", buf);
         }
+        
+        const char query1[] = "INSERT INTO grpsum(id) VALUES (?)";
+        ret = db.exec(query1, { id });
+        if (ret != SQLITE_OK)
+        {
+            char buf[128];
+            sprintf(buf, "insert group summary error: id=%ld", id);
+            addLog(LOG_ERROR, "grp", buf);
+        }
+        
+        addTimedEventEveryMin(std::bind(&grp::Group::SaveSumIntoDb, groups[id]));
     }
     return 0;
 }
@@ -264,6 +348,28 @@ std::string QUERY_FLAGS(::int64_t group, ::int64_t qq, std::vector<std::string> 
     return "就你也想看权限？";
 }
 
+std::string SUMMARY(int64_t group, ::int64_t qq, std::vector<std::string>& args)
+{
+    auto& g = groups[group];
+    std::stringstream ss;
+    ss << "本群一共" << std::endl;
+    ss << "赚到 " << g.sum_earned << " 个批" << std::endl;
+    ss << "花出 " << g.sum_spent << " 个批" << std::endl;
+    ss << "开了 " << g.sum_case << " 个箱" << std::endl;
+    ss << "抽了 " << g.sum_card << " 张卡" << std::endl;
+    ss << "吃了 " << g.sum_eatwhat << " 次什么" << std::endl;
+    ss << "禁烟群友 " << g.sum_smoke << " 分钟" << std::endl;
+    switch (randInt(0, 3))
+    {
+        case 0: ss << "各位水友继续努力/cy" << std::endl; break;
+        case 1: ss << "上班多水群，少上班" << std::endl; break;
+        case 2: ss << "群友们平时一定很无聊8" << std::endl; break;
+        case 3: ss << "批到底有什么用啊" << std::endl; break;
+        default: break;
+    }
+    return ss.str();
+}
+
 void msgDispatcher(const json& body)
 {
     auto query = mirai::messageChainToArgs(body);
@@ -294,6 +400,10 @@ void msgDispatcher(const json& body)
     else if (cmd.substr(0, sizeof("权限")-1) == "权限")
     {
         resp = QUERY_FLAGS(m.groupid, m.qqid, query);
+    }
+    else if (cmd.substr(0, sizeof("统计")-1) == "统计")
+    {
+        resp = SUMMARY(m.groupid, m.qqid, query);
     }
 
     if (!resp.empty())
@@ -334,7 +444,10 @@ void init()
     CreateTable();
     LoadListFromDb();
     for (auto& [groupid, groupObj] : grp::groups)
+    {
         groupObj.updateMembers();
+        groupObj.LoadSumFromDb();
+    }
 }
 
 }

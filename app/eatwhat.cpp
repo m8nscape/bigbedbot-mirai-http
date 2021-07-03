@@ -270,6 +270,7 @@ json EATWHAT(::int64_t group, ::int64_t qq, std::vector<std::string> args)
 
     food f;
     getFood(f);
+    grp::groups[group].sum_eatwhat += 1;
     json resp = mirai::MSG_TEMPLATE;
     json& r = resp["messageChain"];
     r.push_back(mirai::buildMessageAt(qq));
@@ -284,6 +285,7 @@ json DRINKWHAT(::int64_t group, ::int64_t qq, std::vector<std::string> args)
 
     drink d;
     getDrink(d);
+    grp::groups[group].sum_eatwhat += 1;
     json resp = mirai::MSG_TEMPLATE;
     json& r = resp["messageChain"];
     r.push_back(mirai::buildMessageAt(qq));
@@ -303,6 +305,7 @@ json EATWHAT10(::int64_t group, ::int64_t qq, std::vector<std::string> args)
 
     food f[10];
     int size = getFood10(f);
+    grp::groups[group].sum_eatwhat += size;
     for (int i = 0; i < size; ++i)
     {
         std::stringstream ss;
