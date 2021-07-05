@@ -6,7 +6,7 @@ inline std::mt19937 random_gen(random_rd()); // 以 rd() 播种的标准 mersenn
 
 inline int randInt(int max)   // [min, max]
 {
-	std::uniform_int_distribution<> dis(0, max);
+	std::uniform_int_distribution<> dis(1, max);
 	return dis(random_gen);
 }
 

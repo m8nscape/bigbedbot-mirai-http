@@ -481,13 +481,15 @@ int procRecvMsgEntry(const json& v)
             }
             catch (std::exception &e)
             {
-                addLog(LOG_ERROR, "api", 
-                    "Exception occurred: %s at callback %u of %s\n"
-                    "----------Message Begin----------\n"
-                    "%s\n"
-                    "----------Message End------------", 
-                    e.what(), i, type.c_str(), v.dump().c_str());
-                throw(e);
+                std::stringstream ss;
+                ss << "Exception occurred at callback" << i << "of" << type.c_str() << ": " << e.what() << std::endl;
+                ss << "----------Message Begin----------" << std::endl;
+                ss << v.dump() << std::endl;
+                ss << "----------Message End------------" << std::endl;
+                addLog(LOG_ERROR, "api", ss.str().c_str());
+
+                if (rootQQId != 0)
+                    sendFriendMsgStr(rootQQId, ss.str());
             }
         }
         return 0;

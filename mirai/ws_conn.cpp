@@ -80,6 +80,7 @@ int connect(const std::string& path)
                 if (listening)
                 {
                     addLog(LOG_WARNING, "ws", "Exception occurred while reading: %s", e.what());
+                    disconnect();
 
                     if (reconnectTimeout > 0)
                     {
@@ -94,6 +95,10 @@ int connect(const std::string& path)
                             {
                                 addLog(LOG_WARNING, "ws", "Test connection failed");
                                 continue;
+                            }
+                            else
+                            {
+                                break;
                             }
                         }
 

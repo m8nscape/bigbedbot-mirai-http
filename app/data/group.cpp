@@ -361,10 +361,10 @@ std::string SUMMARY(int64_t group, ::int64_t qq, std::vector<std::string>& args)
     ss << "禁烟群友 " << g.sum_smoke << " 分钟" << std::endl;
     switch (randInt(0, 3))
     {
-        case 0: ss << "各位水友继续努力/cy" << std::endl; break;
-        case 1: ss << "上班多水群，少上班" << std::endl; break;
-        case 2: ss << "群友们平时一定很无聊8" << std::endl; break;
-        case 3: ss << "批到底有什么用啊" << std::endl; break;
+        case 0: ss << "各位水友继续努力/cy"; break;
+        case 1: ss << "上班多水群，少上班"; break;
+        case 2: ss << "群友们平时一定很无聊8"; break;
+        case 3: ss << "批到底有什么用啊"; break;
         default: break;
     }
     return ss.str();
