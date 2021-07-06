@@ -10,6 +10,7 @@
 #include "app/eatwhat.h"
 #include "app/monopoly.h"
 #include "app/weather.h"
+#include "app/gambol.h"
 
 #include "time_evt.h"
 
@@ -51,13 +52,8 @@ void init_modules()
 
 void shutdown_modules()
 {
-    // for (auto& [group, cfg] : gambol::groupMap)
-    // {
-    //     if (cfg.flipcoin_running)
-    //         gambol::flipcoin::roundCancel(group);
-    //     if (cfg.roulette_running)
-    // 		gambol::roulette::roundCancel(group);
-    // }
+    gambol::flipcoin::roundCancelAll();
+    gambol::roulette::roundCancelAll();
 
     eatwhat::db.transactionStop();
 
@@ -108,6 +104,7 @@ void add_msg_callbacks()
     mirai::regEventProc(evt::FriendMessage, weather::msgCallback);
     mirai::regEventProc(evt::TempMessage, 	weather::msgCallback);
     mirai::regEventProc(evt::GroupMessage, 	weather::msgCallback);
+    mirai::regEventProc(evt::GroupMessage, 	gambol::msgDispatcher);
 }
 
 }

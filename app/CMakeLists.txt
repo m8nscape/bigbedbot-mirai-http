@@ -10,6 +10,7 @@ add_library(app STATIC
     eatwhat.cpp eatwhat.h
     monopoly.cpp monopoly.h
     weather.cpp weather.h
+    gambol.cpp gambol.h
 )
 set_target_properties(app PROPERTIES
     CXX_STANDARD 17)

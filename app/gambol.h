@@ -1,6 +1,7 @@
 #pragma once
 #include <map>
 #include <functional>
+#include <nlohmann/json.hpp>
 
 namespace gambol
 {
@@ -11,39 +12,31 @@ namespace gambol
 
 enum class commands : size_t {
     // basic
-    ÏÂ×¢,
+    BET,
 
     // flipcoin
-    flipcoin,
-    Õı,
-    ·´,
-    ¿ªÊ¼Ò¡ºÅ,
-    Ò¡ºÅ,
+    FLIPCOIN_START,
+    FLIPCOIN_FRONT,
+    FLIPCOIN_BACK,
+    ROULETTE_START,
+    ROULETTE_CHOOSE,
 };
 
 inline std::map<std::string, commands> commands_str
 {
-    {"¿ªÊ¼·­Åú", commands::flipcoin},
-    {"é_Ê¼·­Åú", commands::flipcoin},   //·±ów»¯
-    {"Õı", commands::Õı},  //º†ów·±ówÒ»˜Ó
-    {"·´", commands::·´},  //º†ów·±ówÒ»˜Ó
-    {"¿ªÊ¼Ò¡ºÅ", commands::¿ªÊ¼Ò¡ºÅ},
-    {"é_Ê¼“uÌ–", commands::¿ªÊ¼Ò¡ºÅ},  //·±ów»¯
-    {"Ò¡ºÅ", commands::Ò¡ºÅ},
-    {"“uÌ–", commands::Ò¡ºÅ},  //·±ów»¯
-    {"Ò¡", commands::Ò¡ºÅ},
-    {"“u", commands::Ò¡ºÅ}  //·±ów»¯
+    {"å¼€å§‹ç¿»æ‰¹", commands::FLIPCOIN_START},
+    {"é–‹å§‹ç¿»æ‰¹", commands::FLIPCOIN_START},   //ç¹é«”åŒ–
+    {"æ­£", commands::FLIPCOIN_FRONT},  //ç°¡é«”ç¹é«”ä¸€æ¨£
+    {"å", commands::FLIPCOIN_BACK},  //ç°¡é«”ç¹é«”ä¸€æ¨£
+    {"å¼€å§‹æ‘‡å·", commands::ROULETTE_START},
+    {"é–‹å§‹æ–è™Ÿ", commands::ROULETTE_START},  //ç¹é«”åŒ–
+    {"æ‘‡å·", commands::ROULETTE_CHOOSE},
+    {"æ–è™Ÿ", commands::ROULETTE_CHOOSE},  //ç¹é«”åŒ–
+    {"æ‘‡", commands::ROULETTE_CHOOSE},
+    {"æ–", commands::ROULETTE_CHOOSE}  //ç¹é«”åŒ–
 };
 
-typedef std::function<std::string(::int64_t, ::int64_t, std::vector<std::string>&, const char*)> callback;
-struct command
-{
-    commands c = (commands)0;
-    std::vector<std::string> args;
-    callback func = nullptr;
-};
-
-command msgDispatcher(const json& body);
+void msgDispatcher(const nlohmann::json& body);
 
 ///////////////////////////////////////////////////////////////////////////////
 // flipcoin
@@ -66,6 +59,7 @@ void roundStart(int64_t group);
 void roundAnnounce(int64_t group);
 void roundEnd(int64_t group);
 void roundCancel(int64_t group);
+void roundCancelAll();
 
 void put(int64_t group, int64_t qq, bet s);
 
@@ -126,7 +120,7 @@ enum grid
     GRID_COUNT
 };
 
-inline constexpr char* gridName[] = 
+inline const char* gridName[] = 
 {
     "0",
     "1",
@@ -165,10 +159,10 @@ inline constexpr char* gridName[] =
     "34",
     "35",
     "36",
-    "ºÚ",
-    "ºì",
-    "µ¥",
-    "Ë«",
+    "é»‘",
+    "çº¢",
+    "å•",
+    "åŒ",
     "1st",
     "2nd",
     "3rd"
@@ -213,18 +207,25 @@ inline const std::map<std::string, grid> gridTokens
     {"34", N34},
     {"35", N35},
     {"36", N36},
-    {"ºÚ", Cblack},
-    {"ºì", Cred},
-    {"ºÚÉ«", Cblack},
-    {"ºìÉ«", Cred},
-    {"µ¥", Aodd},
-    {"Ë«", Aeven},
-    {"µ¥Êı", Aodd},
-    {"Ë«Êı", Aeven},
-    {"Ææ", Aodd},
-    {"Å¼", Aeven},
-    {"ÆæÊı", Aodd},
-    {"Å¼Êı", Aeven},
+    {"é»‘", Cblack},
+    {"çº¢", Cred},
+    {"ç´…", Cred},
+    {"é»‘è‰²", Cblack},
+    {"çº¢è‰²", Cred},
+    {"ç´…è‰²", Cred},
+    {"å•", Aodd},
+    {"åŒ", Aeven},
+    {"é›™", Aeven},
+    {"å•æ•°", Aodd},
+    {"åŒæ•°", Aeven},
+    {"å•æ•¸", Aodd},
+    {"é›™æ•¸", Aeven},
+    {"å¥‡", Aodd},
+    {"å¶", Aeven},
+    {"å¥‡æ•°", Aodd},
+    {"å¶æ•°", Aeven},
+    {"å¥‡æ•¸", Aodd},
+    {"å¶æ•¸", Aeven},
     {"1st", P1st},
     {"2nd", P2nd},
     {"3rd", P3rd},
@@ -248,6 +249,7 @@ void roundStart(int64_t group);
 void roundAnnounce(int64_t group);
 void roundEnd(int64_t group);
 void roundCancel(int64_t group);
+void roundCancelAll();
 
 void put(int64_t group, int64_t qq, grid g, int64_t amount);
 }

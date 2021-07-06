@@ -1,62 +1,108 @@
 #include "gambol.h"
-#include "cqp.h"
-#include "appmain.h"
 #include <sstream>
 #include <set>
 #include <thread>
-#include "cqp_ex.h"
-#include "utils/string_util.h"
+#include <regex>
+#include "utils/logger.h"
 #include "utils/rand.h"
 #include "data/user.h"
+#include "data/group.h"
 
 using namespace std::string_literals;
-std::string str_put_fail = "ƒ„ª·≤ªª·"s + EMOJI_DOWN + "◊¢£ø";
-std::string str_nobody = "üo»À"s + EMOJI_DOWN + "◊¢£¨»°œ˚±ææ÷";
-const char* cstr_put_fail = str_put_fail.c_str();
-const char* cstr_nobody = str_nobody.c_str();
+std::string str_put_fail = "‰Ω†‰ºö‰∏ç‰ºö‚¨áÊ≥®Ôºü";
+std::string str_nobody = "ÁÑ°‰∫∫‚¨áÊ≥®ÔºåÂèñÊ∂àÊú¨Â±Ä";
 
 namespace gambol
 {
 using user::plist;
 
+typedef std::function<void(::int64_t, ::int64_t, std::vector<std::string>&, const char*)> callback;
+struct command
+{
+    commands c = (commands)0;
+    std::vector<std::string> args;
+    callback func = nullptr;
+};
+
 std::map<int64_t, gameData> groupMap;
+
+std::string CQ_At(int64_t qq) {return std::to_string(qq);}
+std::string getCard(int64_t group, int64_t qq) {return std::to_string(qq);}
 
 ///////////////////////////////////////////////////////////////////////////////
 
-command msgDispatcher(const json& body)
+using nlohmann::json;
+
+json not_registered(int64_t qq)
+{
+    json resp = R"({ "messageChain": [] })"_json;
+    resp["messageChain"].push_back(mirai::buildMessageAt(qq));
+    resp["messageChain"].push_back(mirai::buildMessagePlain("Ôºå‰Ω†ËøòÊ≤°ÊúâÂºÄÈÄöËè†Ëèú"));
+    return resp;
+}
+
+json not_enough_currency(int64_t qq)
+{
+    json resp = R"({ "messageChain": [] })"_json;
+    resp["messageChain"].push_back(mirai::buildMessageAt(qq));
+    resp["messageChain"].push_back(mirai::buildMessagePlain("Ôºå‰Ω†ÁöÑ‰ΩôÈ¢ù‰∏çË∂≥"));
+    return resp;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+void msgDispatcher(const json& body)
 {
     command c;
-    auto query = mirai::messageChainToArgs(body);
-    if (query.empty()) return c;
+    std::string query = mirai::messageChainToStr(body);
+    if (query.empty()) return;
+    if (query.length() > 32) return;
 
-    auto cmd = query[0];
+    auto mm = mirai::parseMsgMetadata(body);
+    if (!grp::groups[mm.groupid].getFlag(grp::Group::MASK_GAMBOL))
+        return;
 
-    c.args = query;
-
-    if (cmd.substr(0, 4) == "“°∫≈" && cmd.length() > 4 && query.size() > 1)
+    // cmd:
+    static std::regex reFlipcoinStart = std::regex(R"((ÂºÄ|Èñã)ÂßãÁøªÊâπ( +(Ê≠£|Âèç) +(\d+))?)");
+    static std::regex reFlipcoinChoose = std::regex(R"((Áøª(Êâπ)?)? *(Ê≠£|Âèç) +(\d+))");
+    static std::regex reRouletteStart = std::regex(R"((ÂºÄ|Èñã)Âßã(ÊëáÂè∑|ÊêñËôü)( +(.+?) +(\d+))?)");
+    static std::regex reRouletteChoose = std::regex(R"((Êëá|Êêñ(Âè∑|Ëôü)?) *(.+?) +(\d+))");
+    std::smatch m;
+    if (std::regex_match(query, m, reFlipcoinStart))
     {
-        cmd = "“°∫≈";
-        c.args.resize(3);
-        c.args[0] = cmd;
-        c.args[1] = query[0].substr(4);
-        c.args[2] = query[1];
+        c.args = {"ÂºÄÂßãÁøªÊâπ", m[3], m[4]};
+        c.c = commands::FLIPCOIN_START;
     }
-    else if (cmd.substr(0, 4) != "“°∫≈" && cmd.substr(0, 2) == "“°" && cmd.length() > 2 && query.size() > 1)
+    else if (std::regex_match(query, m, reFlipcoinChoose))
     {
-        cmd = "“°∫≈";
-        c.args.resize(3);
-        c.args[0] = cmd;
-        c.args[1] = query[0].substr(2);
-        c.args[2] = query[1];
+        c.args = {m[3], m[4]};
+        if (m[3] == "Ê≠£")
+            c.c = commands::FLIPCOIN_FRONT;
+        else
+            c.c = commands::FLIPCOIN_BACK;
     }
-    if (commands_str.find(cmd) == commands_str.end()) return c;
-
-    switch (c.c = commands_str[cmd])
+    else if (std::regex_match(query, m, reRouletteStart))
     {
-    case commands::flipcoin:
-        c.func = [](::int64_t group, ::int64_t qq, std::vector<std::string> args, std::string raw) -> std::string
+        c.args = {"ÂºÄÂßãÊëáÂè∑", m[4], m[5]};
+        c.c = commands::ROULETTE_START;
+    }
+    else if (std::regex_match(query, m, reRouletteChoose))
+    {
+        c.args = {"ÊëáÂè∑", m[3], m[4]};
+        c.c = commands::ROULETTE_CHOOSE;
+    }
+    else return;
+
+    switch (c.c)
+    {
+    case commands::FLIPCOIN_START:
+        c.func = [](::int64_t group, ::int64_t qq, std::vector<std::string> args, const char* raw)
         {
-            if (user::plist.find(qq) == user::plist.end()) return std::string(CQ_At(qq)) + "£¨ƒ„ªπ√ª”–ø™Õ®≤§≤À";
+            if (user::plist.find(qq) == user::plist.end()) 
+            {
+                mirai::sendGroupMsg(group, not_registered(qq));
+                return;
+            }
 
             flipcoin::roundStart(group);
             if (args.size() > 2)
@@ -68,17 +114,20 @@ command msgDispatcher(const json& body)
                 catch (std::exception&) {}
                 if (p < 0) p = 0;
 
-                if (p <= 0) return "";
-                else if (args[1] == "’˝") flipcoin::put(group, qq, { p, 0 });
-                else if (args[1] == "∑¥") flipcoin::put(group, qq, { 0, p });
+                if (p <= 0) return;
+                else if (args[1] == "Ê≠£") flipcoin::put(group, qq, { p, 0 });
+                else if (args[1] == "Âèç") flipcoin::put(group, qq, { 0, p });
             }
-            return "";
         };
         break;
-    case commands::’˝:
-        c.func = [](::int64_t group, ::int64_t qq, std::vector<std::string> args, std::string raw) -> std::string
+    case commands::FLIPCOIN_FRONT:
+        c.func = [](::int64_t group, ::int64_t qq, std::vector<std::string> args, const char* raw)
         {
-            if (user::plist.find(qq) == user::plist.end()) return std::string(CQ_At(qq)) + "£¨ƒ„ªπ√ª”–ø™Õ®≤§≤À";
+            if (user::plist.find(qq) == user::plist.end()) 
+            {
+                mirai::sendGroupMsg(group, not_registered(qq));
+                return;
+            }
 
             if (args.size() > 1)
             {
@@ -89,17 +138,19 @@ command msgDispatcher(const json& body)
                 catch (std::exception&) {}
                 if (p < 0) p = 0;
 
-                if (p <= 0) return "";
+                if (p <= 0) return;
                 flipcoin::put(group, qq, { p, 0 });
-                return "";
             }
-            return cstr_put_fail;
         };
         break;
-    case commands::∑¥:
-        c.func = [](::int64_t group, ::int64_t qq, std::vector<std::string> args, std::string raw) -> std::string
+    case commands::FLIPCOIN_BACK:
+        c.func = [](::int64_t group, ::int64_t qq, std::vector<std::string> args, const char* raw)
         {
-            if (user::plist.find(qq) == user::plist.end()) return std::string(CQ_At(qq)) + "£¨ƒ„ªπ√ª”–ø™Õ®≤§≤À";
+            if (user::plist.find(qq) == user::plist.end()) 
+            {
+                mirai::sendGroupMsg(group, not_registered(qq));
+                return;
+            }
 
             if (args.size() > 1)
             {
@@ -110,19 +161,21 @@ command msgDispatcher(const json& body)
                 catch (std::exception&) {}
                 if (p < 0) p = 0;
 
-                if (p <= 0) return "";
+                if (p <= 0) return;
                 flipcoin::put(group, qq, { 0, p });
-                return "";
             }
-            return cstr_put_fail;
         };
         break;
 
 
-    case commands::ø™ º“°∫≈:
-        c.func = [](::int64_t group, ::int64_t qq, std::vector<std::string> args, std::string raw) -> std::string
+    case commands::ROULETTE_START:
+        c.func = [](::int64_t group, ::int64_t qq, std::vector<std::string> args, const char* raw)
         {
-            if (user::plist.find(qq) == user::plist.end()) return std::string(CQ_At(qq)) + "£¨ƒ„ªπ√ª”–ø™Õ®≤§≤À";
+            if (user::plist.find(qq) == user::plist.end()) 
+            {
+                mirai::sendGroupMsg(group, not_registered(qq));
+                return;
+            }
 
             roulette::roundStart(group);
             if (args.size() > 2)
@@ -135,17 +188,20 @@ command msgDispatcher(const json& body)
                 if (p < 0) p = 0;
 
                 std::string subc = args[1];
-                if (p <= 0 || roulette::gridTokens.find(subc) == roulette::gridTokens.end()) return "";
+                if (p <= 0 || roulette::gridTokens.find(subc) == roulette::gridTokens.end()) return;
                 else roulette::put(group, qq, roulette::gridTokens.at(subc), p);
             }
-            return "";
         };
         break;
 
-    case commands::“°∫≈:
-        c.func = [](::int64_t group, ::int64_t qq, std::vector<std::string> args, std::string raw) -> std::string
+    case commands::ROULETTE_CHOOSE:
+        c.func = [](::int64_t group, ::int64_t qq, std::vector<std::string> args, const char* raw)
         {
-            if (user::plist.find(qq) == user::plist.end()) return std::string(CQ_At(qq)) + "£¨ƒ„ªπ√ª”–ø™Õ®≤§≤À";
+            if (user::plist.find(qq) == user::plist.end()) 
+            {
+                mirai::sendGroupMsg(group, not_registered(qq));
+                return;
+            }
 
             if (args.size() > 2)
             {
@@ -157,17 +213,17 @@ command msgDispatcher(const json& body)
                 if (p < 0) p = 0;
 
                 std::string subc = args[1];
-                if (p <= 0 || roulette::gridTokens.find(subc) == roulette::gridTokens.end()) return "";
+                if (p <= 0 || roulette::gridTokens.find(subc) == roulette::gridTokens.end()) return;
                 else roulette::put(group, qq, roulette::gridTokens.at(subc), p);
             }
-            return "";
         };
         break;
 
     default:
         break;
     }
-    return c;
+
+    c.func(mm.groupid, mm.qqid, c.args, query.c_str());
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -180,14 +236,13 @@ void roundStart(int64_t group)
 {
     if (groupMap[group].flipcoin_running)
     {
-        CQ_sendGroupMsg(ac, group, "There is already a game running at this group.");
+        mirai::sendGroupMsgStr(group, "There is already a game running at this group.");
         return;
     }
 
-    CQ_sendGroupMsg(ac, group, "–¬“ª¬÷µƒ∑≠≈˙ø™ º¡À£¨«Î»∫‘±”ª‘æ≤Œº”");
-	groupMap[group].flipcoin_running = true;
+    mirai::sendGroupMsgStr(group, "Êñ∞‰∏ÄËΩÆÁöÑÁøªÊâπÂºÄÂßã‰∫ÜÔºåÊ¨¢ËøéÊ∞¥Âèã‰ª¨Ë∏äË∑ÉÂèÇÂä†");
 	groupMap[group].flipcoin = {};
-
+	groupMap[group].flipcoin_running = true;
 	groupMap[group].flipcoin.startTime = time(nullptr);
     std::thread([=]() {
         using namespace std::chrono_literals;
@@ -217,51 +272,51 @@ void roundStart(int64_t group)
 
 void roundAnnounce(int64_t group)
 {
-    if (groupMap[group].flipcoin_running)
+    if (!groupMap[group].flipcoin_running)
     {
-        CQ_sendGroupMsg(ac, group, "No flipcoin round is running at this group.");
+        //mirai::sendGroupMsgStr(group, "No flipcoin round is running at this group.");
         return;
     }
 
     std::stringstream ss;
     const auto& r = groupMap[group].flipcoin;
-    ss << "±æ¬÷∑≠≈˙" << EMOJI_DOWN << "◊¢ ±º‰ªπ £" << r.startTime + 60 - time(nullptr) << "√Î£¨µ±«∞" << EMOJI_DOWN << "◊¢«Èøˆ£∫\n";
+    ss << "Êú¨ËΩÆÁøªÊâπÊó∂Èó¥ËøòÂâ©" << r.startTime + 60 - time(nullptr) << "Áßí\n";
 
-    ss << "◊‹º∆" << r.total << "∏ˆ≈˙£¨’˝√Ê" << r.front << "∏ˆ£¨∑¥√Ê" << r.back << "∏ˆ";
+    ss << "ÊÄªËÆ°" << r.total << "‰∏™ÊâπÔºåÊ≠£Èù¢" << r.front << "‰∏™ÔºåÂèçÈù¢" << r.back << "‰∏™";
     if (r.total > 0)
     {
         ss << "\n";
-        ss << "’˝√Ê£∫";
+        ss << "Ê≠£Èù¢Ôºö";
         for (const auto& [qq, stat] : r.pee_per_player)
         {
             if (stat.front)
-                ss << getCard(group, qq) << "(" << stat.front << "∏ˆ≈˙) "
+                ss << qq << "(" << stat.front << "‰∏™Êâπ) "
                 << "(" << 50.0 * stat.front / r.front << "%)  ";
         }
         ss << "\n";
-        ss << "∑¥√Ê£∫";
+        ss << "ÂèçÈù¢Ôºö";
         for (const auto& [qq, stat] : r.pee_per_player)
         {
             if (stat.back)
-                ss << getCard(group, qq) << "(" << stat.back << "∏ˆ≈˙) "
+                ss << qq << "(" << stat.back << "‰∏™Êâπ) "
                 << "(" << 50.0 * stat.back / r.back << "%)  ";
         }
     }
-    CQ_sendGroupMsg(ac, group, ss.str().c_str());
+    mirai::sendGroupMsgStr(group, ss.str());
 }
 
 void roundEnd(int64_t group)
 {
-    if (groupMap[group].flipcoin_running)
+    if (!groupMap[group].flipcoin_running)
     {
-        CQ_sendGroupMsg(ac, group, "No flipcoin round is running at this group.");
+        //mirai::sendGroupMsgStr(group, "No flipcoin round is running at this group.");
         return;
     }
 
     const auto& r = groupMap[group].flipcoin;
     if (r.front == 0 || r.back == 0)
     {
-        CQ_sendGroupMsg(ac, group, cstr_nobody);
+        mirai::sendGroupMsgStr(group, str_nobody);
         roundCancel(group);
         return;
     }
@@ -287,55 +342,78 @@ void roundEnd(int64_t group)
     }
 
     std::stringstream ss;
-    ss << "±æ¬÷∑≠≈˙Ω· ¯£¨Ω·π˚Œ™" << (front ? "’˝√Ê" : "∑¥√Ê") << "£¨";
+    ss << "Êú¨ËΩÆÁøªÊâπÁªìÊùüÔºåÁªìÊûú‰∏∫" << (front ? "Ê≠£Èù¢" : "ÂèçÈù¢") << "Ôºå";
     if (deno != 0)
     {
         auto& w = r.pee_per_player.at(winner);
         int64_t bet = (front ? w.front : w.back);
-        ss << CQ_At(winner) << "“‘" << 50.0 * bet / deno
-            << "%µƒ∏≈¬ ”Æµ√¡À¥ÛΩ±" << r.total << "∏ˆ≈˙£°";
+        ss << CQ_At(winner) << "‰ª•" << 50.0 * bet / deno
+            << "%ÁöÑÊ¶ÇÁéáËµ¢ÂæóÂ∑®Ê¨æ" << r.total << "‰∏™Êâπ";
+        int64_t tmpTotal = r.total;
+        while (tmpTotal > 0)
+        {
+            ss << "ÔºÅ";
+            tmpTotal /= 10;
+        }
     }
     else
-        ss << r.total << "∏ˆ≈˙√¥µ√¡À";
-    CQ_sendGroupMsg(ac, group, ss.str().c_str());
+        ss << r.total << "‰∏™Êâπ‰πàÂæóÂíØ";
+    mirai::sendGroupMsgStr(group, ss.str());
 
 	user::plist[winner].modifyCurrency(+r.total);
+    grp::groups[group].sum_earned += r.total;
     groupMap[group].flipcoin_running = false;
 }
 
 void roundCancel(int64_t group)
 {
-    if (groupMap[group].flipcoin_running)
+    if (!groupMap[group].flipcoin_running)
         return;
 
     for (const auto& [qq, stat] : groupMap[group].flipcoin.pee_per_player)
     {
-        if (stat.front) user::plist[qq].modifyCurrency(+stat.front);
-		if (stat.back)  user::plist[qq].modifyCurrency(+stat.back);
+        if (stat.front) 
+        {
+            user::plist[qq].modifyCurrency(+stat.front);
+            grp::groups[group].sum_spent -= stat.front;
+        }
+		if (stat.back)
+        {
+            user::plist[qq].modifyCurrency(+stat.back);
+            grp::groups[group].sum_spent -= stat.back;
+        }
     }
 
     groupMap[group].flipcoin_running = false;
-    CQ_sendGroupMsg(ac, group, "≈˙≤ª∑≠¡À£¨∑µªπÀ˘”–≈˙");
+    mirai::sendGroupMsgStr(group, "Êâπ‰∏çÁøª‰∫ÜÔºåËøîËøòÊâÄÊúâÊâπ");
+}
+
+void roundCancelAll()
+{
+    for (auto& [group, data]: groupMap)
+    {
+        if (data.flipcoin_running)
+            roundCancel(group);
+    }
 }
 
 void put(int64_t group, int64_t qq, bet bet)
 {
-    if (groupMap[group].flipcoin_running)
+    if (!groupMap[group].flipcoin_running)
     {
-        CQ_sendGroupMsg(ac, group, "±æ»∫√¥µ√ø™≈Ã∞°");
+        mirai::sendGroupMsgStr(group, "Êú¨Áæ§‰πàÂæóÂºÄÁõòÂïä");
         return;
     }
 
     if (bet.front + bet.back <= 0)
     {
-        CQ_sendGroupMsg(ac, group, "ƒ„æÕ «∏∫≈˙π÷£ø");
+        mirai::sendGroupMsgStr(group, "‰Ω†Â∞±ÊòØË¥üÊâπÊÄ™Ôºü");
         return;
     }
 
     if (user::plist[qq].getCurrency() < bet.front + bet.back)
     {
-        std::string s = CQ_At(qq) + "£¨ƒ„µƒ”‡∂Ó≤ª◊„";
-        CQ_sendGroupMsg(ac, group, s.c_str());
+        mirai::sendGroupMsg(group, not_enough_currency(qq));
         return;
     }
 
@@ -348,25 +426,27 @@ void put(int64_t group, int64_t qq, bet bet)
     round.back += bet.back;
     round.total += bet.front + bet.back;
 
-	user::plist[qq].modifyCurrency(-(bet.front + bet.back));
+    int64_t spent = bet.front + bet.back;
+	user::plist[qq].modifyCurrency(-spent);
+    grp::groups[group].sum_spent += spent;
 
     std::stringstream ss;
     if (bet.front)
     {
         if (player.front == bet.front)
-            ss << getCard(group, qq) << "≥…π¶" << EMOJI_DOWN << "◊¢" << "’˝√Ê" << bet.front << "∏ˆ≈˙";
+            ss << getCard(group, qq) << "ÊàêÂäü‚¨á" << "Ê≠£Èù¢" << bet.front << "‰∏™Êâπ";
         else
-            ss << getCard(group, qq) << "≥…π¶" << EMOJI_DOWN << "◊¢" << "’˝√Ê" << "µΩ" << player.front << "∏ˆ≈˙";
+            ss << getCard(group, qq) << "ÊàêÂäü‚¨á" << "Ê≠£Èù¢" << "Âà∞" << player.front << "‰∏™Êâπ";
     }
     else if (bet.back)
     {
         if (player.back == bet.back)
-            ss << getCard(group, qq) << "≥…π¶" << EMOJI_DOWN << "◊¢" << "∑¥√Ê" << bet.back << "∏ˆ≈˙";
+            ss << getCard(group, qq) << "ÊàêÂäü‚¨á" << "ÂèçÈù¢" << bet.back << "‰∏™Êâπ";
         else
-            ss << getCard(group, qq) << "≥…π¶" << EMOJI_DOWN << "◊¢" << "∑¥√Ê" << "µΩ" << player.back << "∏ˆ≈˙";
+            ss << getCard(group, qq) << "ÊàêÂäü‚¨á" << "ÂèçÈù¢" << "Âà∞" << player.back << "‰∏™Êâπ";
     }
 
-    CQ_sendGroupMsg(ac, group, ss.str().c_str());
+    mirai::sendGroupMsgStr(group, ss.str());
 }
 }
 
@@ -378,13 +458,13 @@ void roundStart(int64_t group)
 {
     if (groupMap[group].roulette_running)
     {
-        CQ_sendGroupMsg(ac, group, "There is already a game running at this group.");
+        mirai::sendGroupMsgStr(group, "There is already a game running at this group.");
         return;
     }
 
-    CQ_sendGroupMsg(ac, group, "–¬“ª¬÷µƒ“°∫≈ø™ º¡À£¨«Î»∫‘±”ª‘æ≤Œº”");
+    mirai::sendGroupMsgStr(group, "Êñ∞‰∏ÄËΩÆÁöÑÊëáÂè∑ÂºÄÂßã‰∫ÜÔºåÊ¨¢ËøéÊ∞¥Âèã‰ª¨Ë∏äË∑ÉÂèÇÂä†");
 	groupMap[group].roulette = {};
-
+    groupMap[group].roulette_running = true;
     groupMap[group].roulette.startTime = time(nullptr);
     std::thread([=]() {
         using namespace std::chrono_literals;
@@ -414,23 +494,23 @@ void roundStart(int64_t group)
 
 void roundAnnounce(int64_t group)
 {
-    if (groupMap[group].roulette_running)
+    if (!groupMap[group].roulette_running)
     {
-        CQ_sendGroupMsg(ac, group, "No roulette round is running at this group.");
+        //mirai::sendGroupMsgStr(group, "No roulette round is running at this group.");
         return;
     }
 
     std::stringstream ss;
     const auto& r = groupMap[group].roulette;
-    ss << "±æ¬÷“°∫≈ ±º‰ªπ £" << r.startTime + 60 - time(nullptr) << "√Î£¨µ±«∞" << EMOJI_DOWN << "◊¢«Èøˆ£∫\n";
+    ss << "Êú¨ËΩÆÊëáÂè∑Êó∂Èó¥ËøòÂâ©" << r.startTime + 60 - time(nullptr) << "Áßí\n";
 
-    ss << "◊‹º∆" << r.total << "∏ˆ≈˙";
+    ss << "ÊÄªËÆ°" << r.total << "‰∏™Êâπ";
     if (r.total > 0)
     {
         /*
         for (size_t i = 0; i < GRID_COUNT; ++i)
             if (r.amount[i])
-                ss << "£¨" << gridName[i] << ": " << r.amount[i];
+                ss << "Ôºå" << gridName[i] << ": " << r.amount[i];
                 */
 
         for (size_t i = 0; i < GRID_COUNT; ++i)
@@ -440,24 +520,24 @@ void roundAnnounce(int64_t group)
             ss << gridName[i] << ": ";
             for (const auto& [qq, stat] : r.pee_per_player)
                 if (stat.amount[i])
-                    ss << getCard(group, qq) << "("<< stat.amount[i] << "∏ˆ≈˙) ";
+                    ss << getCard(group, qq) << "("<< stat.amount[i] << "‰∏™Êâπ) ";
         }
     }
-    CQ_sendGroupMsg(ac, group, ss.str().c_str());
+    mirai::sendGroupMsgStr(group, ss.str());
 }
 
 void roundEnd(int64_t group)
 {
-    if (groupMap[group].roulette_running)
+    if (!groupMap[group].roulette_running)
     {
-        CQ_sendGroupMsg(ac, group, "No roulette round is running at this group.");
+        //mirai::sendGroupMsgStr(group, "No roulette round is running at this group.");
         return;
     }
 
     const auto& r = groupMap[group].roulette;
     if (r.total == 0)
     {
-        CQ_sendGroupMsg(ac, group, cstr_nobody);
+        mirai::sendGroupMsgStr(group, str_nobody);
         roundCancel(group);
         return;
     }
@@ -490,32 +570,37 @@ void roundEnd(int64_t group)
         {
             addLogDebug("duel", ("reward: "s + std::to_string(qq) + " " + std::to_string(reward_tmp)).c_str());
 			plist[qq].modifyCurrency(reward_tmp);
+            grp::groups[group].sum_earned += reward_tmp;
             reward[qq] = reward_tmp;
         }
     }
 
     std::stringstream ss;
-    ss << "±æ¬÷“°∫≈Ω· ¯£¨Ω·π˚Œ™£∫"
+    ss << "Êú¨ËΩÆÊëáÂè∑ÁªìÊùüÔºåÁªìÊûú‰∏∫Ôºö"
         << "[" << result << "]";
     if (result != 0)
-        ss << (b_black ? " [∫⁄]" : " [∫Ï]")
-            << (b_odd ? " [µ•]" : " [À´]")
-            << (b_1st ? " [1st]" : "")
-            << (b_2nd ? " [2nd]" : "")
-            << (b_3rd ? " [3rd]" : "");
-    ss << "£¨ªÒΩ±»À”–£∫";
+        ss << (b_black ? " <Èªë>" : " <Á∫¢>")
+            << (b_odd ? " <Âçï>" : " <Âèå>")
+            << (b_1st ? " <1st>" : "")
+            << (b_2nd ? " <2nd>" : "")
+            << (b_3rd ? " <3rd>" : "");
+    ss << "\n";
     if (!reward.empty())
+    {
         for (auto& [qq, amount] : reward)
-            ss << "\n" << CQ_At(qq) << " (" << amount << "∏ˆ≈˙)";
+            ss << CQ_At(qq) << "Ëé∑Âæó" << amount << "‰∏™Êâπ";
+    }
     else
-        ss << "\n" << EMOJI_NONE;
-    CQ_sendGroupMsg(ac, group, ss.str().c_str());
+    {
+        ss << "Êâπ‰πàÂæóÂíØ";
+    }
+    mirai::sendGroupMsgStr(group, ss.str());
     groupMap[group].roulette_running = false;
 }
 
 void roundCancel(int64_t group)
 {
-    if (groupMap[group].roulette_running)
+    if (!groupMap[group].roulette_running)
         return;
 
     for (const auto& [qq, stat] : groupMap[group].roulette.pee_per_player)
@@ -524,30 +609,39 @@ void roundCancel(int64_t group)
         for (const auto& a : stat.amount)
             total += a;
 		plist[qq].modifyCurrency(+total);
+        grp::groups[group].sum_spent -= total;
     }
 
     groupMap[group].roulette_running = false;
-    CQ_sendGroupMsg(ac, group, "∫≈≤ª“°¡À£¨∑µªπÀ˘”–≈˙");
+    mirai::sendGroupMsgStr(group, "Âè∑‰∏çÊëá‰∫ÜÔºåËøîËøòÊâÄÊúâÊâπ");
+}
+
+void roundCancelAll()
+{
+    for (auto& [group, data]: groupMap)
+    {
+        if (data.roulette_running)
+            roundCancel(group);
+    }
 }
 
 void put(int64_t group, int64_t qq, grid g, int64_t amount)
 {
-    if (groupMap[group].roulette_running)
+    if (!groupMap[group].roulette_running)
     {
-        CQ_sendGroupMsg(ac, group, "±æ»∫√¥µ√ø™≈Ã∞°");
+        mirai::sendGroupMsgStr(group, "Êú¨Áæ§‰πàÂæóÂºÄÁõòÂïä");
         return;
     }
 
     if (amount < 0)
     {
-        CQ_sendGroupMsg(ac, group, "ƒ„æÕ «∏∫≈˙π÷£ø");
+        mirai::sendGroupMsgStr(group, "‰Ω†Â∞±ÊòØË¥üÊâπÊÄ™Ôºü");
         return;
     }
 
     if (user::plist[qq].getCurrency() < amount)
     {
-        std::string s = CQ_At(qq) + "£¨ƒ„µƒ”‡∂Ó≤ª◊„";
-        CQ_sendGroupMsg(ac, group, s.c_str());
+        mirai::sendGroupMsg(group, not_enough_currency(qq));
         return;
     }
 
@@ -559,14 +653,15 @@ void put(int64_t group, int64_t qq, grid g, int64_t amount)
     round.total += amount;
 
 	plist[qq].modifyCurrency(-amount);
+    grp::groups[group].sum_spent += amount;
 
     std::stringstream ss;
     if (player.amount[g] == amount)
-        ss << getCard(group, qq) << "≥…π¶" << EMOJI_DOWN << "◊¢[" << gridName[g] << "]" << amount << "∏ˆ≈˙";
+        ss << getCard(group, qq) << "ÊàêÂäü‚¨á[" << gridName[g] << "]" << amount << "‰∏™Êâπ";
     else
-        ss << getCard(group, qq) << "≥…π¶" << EMOJI_DOWN << "◊¢[" << gridName[g] << "]µΩ" << player.amount[g] << "∏ˆ≈˙";
+        ss << getCard(group, qq) << "ÊàêÂäü‚¨á[" << gridName[g] << "]Âà∞" << player.amount[g] << "‰∏™Êâπ";
 
-    CQ_sendGroupMsg(ac, group, ss.str().c_str());
+    mirai::sendGroupMsgStr(group, ss.str());
 }
 }
 
