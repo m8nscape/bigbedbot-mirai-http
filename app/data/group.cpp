@@ -234,8 +234,8 @@ std::string ENABLE(::int64_t group, ::int64_t qq, std::vector<std::string> args)
         }
         else if (subcmd == "翻批" || subcmd == "摇号")
         {
-            g.setFlag(Group::MASK_GAMBOL);
-            return "本群已开启翻批/摇号";
+            g.setFlag(Group::MASK_GAMBOL, false);
+            return "本群已关闭翻批/摇号";
         }
         else if (subcmd == "抽卡")
         {
@@ -336,7 +336,7 @@ std::string QUERY_FLAGS(::int64_t group, ::int64_t qq, std::vector<std::string> 
         std::stringstream ss;
         ss << "批: " << (g.getFlag(Group::MASK_P) ? "Y" : "N") << std::endl;
         ss << "吃什么: " << (g.getFlag(Group::MASK_EAT) ? "Y" : "N") << std::endl;
-        ss << "翻批: " << (g.getFlag(Group::MASK_GAMBOL) ? "Y" : "N") << std::endl;
+        //ss << "翻批: " << (g.getFlag(Group::MASK_GAMBOL) ? "Y" : "N") << std::endl;
         ss << "抽卡: " << (g.getFlag(Group::MASK_MONOPOLY) ? "Y" : "N") << std::endl;
         ss << "禁烟: " << (g.getFlag(Group::MASK_SMOKE) ? "Y" : "N") << std::endl;
         ss << "开箱: " << (g.getFlag(Group::MASK_CASE) ? "Y" : "N") << std::endl;
