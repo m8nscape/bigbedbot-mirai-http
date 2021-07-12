@@ -447,34 +447,40 @@ std::string DELDRINK(::int64_t group, ::int64_t qq, const std::string& r)
 
 std::string MENU(::int64_t group, ::int64_t qq, std::vector<std::string> args)
 {
+#if NDEBUG
+    const int MENU_ENTRY_COUNT = 9;
+#else
+    const int MENU_ENTRY_COUNT = 200;
+#endif
     int64_t count = getFoodIdx();
+
     if (!count) return "无";
 
     //return "MENU暂时不可用！";
     
-    // defuault: last 9 entries
-    size_t range_min = (count <= 9) ? 0 : (count - 9);
-    size_t range_max = (count <= 9) ? (count - 1) : (range_min + 8);
+    // defuault: last MENU_ENTRY_COUNT entries
+    size_t range_min = (count <= MENU_ENTRY_COUNT) ? 0 : (count - MENU_ENTRY_COUNT);
+    size_t range_max = (count <= MENU_ENTRY_COUNT) ? (count - 1) : (range_min + MENU_ENTRY_COUNT - 1);
 
 
     // arg[1] is range_mid
-    if (args.size() > 1 && foodList.size() > 9) try
+    if (args.size() > 1 && foodList.size() > MENU_ENTRY_COUNT) try
     {
-        int tmp = std::stoi(args[1]) - 1 - 4;
+        int tmp = std::stoi(args[1]) - 1 - MENU_ENTRY_COUNT / 2;
         if (tmp < 0)
         {
             range_min = 0;
-            range_max = 8;
+            range_max = MENU_ENTRY_COUNT - 1;
         }
         else
         {
             range_min = tmp;
-            range_max = range_min + 8;
+            range_max = range_min + MENU_ENTRY_COUNT - 1;
         }
 
         if (range_max >= foodList.size()) {
             range_max = foodList.size() - 1;
-            range_min = range_max - 8;
+            range_min = range_max - MENU_ENTRY_COUNT - 1;
         }
 
     }

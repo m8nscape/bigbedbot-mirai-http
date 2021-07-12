@@ -97,7 +97,7 @@ const int STAMINA_TIME = 30 * 60; // 30min
 const int FREE_BALANCE_ON_NEW_DAY = 10;
 const int NEW_DAY_TIME_HOUR = 11;
 const int NEW_DAY_TIME_MIN = 0;
-const int DAILY_BONUS = 100;
+const int DAILY_BONUS = 200;
 
 inline int extra_tomorrow = 0;
 
