@@ -30,7 +30,7 @@ inline int unmute(int64_t qqid, int64_t groupid) { return mute(qqid, groupid, 0)
 // RECV
 using nlohmann::json;
 
-typedef std::function<void(const json&)> MessageProc;
+typedef std::pair<std::string, std::function<void(const json&)>> MessageProc;
 
 enum class RecvMsgType
 {

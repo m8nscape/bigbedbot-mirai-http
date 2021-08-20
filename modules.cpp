@@ -89,22 +89,22 @@ void add_timed_events()
 void add_msg_callbacks()
 {
     using evt = mirai::RecvMsgType;
-    mirai::regEventProc(evt::GroupMessage, 	opencase::msgDispatcher);
-    mirai::regEventProc(evt::FriendMessage, help::msgDispatcher);
-    mirai::regEventProc(evt::TempMessage, 	help::msgDispatcher);
-    mirai::regEventProc(evt::GroupMessage, 	help::msgDispatcher);
-    mirai::regEventProc(evt::FriendMessage, tools::msgDispatcher);
-    mirai::regEventProc(evt::TempMessage, 	tools::msgDispatcher);
-    mirai::regEventProc(evt::GroupMessage, 	tools::msgDispatcher);
-    mirai::regEventProc(evt::FriendMessage, smoke::privateMsgCallback);
-    mirai::regEventProc(evt::TempMessage, 	smoke::privateMsgCallback);
-    mirai::regEventProc(evt::GroupMessage, 	smoke::groupMsgCallback);
-    mirai::regEventProc(evt::GroupMessage,  eatwhat::msgDispatcher);
-    mirai::regEventProc(evt::GroupMessage, 	monopoly::msgCallback);
-    mirai::regEventProc(evt::FriendMessage, weather::msgCallback);
-    mirai::regEventProc(evt::TempMessage, 	weather::msgCallback);
-    mirai::regEventProc(evt::GroupMessage, 	weather::msgCallback);
-    mirai::regEventProc(evt::GroupMessage, 	gambol::msgDispatcher);
+    mirai::regEventProc(evt::GroupMessage, {"opencase::msgDispatcher", opencase::msgDispatcher});
+    mirai::regEventProc(evt::FriendMessage, {"help::msgDispatcher", help::msgDispatcher});
+    mirai::regEventProc(evt::TempMessage, {"help::msgDispatcher", help::msgDispatcher});
+    mirai::regEventProc(evt::GroupMessage, {"help::msgDispatcher", help::msgDispatcher});
+    mirai::regEventProc(evt::FriendMessage, {"tools::msgDispatcher", tools::msgDispatcher});
+    mirai::regEventProc(evt::TempMessage, {"tools::msgDispatcher", tools::msgDispatcher});
+    mirai::regEventProc(evt::GroupMessage, {"tools::msgDispatcher", tools::msgDispatcher});
+    mirai::regEventProc(evt::FriendMessage, {"smoke::privateMsgCallback", smoke::privateMsgCallback});
+    mirai::regEventProc(evt::TempMessage, {"smoke::privateMsgCallback", smoke::privateMsgCallback});
+    mirai::regEventProc(evt::GroupMessage, {"smoke::groupMsgCallback", smoke::groupMsgCallback});
+    mirai::regEventProc(evt::GroupMessage, {" eatwhat::msgDispatcher", eatwhat::msgDispatcher});
+    mirai::regEventProc(evt::GroupMessage, {"monopoly::msgCallback", monopoly::msgCallback});
+    mirai::regEventProc(evt::FriendMessage, {"weather::msgCallback", weather::msgCallback});
+    mirai::regEventProc(evt::TempMessage, {"weather::msgCallback", weather::msgCallback});
+    mirai::regEventProc(evt::GroupMessage, {"weather::msgCallback", weather::msgCallback});
+    mirai::regEventProc(evt::GroupMessage, {"gambol::msgDispatcher", gambol::msgDispatcher});
 }
 
 }
