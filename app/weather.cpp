@@ -281,6 +281,7 @@ void weather_cn(const mirai::MsgMetadata& m, const std::string& name)
     // data is not started with '{', likely 302
     if (!buf.empty() && buf[0] != '{')
     {
+        addLog(LOG_WARNING, "weather", "Response json parsing error. Body: \n%s", buf.c_str());
         mirai::sendMsgRespStr(m, "数据返回格式错误");
         return;
     }
@@ -351,6 +352,7 @@ void weather_cn(const mirai::MsgMetadata& m, const std::string& name)
     }
     catch (...)
     {
+        addLog(LOG_WARNING, "weather", "Response parsing error. Body: \n%s", json.dump().c_str());
         mirai::sendMsgRespStr(m, "天气解析失败");
     }
 }

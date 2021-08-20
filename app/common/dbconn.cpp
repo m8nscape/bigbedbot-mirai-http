@@ -58,6 +58,8 @@ std::vector<std::vector<std::any>> SQLite::query(const char* zsql, size_t retSiz
     for (auto& a : args)
     {
         if (a.type() == typeid(int)) sqlite3_bind_int(stmt, i, std::any_cast<int>(a));
+        if (a.type() == typeid(unsigned)) sqlite3_bind_int64(stmt, i, std::any_cast<unsigned>(a));
+        if (a.type() == typeid(size_t)) sqlite3_bind_int64(stmt, i, std::any_cast<size_t>(a));
         else if (a.type() == typeid(int64_t)) sqlite3_bind_int64(stmt, i, std::any_cast<int64_t>(a));
         else if (a.type() == typeid(time_t)) sqlite3_bind_int64(stmt, i, std::any_cast<time_t>(a));
         else if (a.type() == typeid(double)) sqlite3_bind_double(stmt, i, std::any_cast<double>(a));

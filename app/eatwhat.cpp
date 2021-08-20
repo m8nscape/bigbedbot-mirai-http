@@ -9,7 +9,8 @@
 
 namespace eatwhat {
 
-std::vector<food> foodList;
+std::vector<unsigned> foodIdList;
+unsigned foodIdMax = 0;
 
 std::string food::to_string(int64_t group)
 {
@@ -62,7 +63,7 @@ inline int addFood(food& f)
     }
 
     // insert into cached list
-    foodList.push_back(f);
+    foodIdList.push_back(++foodIdMax);
 
     addLog(LOG_INFO, "eat", "Added food %s", f.name.c_str());
     return 0;
@@ -70,7 +71,6 @@ inline int addFood(food& f)
 
 int getFood(food& f)
 {
-    /*
     // get from db
     const char query[] = "SELECT * FROM food ORDER BY RANDOM() limit 1";
     auto list = db.query(query, 4);
@@ -95,19 +95,17 @@ int getFood(food& f)
     }
 
     return 0;
-    */
 
     // get from cached list
-    if (foodList.empty()) return 1;
-    std::vector<food> tmpList{foodList.begin(), foodList.end()};
-    std::random_shuffle(tmpList.begin(), tmpList.end());
-    f = tmpList[0];
-    return 0;
+    // if (foodList.empty()) return 1;
+    // std::vector<food> tmpList{foodList.begin(), foodList.end()};
+    // std::random_shuffle(tmpList.begin(), tmpList.end());
+    // f = tmpList[0];
+    // return 0;
 }
 
 int getFood10(food(&f)[10])
 {
-    /*
     // get from db
     const char query[] = "SELECT * FROM food ORDER BY RANDOM() limit 10";
     auto list = db.query(query, 4);
@@ -136,45 +134,62 @@ int getFood10(food(&f)[10])
     }
 
     return idx;
-    */
 
     // get from cached list
-    std::vector<food> tmpList{foodList.begin(), foodList.end()};
-    std::random_shuffle(tmpList.begin(), tmpList.end());
-    size_t upper_bound = std::min(10ul, tmpList.size());
-    for (size_t i = 0; i < upper_bound; ++i)
-    {
-        f[i] = tmpList[i];
-    }
-    return upper_bound;
+    // std::vector<food> tmpList{foodList.begin(), foodList.end()};
+    // std::random_shuffle(tmpList.begin(), tmpList.end());
+    // size_t upper_bound = std::min(10ul, tmpList.size());
+    // for (size_t i = 0; i < upper_bound; ++i)
+    // {
+    //     f[i] = tmpList[i];
+    // }
+    // return upper_bound;
 }
 
 
 int delFood(const std::string& name)
 {
-    // del from db
-    const char query[] = "DELETE FROM food WHERE name=?";
-    int ret = db.exec(query, { name });
-    if (ret != SQLITE_OK)
+    // get rowid
     {
-        addLog(LOG_ERROR, "eat", "Deleting food %s failed (%s)", name.c_str(), db.errmsg());
-        return 1;
+        const char query[] = "SELECT id FROM food WHERE name=?";
+        auto ret = db.query(query, 1, {name});
+        for (auto id: ret)
+        {
+            // del from cached list
+            auto it = std::search(foodIdList.begin(), foodIdList.end(), 
+                std::default_searcher(foodIdList.begin(), foodIdList.end()));
+            if (it != foodIdList.begin())
+            {
+                foodIdList.erase(it);
+            }
+        }
+    }
+    
+    // del from db
+    {
+        const char query[] = "DELETE FROM food WHERE name=?";
+        int ret = db.exec(query, { name });
+        if (ret != SQLITE_OK)
+        {
+            addLog(LOG_ERROR, "eat", "Deleting food %s failed (%s)", name.c_str(), db.errmsg());
+            return 1;
+        }
     }
 
     // del from cached list
-    int count = 0;
-    for (auto it = foodList.begin(); it != foodList.end();)
-    {
-        if (it->name == name)
-        {
-            ++count;
-            it = foodList.erase(it);
-        }
-        else
-        {
-            ++it;
-        }
-    }
+    // int count = 0;
+    // for (auto it = foodList.begin(); it != foodList.end();)
+    // {
+    //     if (it->name == name)
+    //     {
+    //         ++count;
+    //         it = foodList.erase(it);
+    //     }
+    //     else
+    //     {
+    //         ++it;
+    //     }
+    // }
 
     addLog(LOG_INFO, "eat", "Deleted food %s", name.c_str());
     return 0;
@@ -450,13 +465,11 @@ std::string MENU(::int64_t group, ::int64_t qq, std::vector<std::string> args)
 #if NDEBUG
     const int MENU_ENTRY_COUNT = 9;
 #else
-    const int MENU_ENTRY_COUNT = 200;
+    const int MENU_ENTRY_COUNT = 5;
 #endif
     int64_t count = getFoodIdx();
 
     if (!count) return "无";
-
-    //return "MENU暂时不可用！";
     
     // defuault: last MENU_ENTRY_COUNT entries
     size_t range_min = (count <= MENU_ENTRY_COUNT) ? 0 : (count - MENU_ENTRY_COUNT);
@@ -464,7 +477,7 @@ std::string MENU(::int64_t group, ::int64_t qq, std::vector<std::string> args)
 
 
     // arg[1] is range_mid
-    if (args.size() > 1 && foodList.size() > MENU_ENTRY_COUNT) try
+    if (args.size() > 1 && foodIdMax > MENU_ENTRY_COUNT) try
     {
         int tmp = std::stoi(args[1]) - 1 - MENU_ENTRY_COUNT / 2;
         if (tmp < 0)
@@ -478,8 +491,8 @@ std::string MENU(::int64_t group, ::int64_t qq, std::vector<std::string> args)
             range_max = range_min + MENU_ENTRY_COUNT - 1;
         }
 
-        if (range_max >= foodList.size()) {
-            range_max = foodList.size() - 1;
+        if (range_max >= foodIdMax) {
+            range_max = foodIdMax - 1;
             range_min = range_max - MENU_ENTRY_COUNT - 1;
         }
 
@@ -488,10 +501,20 @@ std::string MENU(::int64_t group, ::int64_t qq, std::vector<std::string> args)
 
     if (range_min > range_max) return "";
     std::stringstream ret;
-    for (size_t i = range_min; i <= range_max; ++i)
+    // for (size_t i = range_min; i <= range_max; ++i)
+    // {
+    //     ret << i + 1 << ": " << foodList[i].to_string(group);
+    //     if (i != range_max) ret << '\n';
+    // }
+    const char query[] = "SELECT * FROM food WHERE id >= ? limit ?";
+    auto list = db.query(query, 4, {foodIdList[range_min], MENU_ENTRY_COUNT});
+    if (list.empty()) return "";
+
+    size_t i = range_min;
+    for (auto &row : list)
     {
-        ret << i + 1 << ": " << foodList[i].to_string(group);
-        if (i != range_max) ret << '\n';
+        ret << std::any_cast<int64_t>(row[0]) << ": " << std::any_cast<std::string>(row[1]);
+        if (i++ != range_max) ret << '\n';
     }
 
     return ret.str();
@@ -621,10 +644,13 @@ void foodLoadListFromDb()
         }
         else
             f.offererType = f.ANONYMOUS;
-        foodList.push_back(f);
+
+        auto id = static_cast<unsigned>(std::any_cast<int64_t>(row[0]));
+        foodIdList.push_back(id);
+        foodIdMax = std::max(foodIdMax, id);
     }
     char msg[128];
-    sprintf(msg, "added %lu foods", foodList.size());
+    sprintf(msg, "added %lu foods", list.size());
     addLogDebug("eat", msg);
 }
 

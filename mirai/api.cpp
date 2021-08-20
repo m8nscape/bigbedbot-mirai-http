@@ -294,6 +294,11 @@ int sendFriendMsg(int64_t qqid, const json& messageChain, int64_t quotemsgid)
     if (quotemsgid) obj["quote"] = quotemsgid;
     obj["messageChain"] = messageChain.at("messageChain");
 
+    auto& text = obj["messageChain"]["text"];
+    while (!text.empty() && *text.rbegin() == "\n")
+        text.erase(text.size() - 1);
+    if (text.empty()) return -1;
+        
     return http::POST("/sendFriendMessage", obj, sendMsgCallback);
 }
 
@@ -324,6 +329,11 @@ int sendGroupMsg(int64_t groupid, const json& messageChain, int64_t quotemsgid)
     if (quotemsgid) obj["quote"] = quotemsgid;
     obj["messageChain"] = messageChain.at("messageChain");
 
+    auto& text = obj["messageChain"]["text"];
+    while (!text.empty() && *text.rbegin() == "\n")
+        text.erase(text.size() - 1);
+    if (text.empty()) return -1;
+        
     return http::POST("/sendGroupMessage", obj, sendMsgCallback);
 }
 
@@ -473,16 +483,16 @@ int procRecvMsgEntry(const json& v)
     if (RecvMsgTypeMap.find(type) != RecvMsgTypeMap.end())
     {
         RecvMsgType e = RecvMsgTypeMap.at(type);
-        for (size_t i = 0; i < eventCallbacks[e].size(); ++i)
+        for (auto& [key, callback]: eventCallbacks[e])
         {
             try
             {
-                eventCallbacks[e][i](v);
+                callback(v);
             }
             catch (std::exception &e)
             {
                 std::stringstream ss;
-                ss << "Exception occurred at callback" << i << "of" << type.c_str() << ": " << e.what() << std::endl;
+                ss << "Exception occurred at callback[" << key << "] of" << type.c_str() << ": " << e.what() << std::endl;
                 ss << "----------Message Begin----------" << std::endl;
                 ss << v.dump() << std::endl;
                 ss << "----------Message End------------" << std::endl;
