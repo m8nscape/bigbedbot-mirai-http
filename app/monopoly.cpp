@@ -46,6 +46,7 @@ struct chance
 };
 double chance::total_prob = 0;
 std::vector<chance> chanceList;
+std::vector<chance> chanceListChaos;
 
 struct flags
 {
@@ -62,23 +63,80 @@ namespace command
 inline int64_t round(double x) { return static_cast<int64_t>(std::round(x)); }
 inline int64_t trunc(double x) { return static_cast<int64_t>(std::trunc(x)); }
 
-
 using efunc = std::function<void(int64_t qqid, int64_t groupid, double x, double y)>;
+
 void do_all(int64_t groupid, efunc f, double x = 0.0, double y = 0.0);
 
-int64_t get_random_registered_member(int64_t groupid);
+int64_t get_random_registered_member(int64_t groupid)
+{
+    std::vector<int64_t> registeredMemberList;
+    for (auto& [qq, pd] : user::plist)
+    {
+        if (grp::groups[groupid].haveMember(qq))
+            registeredMemberList.push_back(qq);
+    }
+    if (!registeredMemberList.empty())
+    {
+        size_t idx = randInt(0, registeredMemberList.size() - 1);
+        return registeredMemberList[idx];
+    }
+    return 0;
+}
 
 // events
 auto& pd = user::plist;
-void muted(int64_t qqid, int64_t groupid, double x) { smoke::nosmoking(groupid, qqid, round(x)); grp::groups[groupid].sum_smoke += round(x);}
-void mute_dk(int64_t qqid, int64_t groupid, double x) { smoke::nosmoking(groupid, /*TODO who is dk*/0, round(x));  grp::groups[groupid].sum_smoke += round(x);}
-void mute_bot(int64_t qqid, int64_t groupid, double x) { smoke::nosmoking(groupid, botLoginQQId, round(x)); }
-void mute_random(int64_t qqid, int64_t groupid, double x, int64_t& target) { target = get_random_registered_member(groupid); smoke::nosmoking(groupid, target, round(x));  grp::groups[groupid].sum_smoke += round(x);}
-void give_key(int64_t qqid, double x) { pd[qqid].modifyKeyCount(round(x)); }
-void give_currency(int64_t qqid, int64_t groupid, double x) { pd[qqid].modifyCurrency(round(x));  grp::groups[groupid].sum_earned += round(x);}
-void give_stamina(int64_t qqid, double x) { pd[qqid].modifyStamina(round(x)); }
-void give_stamina_extra(int64_t qqid, double x) { pd[qqid].modifyStamina(round(x), true); }
-void set_stamina(int64_t qqid, double x) { int s = pd[qqid].modifyStamina(0).staminaAfterUpdate; pd[qqid].modifyStamina(-s); pd[qqid].modifyStamina(round(x)); }
+void muted(int64_t qqid, int64_t groupid, double x)
+{
+    smoke::nosmoking(groupid, qqid, round(x));
+    grp::groups[groupid].sum_smoke += round(x);
+}
+
+void mute_dk(int64_t qqid, int64_t groupid, double x)
+{
+    smoke::nosmoking(groupid, /*TODO who is dk*/0, round(x));
+    grp::groups[groupid].sum_smoke += round(x);
+}
+
+void mute_bot(int64_t qqid, int64_t groupid, double x)
+{
+    smoke::nosmoking(groupid, botLoginQQId, round(x));
+}
+
+void mute_random(int64_t qqid, int64_t groupid, double x, int64_t& target)
+{
+    target = get_random_registered_member(groupid);
+    smoke::nosmoking(groupid, target, round(x));
+    grp::groups[groupid].sum_smoke += round(x);
+}
+
+void give_key(int64_t qqid, double x)
+{
+    pd[qqid].modifyKeyCount(round(x));
+}
+
+void give_currency(int64_t qqid, int64_t groupid, double x)
+{
+    pd[qqid].modifyCurrency(round(x));
+    grp::groups[groupid].sum_earned += round(x);
+}
+
+void give_stamina(int64_t qqid, double x)
+{
+    pd[qqid].modifyStamina(round(x));
+}
+
+void give_stamina_extra(int64_t qqid, double x)
+{
+    pd[qqid].modifyStamina(round(x), true);
+}
+
+void set_stamina(int64_t qqid, double x)
+{
+    int s = pd[qqid].modifyStamina(0).staminaAfterUpdate;
+    pd[qqid].modifyStamina(-s);
+    pd[qqid].modifyStamina(round(x));
+}
+
 void mul_currency(int64_t qqid, int64_t groupid, double x) 
 { 
     if (x < 1 && user_stat[qqid].skip_mul_all_currency_sub1)
@@ -94,22 +152,60 @@ void mul_currency(int64_t qqid, int64_t groupid, double x)
     else
         grp::groups[groupid].sum_spent += -d;
 }
-void give_all_key(int64_t groupid, double x) { do_all(groupid, std::bind(give_key, _1, _3), x); }
-void give_all_currency(int64_t groupid, double x) { do_all(groupid, std::bind(give_currency, _1, groupid, _3), x); }
+
+void give_all_key(int64_t groupid, double x)
+{
+    do_all(groupid, std::bind(give_key, _1, _3), x);
+}
+
+void give_all_currency(int64_t groupid, double x)
+{
+    do_all(groupid, std::bind(give_currency, _1, groupid, _3), x);
+}
+
 void give_all_currency_range(int64_t groupid, double x, double y)
 {
     do_all(groupid, [](int64_t qqid, int64_t groupid, double x, double y)
     {
         give_currency(qqid, groupid, randInt(round(x), round(y)));
-    }, x, y);
+    },
+     x, y);
 }
-void give_all_stamina(int64_t groupid, double x) { do_all(groupid, std::bind(give_stamina, _1, _3), x); }
-void mul_all_currency(int64_t groupid, double x) { do_all(groupid, std::bind(mul_currency, _1, groupid, _3), x); }
-void set_all_stamina(int64_t groupid, double x) { do_all(groupid, std::bind(set_stamina, _1, _3), x); }
-void add_daily_pool(double x) { user::extra_tomorrow += round(x); }
-void get_mul_sub1_skip(int64_t qqid) { user_stat[qqid].skip_mul_all_currency_sub1 = true; }
-void fever(int64_t qqid, double x) { user_stat[qqid].adrenaline_expire_time = time(nullptr) + 15; }
-void chaos(int64_t qqid) { user_stat[qqid].chaos = true; }
+void give_all_stamina(int64_t groupid, double x)
+{
+    do_all(groupid, std::bind(give_stamina, _1, _3), x);
+}
+
+void mul_all_currency(int64_t groupid, double x)
+{
+    do_all(groupid, std::bind(mul_currency, _1, groupid, _3), x);
+}
+
+void set_all_stamina(int64_t groupid, double x)
+{
+    do_all(groupid, std::bind(set_stamina, _1, _3), x);
+}
+
+void add_daily_pool(double x)
+{
+    user::extra_tomorrow += round(x);
+}
+
+void get_mul_sub1_skip(int64_t qqid)
+{
+    user_stat[qqid].skip_mul_all_currency_sub1 = true;
+}
+
+void fever(int64_t qqid, double x)
+{
+    user_stat[qqid].adrenaline_expire_time = time(nullptr) + 15;
+}
+
+void chaos(int64_t qqid)
+{
+    user_stat[qqid].chaos = true;
+}
+
 
 const std::map<std::string, void*> strMap
 {
@@ -135,6 +231,7 @@ const std::map<std::string, void*> strMap
     {"chaos", (void*)chaos},
 };
 
+
 void do_all(int64_t groupid, efunc f, double x, double y)
 {
     bool check_skip_mul_all_currency_sub1 = false;
@@ -159,21 +256,6 @@ void do_all(int64_t groupid, efunc f, double x, double y)
     }
 }
 
-int64_t get_random_registered_member(int64_t groupid)
-{
-    std::vector<int64_t> registeredMemberList;
-    for (auto& [qq, pd] : user::plist)
-    {
-        if (grp::groups[groupid].haveMember(qq))
-            registeredMemberList.push_back(qq);
-    }
-    if (!registeredMemberList.empty())
-    {
-        size_t idx = randInt(0, registeredMemberList.size() - 1);
-        return registeredMemberList[idx];
-    }
-    return 0;
-}
 
 }
 
@@ -259,6 +341,15 @@ int init(const char* yaml)
     }
     addLog(LOG_INFO, "monopoly", "Loaded %u entries", chanceList.size());
 
+    std::sort(chanceList.begin(), chanceList.end(), [](const chance& l, const chance& r) { return l.prob > r.prob; });
+    addLog(LOG_INFO, "monopoly", "Events sorted by probability");
+
+    // generate chaos list (do not add first 20% entries)
+    for (size_t i = chanceList.size() / 5; i < chanceList.size(); ++i)
+    {
+        chanceListChaos.push_back(chanceList[i]);
+    }
+
     return 0;
 }
 
@@ -269,6 +360,7 @@ std::string convertRespMsg(const std::string& raw, int64_t qqid, int64_t groupid
     boost::algorithm::replace_all(s, "{currency_pre}",      std::to_string(pre.getCurrency()));
     boost::algorithm::replace_all(s, "{currency_post}",     std::to_string(post.getCurrency()));
     boost::algorithm::replace_all(s, "{currency_delta}",    std::to_string(post.getCurrency() - pre.getCurrency()));
+    boost::algorithm::replace_all(s, "{currency_delta_neg}",std::to_string(pre.getCurrency() - post.getCurrency()));
     boost::algorithm::replace_all(s, "{key_pre}",           std::to_string(pre.getKeyCount()));
     boost::algorithm::replace_all(s, "{key_post}",          std::to_string(post.getKeyCount()));
     boost::algorithm::replace_all(s, "{key_delta}",         std::to_string(post.getKeyCount() - pre.getKeyCount()));
@@ -364,8 +456,8 @@ void msgCallback(const json& body)
     if (user_stat[m.qqid].chaos)
     {
         user_stat[m.qqid].chaos = false;
-        size_t idx = randInt(0, chanceList.size() - 1);
-        doChance(m, chanceList[idx], adrenaline);
+        size_t idx = randInt(0, chanceListChaos.size() - 1);
+        doChance(m, chanceListChaos[idx], adrenaline);
     }
     else
     {
