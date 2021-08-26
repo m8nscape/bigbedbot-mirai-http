@@ -473,7 +473,19 @@ void flushDailyTimep(bool autotriggered)
     remain_daily_bonus = DAILY_BONUS + extra_tomorrow;
     extra_tomorrow = 0;
 
-    grp::broadcastMsg("每日批池刷新了；额", grp::Group::MASK_DAILYP);
+    std::vector<std::string> msgMap
+    {
+        "每日批池刷新了",
+        "每日批池刷新了；额",
+        "每日批次号刷新了",
+        "没人批i吃刷新了",
+        "每日P池刷新率；呃",
+        "P 풀은 매일 새로 고쳐집니다",
+        "may rii pee cii shruaa xinn laaar"
+        "刷了"
+    };
+
+    grp::broadcastMsg(msgMap[randInt(int(msgMap.size()) - 1)].c_str(), grp::Group::MASK_DAILYP);
     //CQ_addLog(ac, CQLOG_DEBUG, "pee", std::to_string(daily_refresh_time).c_str());
 }
 
