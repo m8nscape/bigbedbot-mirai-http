@@ -294,11 +294,15 @@ int sendFriendMsg(int64_t qqid, const json& messageChain, int64_t quotemsgid)
     if (quotemsgid) obj["quote"] = quotemsgid;
     obj["messageChain"] = messageChain.at("messageChain");
 
-    auto& text = obj["messageChain"]["text"];
-    while (!text.empty() && *text.rbegin() == "\n")
-        text.erase(text.size() - 1);
-    if (text.empty()) return -1;
-        
+    if (!obj["messageChain"].empty())
+    {
+        size_t lastMsgIdx = obj["messageChain"].size() - 1;
+        auto& text = obj["messageChain"][lastMsgIdx]["text"];
+        while (!text.empty() && *text.rbegin() == '\n')
+            text.erase(text.size() - 1);
+        if (text.empty()) return -1;
+    }
+    
     return http::POST("/sendFriendMessage", obj, sendMsgCallback);
 }
 
@@ -329,10 +333,14 @@ int sendGroupMsg(int64_t groupid, const json& messageChain, int64_t quotemsgid)
     if (quotemsgid) obj["quote"] = quotemsgid;
     obj["messageChain"] = messageChain.at("messageChain");
 
-    auto& text = obj["messageChain"]["text"];
-    while (!text.empty() && *text.rbegin() == "\n")
-        text.erase(text.size() - 1);
-    if (text.empty()) return -1;
+    if (!obj["messageChain"].empty())
+    {
+        size_t lastMsgIdx = obj["messageChain"].size() - 1;
+        auto& text = obj["messageChain"][lastMsgIdx]["text"];
+        while (!text.empty() && *text.rbegin() == '\n')
+            text.erase(text.size() - 1);
+        if (text.empty()) return -1;
+    }
         
     return http::POST("/sendGroupMessage", obj, sendMsgCallback);
 }
@@ -492,7 +500,7 @@ int procRecvMsgEntry(const json& v)
             catch (std::exception &e)
             {
                 std::stringstream ss;
-                ss << "Exception occurred at callback[" << key << "] of" << type.c_str() << ": " << e.what() << std::endl;
+                ss << "Exception occurred at callback[" << key << "] of " << type.c_str() << ": " << e.what() << std::endl;
                 ss << "----------Message Begin----------" << std::endl;
                 ss << v.dump() << std::endl;
                 ss << "----------Message End------------" << std::endl;
