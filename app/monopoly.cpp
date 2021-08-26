@@ -51,7 +51,7 @@ std::vector<chance> chanceListChaos;
 struct flags
 {
     time_t  freeze_assets_expire_time = 0;
-    time_t  adrenaline_expire_time = 0;
+    time_t  fever_expire_time = 0;
     bool    chaos = false;
     bool    skip_mul_all_currency_sub1 = false;
 
@@ -198,7 +198,7 @@ void get_mul_sub1_skip(int64_t qqid)
 
 void fever(int64_t qqid, double x)
 {
-    user_stat[qqid].adrenaline_expire_time = time(nullptr) + 15;
+    user_stat[qqid].fever_expire_time = time(nullptr) + 15;
 }
 
 void chaos(int64_t qqid)
@@ -206,6 +206,39 @@ void chaos(int64_t qqid)
     user_stat[qqid].chaos = true;
 }
 
+void chaos_all(int64_t groupid)
+{
+    do_all(groupid, std::bind(chaos, _1));
+}
+
+void currency_digit_random(int64_t qqid)
+{
+    int64_t oldCurrency = pd[qqid].getCurrency();
+    auto currencyStr = std::to_string(oldCurrency);
+    for (char& c: currencyStr) c = randInt('0', '9');
+    int64_t newCurrency = std::stoll(currencyStr);
+    pd[qqid].modifyCurrency(newCurrency - oldCurrency);
+}
+
+void currency_digit_reverse(int64_t qqid)
+{
+    int64_t oldCurrency = pd[qqid].getCurrency();
+    auto currencyStr = std::to_string(oldCurrency);
+    std::string newCurrencyStr;
+    for (char& c: currencyStr) newCurrencyStr += c;
+    int64_t newCurrency = std::stoll(newCurrencyStr);
+    pd[qqid].modifyCurrency(newCurrency - oldCurrency);
+}
+
+void currency_digit_unify(int64_t qqid)
+{
+    int64_t oldCurrency = pd[qqid].getCurrency();
+    auto currencyStr = std::to_string(oldCurrency);
+    int i = randInt(int(currencyStr.length()) - 1);
+    std::string newCurrencyStr(currencyStr.size(), currencyStr[i]);
+    int64_t newCurrency = std::stoi(newCurrencyStr);
+    pd[qqid].modifyCurrency(newCurrency - oldCurrency);
+}
 
 const std::map<std::string, void*> strMap
 {
@@ -229,6 +262,10 @@ const std::map<std::string, void*> strMap
     {"get_mul_sub1_skip", (void*)get_mul_sub1_skip},
     {"fever", (void*)fever},
     {"chaos", (void*)chaos},
+    {"chaos_all", (void*)chaos_all},
+    {"currency_digit_random", (void*)currency_digit_random},
+    {"currency_digit_reverse", (void*)currency_digit_reverse},
+    {"currency_digit_unify", (void*)currency_digit_unify},
 };
 
 
@@ -310,6 +347,7 @@ int init(const char* yaml)
                 }
 
                 using namespace command;
+                // _1: qqid | _2: groupid
                 auto pf = (uintptr_t)strMap.at(cmd);
                 if      (pf == (uintptr_t)muted)                c.cmds.emplace_back(std::bind(muted, _1, _2, x));
                 else if (pf == (uintptr_t)mute_dk)              c.cmds.emplace_back(std::bind(mute_dk, _1, _2, x));
@@ -331,6 +369,10 @@ int init(const char* yaml)
                 else if (pf == (uintptr_t)get_mul_sub1_skip)    c.cmds.emplace_back(std::bind(get_mul_sub1_skip, _1));
                 else if (pf == (uintptr_t)fever)                c.cmds.emplace_back(std::bind(fever, _1, x));
                 else if (pf == (uintptr_t)chaos)                c.cmds.emplace_back(std::bind(chaos, _1));
+                else if (pf == (uintptr_t)chaos_all)            c.cmds.emplace_back(std::bind(chaos_all, _2));
+                else if (pf == (uintptr_t)currency_digit_random) c.cmds.emplace_back(std::bind(currency_digit_random, _1));
+                else if (pf == (uintptr_t)currency_digit_reverse) c.cmds.emplace_back(std::bind(currency_digit_reverse, _1));
+                else if (pf == (uintptr_t)currency_digit_unify) c.cmds.emplace_back(std::bind(currency_digit_unify, _1));
                 else addLog(LOG_WARNING, "monopoly", "unknown event \"%s\"", cmd.c_str());
             }
             else
@@ -372,7 +414,7 @@ std::string convertRespMsg(const std::string& raw, int64_t qqid, int64_t groupid
     return std::move(s);
 }
 
-void doChance(const mirai::MsgMetadata& m, const chance& c, bool adrenaline)
+void doChance(const mirai::MsgMetadata& m, const chance& c, bool isInFever)
 {
     // save pre-cmd info
     auto pre = user::plist[m.qqid];
@@ -388,7 +430,7 @@ void doChance(const mirai::MsgMetadata& m, const chance& c, bool adrenaline)
     // send resp
     json resp = mirai::MSG_TEMPLATE;
     json& r = resp["messageChain"];
-    if (adrenaline)
+    if (isInFever)
         r.push_back(mirai::buildMessagePlain("肾上腺素生效！"));
     r.push_back(mirai::buildMessageAt(m.qqid));
     r.push_back(mirai::buildMessagePlain(convertRespMsg(c.msg, m.qqid, m.groupid, target, pre, user::plist[m.qqid])));
@@ -432,9 +474,10 @@ void msgCallback(const json& body)
         return;
     }
 
+    // stamina check
     time_t t = time(nullptr);
-    bool adrenaline = t <= user_stat[m.qqid].adrenaline_expire_time;
-    if (!adrenaline)
+    bool isInFever = t <= user_stat[m.qqid].fever_expire_time;
+    if (!isInFever)
     {
         auto [enough, stamina, rtime] = user::plist[m.qqid].modifyStamina(-1);
         if (enough)
@@ -457,7 +500,7 @@ void msgCallback(const json& body)
     {
         user_stat[m.qqid].chaos = false;
         size_t idx = randInt(0, chanceListChaos.size() - 1);
-        doChance(m, chanceListChaos[idx], adrenaline);
+        doChance(m, chanceListChaos[idx], isInFever);
     }
     else
     {
@@ -468,7 +511,7 @@ void msgCallback(const json& body)
             p += c.prob;
             if (prob < p)
             {
-                doChance(m, c, adrenaline);
+                doChance(m, c, isInFever);
                 break;
             }
         }
@@ -498,8 +541,8 @@ void choukasuoha(const json& body)
         while (user::plist[m.qqid].testStamina(1).enough && !smoke::isSmoking(m.qqid, m.groupid))
         {
             time_t t = time(nullptr);
-            bool adrenaline = t <= user_stat[m.qqid].adrenaline_expire_time;
-            if (!adrenaline)
+            bool isInFever = t <= user_stat[m.qqid].fever_expire_time;
+            if (!isInFever)
             {
                 auto [enough, stamina, rtime] = user::plist[m.qqid].modifyStamina(-1);
                 if (!enough)
@@ -513,7 +556,7 @@ void choukasuoha(const json& body)
             {
                 user_stat[m.qqid].chaos = false;
                 size_t idx = randInt(0, chanceList.size() - 1);
-                doChance(m, chanceList[idx], adrenaline);
+                doChance(m, chanceList[idx], isInFever);
             }
             else
             {
@@ -524,7 +567,7 @@ void choukasuoha(const json& body)
                     p += c.prob;
                     if (prob < p)
                     {
-                        doChance(m, c, adrenaline);
+                        doChance(m, c, isInFever);
                         break;
                     }
                 }
