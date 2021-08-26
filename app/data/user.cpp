@@ -71,10 +71,10 @@ int pdata::getExtraStamina() const
 pdata::resultStamina pdata::modifyStamina(int delta, bool extra)
 {
     int stamina = getStamina(false).staminaAfterUpdate;
-    int cost = -delta;
 
     bool enough = false;
 
+    int cost = -delta;
     if (cost > 0)
     {
         if (stamina_extra >= cost)
@@ -97,13 +97,14 @@ pdata::resultStamina pdata::modifyStamina(int delta, bool extra)
     else if (cost < 0)
     {
         enough = true;
-        if (stamina - cost <= MAX_STAMINA)
+        stamina += delta;
+        if (stamina >= MAX_STAMINA)
         {
-            // do nothing
-        }
-        else if (extra) // part of cost(recovery) goes to extra
-        {
-            stamina_extra += stamina - cost - MAX_STAMINA;
+            if (extra) // part of cost(recovery) goes to extra
+            {
+                stamina_extra += stamina - MAX_STAMINA;
+            }
+            stamina = MAX_STAMINA;
         }
     }
 
