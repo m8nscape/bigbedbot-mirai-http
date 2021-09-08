@@ -481,7 +481,7 @@ void flushDailyTimep(bool autotriggered)
         "没人批i吃刷新了",
         "每日P池刷新率；呃",
         "P 풀은 매일 새로 고쳐집니다",
-        "may rii pee cii shruaa xinn laaar"
+        "may rii pee cii shruaa xinn laaar",
         "刷了"
     };
 
