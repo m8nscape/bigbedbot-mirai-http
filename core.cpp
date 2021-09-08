@@ -92,12 +92,12 @@ int init_app_and_start()
     // app: user
     user::init("./config/user.yaml");
     addTimedEventEveryMin(std::bind(&SQLite::commit, &user::db, true));
-    mirai::regEventProc(mirai::RecvMsgType::GroupMessage, {"GroupMessage", grp::msgDispatcher});
+    mirai::regEventProc(mirai::RecvMsgType::GroupMessage, {"UserMessage", user::msgCallback});
 
     // app: group
     grp::init();
     addTimedEventEveryMin(std::bind(&SQLite::commit, &grp::db, true));
-    mirai::regEventProc(mirai::RecvMsgType::GroupMessage, {"UserMessage", user::msgCallback});
+    mirai::regEventProc(mirai::RecvMsgType::GroupMessage, {"GroupMessage", grp::msgDispatcher});
     // 每分钟保存群统计
     for (auto it = grp::groups.begin(); it != grp::groups.end(); ++it)
         addTimedEventEveryMin(std::bind(&grp::Group::SaveSumIntoDb, &it->second));
