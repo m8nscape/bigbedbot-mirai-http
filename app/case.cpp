@@ -211,92 +211,7 @@ json OPEN_10(::int64_t group, ::int64_t qq, std::vector<std::string> args)
     return resp;
 }
 
-json OPEN_R(::int64_t group, ::int64_t qq, std::vector<std::string> args)
-{
-    if (plist.find(qq) == plist.end())
-        return not_registered(qq);
-
-    auto &p = plist[qq];
-    //CQ_setGroupBan(ac, group, qq, 60);
-    //return "不准开";
-
-    if (p.getCurrency() < OPEN_RUN_SP2_COST)
-        return not_enough_currency(qq);
-
-    auto[enough, stamina, rtime] = p.testStamina(OPEN_RUN_SP2_STAMINA);
-
-    if (!enough)
-        return not_enough_stamina(qq, rtime);
-    
-    p.modifyStamina(-OPEN_RUN_SP2_STAMINA, true);
-
-    json resp = R"({ "messageChain": [] })"_json;
-    json& r = resp["messageChain"];
-    std::stringstream ss;
-    r.push_back(mirai::buildMessageAt(qq));
-    ss << "消耗" << OPEN_RUN_SP2_COST << "个批和" << OPEN_RUN_SP2_STAMINA << "点体力发动技能！\n";
-    r.push_back(mirai::buildMessagePlain(ss.str()));
-    ss.str("");
-
-    std::vector<int> case_counts(CASE_TYPES.size(), 0);
-    int count = 0;
-    int cost = OPEN_RUN_SP2_COST;
-    int res = 0;
-    int64_t pee = p.getCurrency() - cost;
-    case_detail reward;
-    do {
-        ++count;
-        cost += FEE_PER_CASE;
-        reward = draw_case(randReal());
-        case_counts[reward.type_idx()]++;
-        res += reward.worth();
-        pee += reward.worth() - FEE_PER_CASE;
-        if (reward.worth() >= 0)
-            grp::groups[group].sum_earned += reward.worth();
-        else
-            grp::groups[group].sum_spent += -reward.worth();
-        grp::groups[group].sum_spent += FEE_PER_CASE;
-        grp::groups[group].sum_case += 1;
-
-        if (reward.type_idx() == SP2_TYPE)
-        {
-            r.push_back(mirai::buildMessageAt(qq));
-            ss << "开了" << count << "个箱子终于开出了" << reward.full() << " (" << reward.worth() << "批)，"
-                << "本次净收益" << pee - p.getCurrency() << "个批";
-            r.push_back(mirai::buildMessagePlain(ss.str()));
-
-            p.modifyCurrency(pee - p.getCurrency());
-            p.modifyBoxCount(count);
-            return resp;
-        }
-        else if (reward.type_idx() == SP1_TYPE)
-        {
-            r.push_back(mirai::buildMessagePlain("歪哟，"));
-            r.push_back(mirai::buildMessageAt(qq));
-            ss << "发了，开了" << count << "个箱子居然开出了" << reward.full() << " (" << reward.worth() << "批)，"
-                << "本次净收益" << pee - p.getCurrency() << "个批";
-            r.push_back(mirai::buildMessagePlain(ss.str()));
-
-            p.modifyCurrency(pee - p.getCurrency());
-            p.modifyBoxCount(count);
-            return resp;
-        }
-    } while (pee >= FEE_PER_CASE);
-
-
-    r.push_back(mirai::buildMessageAt(qq));
-    ss << "破产了，开了" << count << "个箱子也没能开出红箱，"
-        << "本次净收益" << pee - p.getCurrency() << "个批";
-    r.push_back(mirai::buildMessagePlain(ss.str()));
-
-    p.modifyCurrency(pee - p.getCurrency());
-    p.modifyBoxCount(count);
-    return resp;
-
-    //ss << "你还有" << stamina << "点体力，";
-}
-
-json OPEN_Y(::int64_t group, ::int64_t qq, std::vector<std::string> args)
+json OPEN_SP1(::int64_t group, ::int64_t qq, std::vector<std::string> args)
 {
     if (plist.find(qq) == plist.end())
         return not_registered(qq);
@@ -345,8 +260,8 @@ json OPEN_Y(::int64_t group, ::int64_t qq, std::vector<std::string> args)
 
         if (reward.type_idx() == SP1_TYPE)
         {
-            r.push_back(mirai::buildMessageAt(qq));
-            ss << "开了" << count << "个箱子终于开出了" << reward.full() << " (" << reward.worth() << "批)，"
+            ss << grp::groups[group].getMemberName(qq)
+                << "开了" << count << "个箱子终于开出了" << reward.full() << " (" << reward.worth() << "批)，"
                 << "本次净收益" << pee - p.getCurrency() << "个批";
             r.push_back(mirai::buildMessagePlain(ss.str()));
 
@@ -357,8 +272,93 @@ json OPEN_Y(::int64_t group, ::int64_t qq, std::vector<std::string> args)
     } while (pee >= FEE_PER_CASE);
 
 
+    ss << grp::groups[group].getMemberName(qq)
+        << "破产了，开了" << count << "个箱子也没能开出黄箱，"
+        << "本次净收益" << pee - p.getCurrency() << "个批";
+    r.push_back(mirai::buildMessagePlain(ss.str()));
+
+    p.modifyCurrency(pee - p.getCurrency());
+    p.modifyBoxCount(count);
+    return resp;
+
+    //ss << "你还有" << stamina << "点体力，";
+}
+
+json OPEN_SP2(::int64_t group, ::int64_t qq, std::vector<std::string> args)
+{
+    if (plist.find(qq) == plist.end())
+        return not_registered(qq);
+
+    auto &p = plist[qq];
+    //CQ_setGroupBan(ac, group, qq, 60);
+    //return "不准开";
+
+    if (p.getCurrency() < OPEN_RUN_SP2_COST)
+        return not_enough_currency(qq);
+
+    auto[enough, stamina, rtime] = p.testStamina(OPEN_RUN_SP2_STAMINA);
+
+    if (!enough)
+        return not_enough_stamina(qq, rtime);
+    
+    p.modifyStamina(-OPEN_RUN_SP2_STAMINA, true);
+
+    json resp = R"({ "messageChain": [] })"_json;
+    json& r = resp["messageChain"];
+    std::stringstream ss;
     r.push_back(mirai::buildMessageAt(qq));
-    ss << "破产了，开了" << count << "个箱子也没能开出黄箱，"
+    ss << "消耗" << OPEN_RUN_SP2_COST << "个批和" << OPEN_RUN_SP2_STAMINA << "点体力发动技能！\n";
+    r.push_back(mirai::buildMessagePlain(ss.str()));
+    ss.str("");
+
+    std::vector<int> case_counts(CASE_TYPES.size(), 0);
+    int count = 0;
+    int cost = OPEN_RUN_SP2_COST;
+    int res = 0;
+    int64_t pee = p.getCurrency() - cost;
+    case_detail reward;
+    do {
+        ++count;
+        cost += FEE_PER_CASE;
+        reward = draw_case(randReal());
+        case_counts[reward.type_idx()]++;
+        res += reward.worth();
+        pee += reward.worth() - FEE_PER_CASE;
+        if (reward.worth() >= 0)
+            grp::groups[group].sum_earned += reward.worth();
+        else
+            grp::groups[group].sum_spent += -reward.worth();
+        grp::groups[group].sum_spent += FEE_PER_CASE;
+        grp::groups[group].sum_case += 1;
+
+        if (reward.type_idx() == SP2_TYPE)
+        {
+            ss << grp::groups[group].getMemberName(qq)
+                << "开了" << count << "个箱子终于开出了" << reward.full() << " (" << reward.worth() << "批)，"
+                << "本次净收益" << pee - p.getCurrency() << "个批";
+            r.push_back(mirai::buildMessagePlain(ss.str()));
+
+            p.modifyCurrency(pee - p.getCurrency());
+            p.modifyBoxCount(count);
+            return resp;
+        }
+        else if (reward.type_idx() == SP1_TYPE)
+        {
+            r.push_back(mirai::buildMessagePlain("歪哟，"));
+            r.push_back(mirai::buildMessageAt(qq));
+            ss << "发了，开了" << count << "个箱子居然开出了" << reward.full() << " (" << reward.worth() << "批)，"
+                << "本次净收益" << pee - p.getCurrency() << "个批";
+            r.push_back(mirai::buildMessagePlain(ss.str()));
+
+            p.modifyCurrency(pee - p.getCurrency());
+            p.modifyBoxCount(count);
+            return resp;
+        }
+    } while (pee >= FEE_PER_CASE);
+
+
+    ss << grp::groups[group].getMemberName(qq)
+        << "破产了，开了" << count << "个箱子也没能开出红箱，"
         << "本次净收益" << pee - p.getCurrency() << "个批";
     r.push_back(mirai::buildMessagePlain(ss.str()));
 
@@ -440,10 +440,10 @@ const std::map<std::string, commands> commands_str
     {"開箱", commands::OPEN_1},  //繁體化
     {"开箱十连", commands::OPEN_10},
     {"開箱十連", commands::OPEN_10},  //繁體化
-    {"开黄箱", commands::OPEN_Y},
-    {"開黃箱", commands::OPEN_Y},  //繁體化
-    {"开红箱", commands::OPEN_R},
-    {"開紅箱", commands::OPEN_R},  //繁體化
+    {"开黄箱", commands::OPEN_SP1},
+    {"開黃箱", commands::OPEN_SP1},  //繁體化
+    {"开红箱", commands::OPEN_SP2},
+    {"開紅箱", commands::OPEN_SP2},  //繁體化
     {"开箱梭哈", commands::OPEN_ENDLESS},
     {"开箱照破", commands::OPEN_ENDLESS},  //梭哈在FF14的翻译是[照破]
     {"開箱梭哈", commands::OPEN_ENDLESS},  //繁體化
@@ -472,11 +472,11 @@ void msgDispatcher(const json& body)
     case commands::OPEN_10:
         resp = OPEN_10(m.groupid, m.qqid, query);
         break;
-    case commands::OPEN_R:
-        resp = OPEN_R(m.groupid, m.qqid, query);
+    case commands::OPEN_SP2:
+        resp = OPEN_SP2(m.groupid, m.qqid, query);
         break;
-    case commands::OPEN_Y:
-        resp = OPEN_Y(m.groupid, m.qqid, query);
+    case commands::OPEN_SP1:
+        resp = OPEN_SP1(m.groupid, m.qqid, query);
         break;
     case commands::OPEN_ENDLESS:
         resp = OPEN_ENDLESS(m.groupid, m.qqid, query);

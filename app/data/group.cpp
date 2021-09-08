@@ -182,6 +182,11 @@ int64_t Group::getMember(const char* name) const
     return 0;
 }
 
+std::string Group::getMemberName(int64_t qq) const
+{
+    return haveMember(qq) ? members.at(qq).nameCard : "";
+}
+
 void Group::sendMsg(const char* msg) const
 {
     mirai::sendGroupMsgStr(group_id, std::string(msg));

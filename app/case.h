@@ -15,8 +15,8 @@ void init(const char* cfg_yml);
 enum class commands : size_t {
 	OPEN_1,
 	OPEN_10,
-	OPEN_Y,
-	OPEN_R,
+	OPEN_SP1,
+	OPEN_SP2,
 	OPEN_ENDLESS,
 };
 
