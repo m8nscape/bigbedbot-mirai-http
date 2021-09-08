@@ -369,7 +369,7 @@ std::string selfUnsmoke(int64_t qq)
 
             mirai::unmute(qq, g.first);
 
-            std::string qqname = mirai::getGroupMemberCard(g.first, qq);
+            std::string qqname = grp::groups[g.first].getMemberName(qq);
             if (qqname.empty()) qqname = std::to_string(qq);
             int64_t remain = (g.second - t) / 60; // min
             int64_t extra = (g.second - t) % 60;  // sec
