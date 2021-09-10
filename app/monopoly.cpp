@@ -401,8 +401,6 @@ std::string convertRespMsg(const std::string& raw, int64_t qqid, int64_t groupid
     s += "，恭喜你抽到了" + raw;
     boost::algorithm::replace_all(s, "{currency_pre}",      std::to_string(pre.getCurrency()));
     boost::algorithm::replace_all(s, "{currency_post}",     std::to_string(post.getCurrency()));
-    boost::algorithm::replace_all(s, "{currency_delta}",    std::to_string(post.getCurrency() - pre.getCurrency()));
-    boost::algorithm::replace_all(s, "{currency_delta_neg}",std::to_string(pre.getCurrency() - post.getCurrency()));
     boost::algorithm::replace_all(s, "{key_pre}",           std::to_string(pre.getKeyCount()));
     boost::algorithm::replace_all(s, "{key_post}",          std::to_string(post.getKeyCount()));
     boost::algorithm::replace_all(s, "{key_delta}",         std::to_string(post.getKeyCount() - pre.getKeyCount()));
@@ -411,6 +409,19 @@ std::string convertRespMsg(const std::string& raw, int64_t qqid, int64_t groupid
     boost::algorithm::replace_all(s, "{stamina_delta}",     std::to_string(post.getStamina(true).staminaAfterUpdate - pre.getStamina(true).staminaAfterUpdate));
     boost::algorithm::replace_all(s, "{player_card}",       grp::groups[groupid].members[qqid].nameCard);
     boost::algorithm::replace_all(s, "{target_card}",       target ? grp::groups[groupid].members[target].nameCard : "");
+
+    using namespace std::string_literals;
+    int64_t deltaCurrency = post.getCurrency() - pre.getCurrency();
+    if (deltaCurrency > 0)
+        boost::algorithm::replace_all(s, "{currency_delta_pos}", "+"s + std::to_string(deltaCurrency));
+    else if (deltaCurrency == 0)
+        boost::algorithm::replace_all(s, "{currency_delta_pos}", "+-0"s);
+    else
+        boost::algorithm::replace_all(s, "{currency_delta_pos}", std::to_string(deltaCurrency));
+
+    boost::algorithm::replace_all(s, "{currency_delta}",    std::to_string(deltaCurrency));
+    boost::algorithm::replace_all(s, "{currency_delta_neg}",std::to_string(-deltaCurrency));
+    
     return std::move(s);
 }
 
