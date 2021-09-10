@@ -40,6 +40,29 @@ MsgMetadata parseMsgMetadata(const json& v)
     return meta;
 }
 
+std::pair<int64_t, int64_t> parseIdFromGroupEvent(const json& reqEvent)
+{
+    int64_t groupid = 0;
+    int64_t qqid = 0;
+    if (reqEvent.contains("member"))
+    {
+        const auto& m = reqEvent.at("member");
+        if (m.contains("id"))
+        {
+            qqid = m.at("id");
+        }
+        if (m.contains("group"))
+        {
+            const auto& g = m.at("group");
+            if (g.contains("id"))
+            {
+                groupid = g.at("id");
+            }
+        }
+    }
+    return std::make_pair(groupid, qqid);
+}
+
 std::string convertMessageChainObject(const json& e)
 {
     if (!e.contains("type")) return "";

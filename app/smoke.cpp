@@ -15,6 +15,99 @@
 namespace smoke
 {
 
+class SmokeTimeMgr
+{
+private:
+    // qqid -> <groupid, until>
+    std::map<int64_t, std::map<int64_t, time_t>> mapTime;
+public:
+    bool exist(int64_t qqid, int64_t groupid = 0) const
+    {
+        if (mapTime.empty()) return false;
+        if (mapTime.find(qqid) == mapTime.end()) return false;
+        // ^this ensures mapTime has object of key=qqid
+        if (groupid == 0) return true;
+        return mapTime.at(qqid).find(groupid) != mapTime.at(qqid).end();
+    }
+    bool remove(int64_t qqid, int64_t groupid = 0)
+    {
+        if (mapTime.find(qqid) != mapTime.end())
+        {
+            if (groupid != 0)
+            {
+                if (mapTime[qqid].find(groupid) != mapTime[qqid].end()) 
+                    mapTime[qqid].erase(groupid);
+                if (mapTime[qqid].empty()) 
+                    mapTime.erase(qqid);
+            }
+            else
+            {
+                mapTime.erase(qqid);
+            }
+
+            assert(!exist(qqid, groupid));
+            addLogDebug("smoke", "Removed %lld @ %lld from smoking list", qqid, groupid);
+            return true;
+        }
+        return false;
+    }
+    bool add(int64_t qqid, int64_t groupid, int64_t durationSec)
+    {
+        if (durationSec <= 0) 
+            return remove(qqid, groupid);
+
+        time_t until = time(nullptr) + durationSec;
+        mapTime[qqid][groupid] = until;
+
+        addLogDebug("smoke", "Added %lld @ %lld until %ld to smoking list", qqid, groupid, until);
+        return true;
+    }
+
+    bool isSmoking(int64_t qqid, int64_t groupid) const
+    {
+        if (exist(qqid, groupid))
+        {
+            time_t t = time(nullptr);
+            if (t <= mapTime.at(qqid).at(groupid))
+                return true;
+        }
+        return false;
+    }
+    void update(int64_t qqid)
+    {
+        // time expiration
+        if (mapTime.find(qqid) != mapTime.end())
+        {
+            time_t t = time(nullptr);
+            std::list<int64_t> expiredGroups;
+
+            // 保存到时间的群
+            for (auto& [groupid, until] : mapTime[qqid])
+                if (t > until) expiredGroups.push_back(groupid);
+
+            // 对成员去掉到时间的群
+            for (int64_t& groupid : expiredGroups)
+            {
+                remove(qqid, groupid);
+                addLogDebug("smoke", "Removed %lld @ %lld from smoking list", qqid, groupid);
+            }
+        }
+    }
+    size_t getGroupCount(int64_t qqid) const
+    {
+        if (!exist(qqid)) return 0;
+        return mapTime.at(qqid).size();
+    }
+    void foreach(int64_t qqid, std::function<void(int64_t, int64_t, time_t)> pFn) const
+    {
+        if (!exist(qqid)) return;
+        for (const auto& [groupid, until]: mapTime.at(qqid)) 
+            pFn(qqid, groupid, until);
+    }
+} smokeTimeMgr;
+
+
+
 RetVal nosmoking(int64_t group, int64_t target, int duration_min)
 {
     if (duration_min < 0) return RetVal::INVALID_DURATION;
@@ -40,34 +133,16 @@ RetVal nosmoking(int64_t group, int64_t target, int duration_min)
     
     if (duration_min == 0)
     {
-        if (smokeTimeInGroups.find(target) != smokeTimeInGroups.end() && 
-            smokeTimeInGroups[target].find(group) != smokeTimeInGroups[target].end())
+        if (smokeTimeMgr.exist(target, group))
         {
-            smokeTimeInGroups[target].erase(group);
-            addLogDebug("smoke", "Removed %lld @ %lld from smoking list", target, group);
+            smokeTimeMgr.remove(target, group);
         }
         return RetVal::ZERO_DURATION;
     }
 
     time_t t = time(nullptr) + int64_t(duration_min) * 60;
-    smokeTimeInGroups[target][group] = t;
-    addLogDebug("smoke", "Added %lld @ %lld until %ld to smoking list", target, group, t);
+    smokeTimeMgr.add(target, group, int64_t(duration_min) * 60);
     return RetVal::OK;
-}
-
-bool isSmoking(int64_t qqid, int64_t groupid)
-{
-    if (smokeTimeInGroups.find(qqid) == smokeTimeInGroups.end() || smokeTimeInGroups[qqid].empty())
-        return false;
-    
-    if (smoke::smokeTimeInGroups[qqid].find(groupid) != smoke::smokeTimeInGroups[qqid].end())
-    {
-        time_t t = time(nullptr);
-        if (t <= smoke::smokeTimeInGroups[qqid][groupid])
-            return true;
-    }
-    
-    return false;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -221,34 +296,6 @@ void GROUP_UNSMOKE(const mirai::MsgMetadata& m, int64_t target_qqid)
         mirai::sendGroupMsgStr(m.groupid, "解禁失败");
 }
 
-void updateSmokeTimeList(int64_t qqid)
-{
-    // time expiration
-    if (smoke::smokeTimeInGroups.find(qqid) != smoke::smokeTimeInGroups.end())
-    {
-        time_t t = time(nullptr);
-        std::list<int64_t> expired;
-
-        // 保存到时间的群
-        for (auto& [groupid, expire] : smoke::smokeTimeInGroups[qqid])
-            if (t > expire) expired.push_back(groupid);
-
-        // 对成员去掉到时间的群
-        for (auto& groupid : expired)
-        {
-            smoke::smokeTimeInGroups[qqid].erase(groupid);
-            addLogDebug("smoke", "Removed %lld @ %lld from smoking list", qqid, groupid);
-        }
-
-        // 如果全部解禁，去掉该成员
-        if (smoke::smokeTimeInGroups[qqid].empty())
-        {
-            smoke::smokeTimeInGroups.erase(qqid);
-            addLogDebug("smoke", "Removed %lld from all smoking list", qqid);
-        }
-    }
-}
-
 int64_t getTarget(int64_t groupid, const std::string& s)
 {
     if (s.empty())
@@ -275,12 +322,8 @@ void groupMsgCallback(const json& body)
     groupLastTalkedMember[m.groupid] = m.qqid;
 
     // one must not being smoked if it is still able to talk
-    if (smoke::smokeTimeInGroups.find(m.qqid) != smoke::smokeTimeInGroups.end() &&
-         smoke::smokeTimeInGroups[m.qqid].find(m.groupid) != smoke::smokeTimeInGroups[m.qqid].end())
-    {
-        smoke::smokeTimeInGroups[m.qqid][m.groupid] = 0;
-    }
-    updateSmokeTimeList(m.qqid);
+    // ^ nope: network lag may happens
+    //smokeTimeMgr.remove(m.qqid, m.groupid);
 
     if (!grp::groups[m.groupid].getFlag(grp::Group::MASK_P | grp::Group::MASK_SMOKE))
         return;
@@ -331,9 +374,9 @@ std::string selfUnsmoke(int64_t qq)
 {
     // update smoke status
     if (qq != botLoginQQId && qq != 10000 && qq != 1000000)
-        updateSmokeTimeList(qq);
+        smokeTimeMgr.update(qq);
 
-    if (smokeTimeInGroups.find(qq) == smokeTimeInGroups.end() || smokeTimeInGroups[qq].empty())
+    if (!smokeTimeMgr.exist(qq))
         return "你么得被烟啊";
 
     if (plist.find(qq) == plist.end()) return "你还没有开通菠菜";
@@ -341,17 +384,17 @@ std::string selfUnsmoke(int64_t qq)
 
     time_t t = time(nullptr);
     int64_t total_remain = 0;
-    for (auto& g : smokeTimeInGroups[qq])
+    smokeTimeMgr.foreach(qq, [&total_remain, t](int64_t qqid, int64_t groupid, time_t until)
     {
-        if (t <= g.second)
+        if (t <= until)
         {
-            int64_t remain = (g.second - t) / 60.0; // min
-            int64_t extra = (g.second - t) % 60;  // sec
+            int64_t remain = (until - t) / 60.0; // min
+            int64_t extra = (until - t) % 60;  // sec
             total_remain += remain + !!extra;
         }
-    }
+    });
     std::stringstream ss;
-    ss << "你在" << smokeTimeInGroups[qq].size() << "个群被烟" << total_remain << "分钟，";
+    ss << "你在" << smokeTimeMgr.getGroupCount(qq) << "个群被烟" << total_remain << "分钟，";
     int64_t total_cost = (int64_t)std::ceil(total_remain * UNSMOKE_COST_RATIO);
     if (p.getCurrency() < total_cost)
     {
@@ -363,22 +406,22 @@ std::string selfUnsmoke(int64_t qq)
         ss << "本次接近消费" << total_cost << "个批";
 
         // broadcast to groups
-        for (auto& g : smokeTimeInGroups[qq])
+        smokeTimeMgr.foreach(qq, [&total_remain, t](int64_t qq, int64_t groupid, time_t until)
         {
-            if (t > g.second) continue;
+            if (t > until) return;
 
-            mirai::unmute(qq, g.first);
+            mirai::unmute(qq, groupid);
 
-            std::string qqname = grp::groups[g.first].getMemberName(qq);
+            std::string qqname = grp::groups[groupid].getMemberName(qq);
             if (qqname.empty()) qqname = std::to_string(qq);
-            int64_t remain = (g.second - t) / 60; // min
-            int64_t extra = (g.second - t) % 60;  // sec
+            int64_t remain = (until - t) / 60; // min
+            int64_t extra = (until - t) % 60;  // sec
 
             std::stringstream sg;
             sg << qqname << "花费巨资" << (int64_t)std::round((remain + !!extra) * UNSMOKE_COST_RATIO) << "个批申请接近成功";
-            mirai::sendGroupMsgStr(g.first, sg.str());
-        }
-        smokeTimeInGroups[qq].clear();
+            mirai::sendGroupMsgStr(groupid, sg.str());
+        });
+        smokeTimeMgr.remove(qq);
     }
     return ss.str();
 }
@@ -408,7 +451,7 @@ void privateMsgCallback(const json& body)
 
     // update smoke status
     if (m.qqid != botLoginQQId && m.qqid != 10000 && m.qqid != 1000000)
-        updateSmokeTimeList(m.qqid);
+        smokeTimeMgr.update(m.qqid);
 
     std::string resp;
     switch (c)
@@ -421,6 +464,34 @@ void privateMsgCallback(const json& body)
     }
 
     mirai::sendMsgRespStr(m, resp);
+}
+
+
+void MemberMuteEvent(const json& req)
+{
+    if (req.contains("durationSeconds"))
+    {
+        int64_t durationSec = req.at("durationSeconds");
+        auto [groupid, qqid] = mirai::parseIdFromGroupEvent(req);
+        if (groupid != 0 && qqid != 0)
+        {
+            smokeTimeMgr.add(qqid, groupid, durationSec);
+        }
+    }
+}
+
+void MemberUnmuteEvent(const json& req)
+{
+    auto [groupid, qqid] = mirai::parseIdFromGroupEvent(req);
+    if (groupid != 0 && qqid != 0)
+    {
+        smokeTimeMgr.remove(qqid, groupid);
+    }
+}
+
+bool isSmoking(int64_t qqid, int64_t groupid)
+{
+    return smokeTimeMgr.isSmoking(qqid, groupid);
 }
 
 }
