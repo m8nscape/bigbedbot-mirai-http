@@ -513,7 +513,7 @@ std::string MENU(::int64_t group, ::int64_t qq, std::vector<std::string> args)
     size_t i = range_min;
     for (auto &row : list)
     {
-        ret << std::any_cast<int64_t>(row[0]) << ": " << std::any_cast<std::string>(row[1]);
+        ret << i << ": " << std::any_cast<std::string>(row[1]);
         if (i++ != range_max) ret << '\n';
     }
 
