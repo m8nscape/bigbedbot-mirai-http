@@ -137,6 +137,9 @@ Self-explanatory. 开一个[箱子](https://docs.qq.com/sheet/DU05RYmhVd2xCWExM?
 
 Changelog
 ===============
+20210910
+- Add: 响应mirai事件：添加好友、禁言、解除禁言、新成员加群、成员被踢出群、成员退群、成员修改群名片
+
 20210826
 - Mod: 抽卡世界线震动排除前20%概率事件
 
