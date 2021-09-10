@@ -48,9 +48,7 @@ void peeLoadFromDb()
         p4 = std::any_cast<int64_t>(row[4]);
         plist[qq] = { qq, p1, p2, p3, p4 };
     }
-    char msg[128];
-    sprintf(msg, "added %lu users", plist.size());
-    addLogDebug("pee", msg);
+    addLogDebug("pee", "added %lu users", plist.size());
 }
 
 pdata::resultStamina pdata::getStamina(bool extra) const

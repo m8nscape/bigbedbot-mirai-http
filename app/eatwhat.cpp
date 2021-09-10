@@ -649,9 +649,7 @@ void foodLoadListFromDb()
         foodIdList.push_back(id);
         foodIdMax = std::max(foodIdMax, id);
     }
-    char msg[128];
-    sprintf(msg, "added %lu foods", list.size());
-    addLogDebug("eat", msg);
+    addLogDebug("eat", "added %lu foods", list.size());
 }
 
 

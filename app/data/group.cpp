@@ -47,9 +47,7 @@ void LoadListFromDb()
 
         groups[g.group_id] = g;
     }
-    char msg[128];
-    sprintf(msg, "added %lu groups", groups.size());
-    addLogDebug("grp", msg);
+    addLogDebug("grp", "added %lu groups", groups.size());
 
     // update for new table
     for (const auto& g: groups)
@@ -59,9 +57,7 @@ void LoadListFromDb()
         auto ret = db.exec(query1, { id });
         if (ret != SQLITE_OK)
         {
-            char buf[128];
-            sprintf(buf, "insert group summary error: id=%ld", id);
-            addLog(LOG_ERROR, "grp", buf);
+            addLog(LOG_ERROR, "grp", "insert group summary error: id=%ld", id);
         }
     }
 
@@ -105,9 +101,7 @@ WHERE id=?", {
 });
     if (ret != SQLITE_OK)
     {
-        char buf[64];
-        sprintf(buf, "update summary error: id=%ld", group_id);
-        addLog(LOG_ERROR, "grp", buf);
+        addLog(LOG_ERROR, "grp", "update summary error: id=%ld", group_id);
     }
 }
 
@@ -122,9 +116,7 @@ void Group::setFlag(int64_t mask, bool set)
     auto ret = db.exec(query, { flags, group_id });
     if (ret != SQLITE_OK)
     {
-        char buf[64];
-        sprintf(buf, "update flag error: id=%ld, flags=%ld", group_id, flags);
-        addLog(LOG_ERROR, "grp", buf);
+        addLog(LOG_ERROR, "grp", "update flag error: id=%ld, flags=%ld", group_id, flags);
     }
 }
 
@@ -135,16 +127,12 @@ bool Group::getFlag(int64_t mask)
 
 void Group::updateMembers()
 {
-    char buf[64];
-    sprintf(buf, "updating members for group %ld", group_id);
-    addLog(LOG_INFO, "grp", buf);
+    addLog(LOG_INFO, "grp", "updating members for group %ld", group_id);
 
     auto members_tmp = mirai::getGroupMemberList(group_id);
     if (members_tmp.empty())
     {
-        char buf[64];
-        sprintf(buf, "updating members for group %ld error", group_id);
-        addLog(LOG_ERROR, "grp", buf);
+        addLog(LOG_ERROR, "grp", "updating members for group %ld error", group_id);
         return;
     }
 
@@ -152,8 +140,7 @@ void Group::updateMembers()
     for (const auto& m: members_tmp)
         members[m.qqid] = m;
 
-    sprintf(buf, "updated %lu members", members.size());
-    addLog(LOG_INFO, "grp", buf);
+    addLog(LOG_INFO, "grp", "updated %lu members", members.size());
 }
 
 bool Group::haveMember(int64_t qq) const
@@ -202,18 +189,14 @@ int newGroupIfNotExist(int64_t id)
         auto ret = db.exec(query, { id, 0 });
         if (ret != SQLITE_OK)
         {
-            char buf[128];
-            sprintf(buf, "insert group error: id=%ld", id);
-            addLog(LOG_ERROR, "grp", buf);
+            addLog(LOG_ERROR, "grp", "insert group error: id=%ld", id);
         }
         
         const char query1[] = "INSERT INTO grpsum(id) VALUES (?)";
         ret = db.exec(query1, { id });
         if (ret != SQLITE_OK)
         {
-            char buf[128];
-            sprintf(buf, "insert group summary error: id=%ld", id);
-            addLog(LOG_ERROR, "grp", buf);
+            addLog(LOG_ERROR, "grp", "insert group summary error: id=%ld", id);
         }
         
         addTimedEventEveryMin(std::bind(&grp::Group::SaveSumIntoDb, groups[id]));
@@ -441,9 +424,7 @@ void MemberJoinEvent(const json& req)
 
         grp::groups[groupid].members[g.qqid] = g;
 
-        char buf[64];
-        sprintf(buf, "added member %lu to group %lu", g.qqid, groupid);
-        addLog(LOG_INFO, "grp", buf);
+        addLog(LOG_INFO, "grp", "added member %lu to group %lu", g.qqid, groupid);
     }
 }
 
@@ -457,9 +438,7 @@ void MemberLeaveEventKick(const json& req)
         if (g.find(qqid) != g.end())
         {
             g.erase(qqid);
-            char buf[64];
-            sprintf(buf, "removed member %lu from group %lu", qqid, groupid);
-            addLog(LOG_INFO, "grp", buf);
+            addLog(LOG_INFO, "grp", "removed member %lu from group %lu", qqid, groupid);
         }
     }
 }
@@ -482,9 +461,7 @@ void MemberCardChangeEvent(const json& req)
             if (g.find(qqid) != g.end())
             {
                 g[qqid].nameCard = current;
-                char buf[64];
-                sprintf(buf, "modified member card %lu in group %lu to %s", qqid, groupid, current.c_str());
-                addLog(LOG_INFO, "grp", buf);
+                addLog(LOG_INFO, "grp", "modified member card %lu in group %lu to %s", qqid, groupid, current.c_str());
             }
         }
 

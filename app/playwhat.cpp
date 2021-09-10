@@ -403,9 +403,7 @@ void updateSteamGameList()
 		case 0:
 			games.games.clear();
 			games = std::move(gamestmp);
-			char msg[128];
-			sprintf_s(msg, "added %u games", games.games.size());
-			addLogDebug("play", msg);
+			addLogDebug("play", "added %u games", games.games.size());
 			break;
 
 		case 2:

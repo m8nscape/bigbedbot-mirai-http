@@ -39,9 +39,7 @@ std::vector<std::vector<std::any>> SQLite::query(const char* zsql, size_t retSiz
         }   
         ++idx;
     }
-    char msg[128];
-    sprintf(msg, "query result: %lu rows", ret.size());
-    addLogDebug(logGrp, msg);
+    addLogDebug(logGrp, "query result: %lu rows", ret.size());
     sqlite3_finalize(stmt);
     return ret;
 }
@@ -87,9 +85,7 @@ std::vector<std::vector<std::any>> SQLite::query(const char* zsql, size_t retSiz
         }
         ++idx;
     }
-    char msg[128];
-    sprintf(msg, "query result: %lu rows", ret.size());
-    addLogDebug(logGrp, msg);
+    addLogDebug(logGrp, "query result: %lu rows", ret.size());
     sqlite3_finalize(stmt);
     return ret;
 }
@@ -103,9 +99,7 @@ int SQLite::exec(const char* zsql)
 		return ret;
 	if ((ret = sqlite3_step(stmt)) != SQLITE_OK && ret != SQLITE_ROW && ret != SQLITE_DONE)
 	{
-		char msg[1024];
-		sprintf(msg, "%s %s: %s", "exec", zsql, errmsg());
-		addLog(LOG_ERROR, logGrp, msg);
+		addLog(LOG_ERROR, logGrp, "%s %s: %s", "exec", zsql, errmsg());
 	}
 	sqlite3_finalize(stmt);
 	return SQLITE_OK;
@@ -133,9 +127,7 @@ int SQLite::exec(const char* zsql, std::initializer_list<std::any> args)
 
     if ((ret = sqlite3_step(stmt)) != SQLITE_OK && ret != SQLITE_ROW && ret != SQLITE_DONE)
     {
-        char msg[1024];
-        sprintf(msg, "%s %s: %s", "exec", zsql, errmsg());
-        addLog(LOG_ERROR, logGrp, msg);
+        addLog(LOG_ERROR, logGrp, "%s %s: %s", "exec", zsql, errmsg());
     }
     return sqlite3_finalize(stmt);
 }
@@ -154,9 +146,7 @@ void SQLite::transactionStart()
     int ret;
     if ((ret = sqlite3_step(stmt)) != SQLITE_OK && ret != SQLITE_ROW && ret != SQLITE_DONE)
     {
-        char msg[256];
-        sprintf(msg, "%s: %s", "transactionStart", errmsg());
-        addLog(LOG_ERROR, logGrp, msg);
+        addLog(LOG_ERROR, logGrp, "%s: %s", "transactionStart", errmsg());
     }
     else
     {
@@ -178,9 +168,7 @@ void SQLite::transactionStop()
     int ret;
     if ((ret = sqlite3_step(stmt)) != SQLITE_OK && ret != SQLITE_ROW && ret != SQLITE_DONE)
     {
-        char msg[256];
-        sprintf(msg, "%s: %s", "transactionEnd", errmsg());
-        addLog(LOG_ERROR, logGrp, msg);
+        addLog(LOG_ERROR, logGrp, "%s: %s", "transactionEnd", errmsg());
     }
     else
     {
