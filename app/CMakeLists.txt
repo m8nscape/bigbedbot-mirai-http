@@ -11,6 +11,7 @@ add_library(app STATIC
     monopoly.cpp monopoly.h
     weather.cpp weather.h
     gambol.cpp gambol.h
+    apievent.cpp apievent.h
 )
 set_target_properties(app PROPERTIES
     CXX_STANDARD 17)

@@ -98,6 +98,10 @@ int init_app_and_start()
     grp::init();
     addTimedEventEveryMin(std::bind(&SQLite::commit, &grp::db, true));
     mirai::regEventProc(mirai::RecvMsgType::GroupMessage, {"GroupMessage", grp::msgDispatcher});
+    mirai::regEventProc(mirai::RecvMsgType::MemberJoinEvent, {"grp::MemberJoinEvent", grp::MemberJoinEvent});
+    mirai::regEventProc(mirai::RecvMsgType::MemberLeaveEventKick, {"grp::MemberLeaveEventKick", grp::MemberLeaveEventKick});
+    mirai::regEventProc(mirai::RecvMsgType::MemberLeaveEventQuit, {"grp::MemberLeaveEventQuit", grp::MemberLeaveEventQuit});
+    mirai::regEventProc(mirai::RecvMsgType::MemberCardChangeEvent, {"grp::MemberCardChangeEvent", grp::MemberCardChangeEvent});
     // 每分钟保存群统计
     for (auto it = grp::groups.begin(); it != grp::groups.end(); ++it)
         addTimedEventEveryMin(std::bind(&grp::Group::SaveSumIntoDb, &it->second));

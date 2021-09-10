@@ -26,6 +26,9 @@ int sendGroupMsg(int64_t groupid, const json& messageChain, int64_t quotemsgid =
 int recallMsg(int64_t msgid);
 int mute(int64_t qqid, int64_t groupid, int time_sec);
 inline int unmute(int64_t qqid, int64_t groupid) { return mute(qqid, groupid, 0); }
+int respNewFriendRequestEvent(const json& req, int operation, const std::string& message = "");
+int respMemberJoinRequestEvent(const json& req, int operation, const std::string& message = "");
+int respBotInvitedJoinGroupRequestEvent(const json& req, int operation, const std::string& message = "");
 
 // RECV
 using nlohmann::json;
@@ -67,6 +70,7 @@ enum class RecvMsgType
     NewFriendRequestEvent,
     MemberJoinRequestEvent,
     BotInvitedJoinGroupRequestEvent,
+    NudgeEvent,
 };
 
 const std::map<std::string, RecvMsgType> RecvMsgTypeMap
@@ -104,6 +108,7 @@ const std::map<std::string, RecvMsgType> RecvMsgTypeMap
     { "NewFriendRequestEvent", RecvMsgType::NewFriendRequestEvent },
     { "MemberJoinRequestEvent", RecvMsgType::MemberJoinRequestEvent },
     { "BotInvitedJoinGroupRequestEvent", RecvMsgType::BotInvitedJoinGroupRequestEvent },
+    { "NudgeEvent", RecvMsgType::NudgeEvent },
 };
 
 int regEventProc(RecvMsgType evt, MessageProc cb);

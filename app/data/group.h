@@ -74,6 +74,10 @@ struct command
 
 int newGroupIfNotExist(int64_t id);
 void msgDispatcher(const json& body);
+void MemberJoinEvent(const json& req);
+void MemberLeaveEventKick(const json& req);
+void MemberLeaveEventQuit(const json& req);
+void MemberCardChangeEvent(const json& req);
 
 void broadcastMsg(const char* msg, int64_t flags = -1);
 

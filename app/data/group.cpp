@@ -417,6 +417,80 @@ void msgDispatcher(const json& body)
     }
 }
 
+void MemberJoinEvent(const json& req)
+{
+    auto [groupid, qqid] = mirai::parseIdFromGroupEvent(req);
+    if (groupid != 0 && qqid != 0)
+    {
+        const auto& m = req.at("member");
+        mirai::group_member_info g;
+        if (m.contains("id"))
+            g.qqid = m.at("id");
+        if (m.contains("memberName"))
+            g.nameCard = m.at("memberName");
+        if (m.contains("permission"))
+        {
+            const auto& p = m.at("permission");
+            if (p == "ADMINISTRATOR") 
+                g.permission = mirai::group_member_permission::ADMINISTRATOR;
+            else if (p == "OWNER") 
+                g.permission = mirai::group_member_permission::OWNER;
+            else 
+                g.permission = mirai::group_member_permission::MEMBER;
+        }
+
+        grp::groups[groupid].members[g.qqid] = g;
+
+        char buf[64];
+        sprintf(buf, "added member %lu to group %lu", g.qqid, groupid);
+        addLog(LOG_INFO, "grp", buf);
+    }
+}
+
+void MemberLeaveEventKick(const json& req)
+{
+    auto [groupid, qqid] = mirai::parseIdFromGroupEvent(req);
+    if (groupid != 0 && qqid != 0)
+    {
+        const auto& m = req.at("member");
+        auto& g = grp::groups[groupid].members;
+        if (g.find(qqid) != g.end())
+        {
+            g.erase(qqid);
+            char buf[64];
+            sprintf(buf, "removed member %lu from group %lu", qqid, groupid);
+            addLog(LOG_INFO, "grp", buf);
+        }
+    }
+}
+
+void MemberLeaveEventQuit(const json& req)
+{
+    MemberLeaveEventKick(req);
+}
+
+void MemberCardChangeEvent(const json& req)
+{
+    auto [groupid, qqid] = mirai::parseIdFromGroupEvent(req);
+    if (groupid != 0 && qqid != 0)
+    {
+        const auto& m = req.at("member");
+        if (req.contains("current"))
+        {
+            std::string current = req.at("current");
+            auto& g = grp::groups[groupid].members;
+            if (g.find(qqid) != g.end())
+            {
+                g[qqid].nameCard = current;
+                char buf[64];
+                sprintf(buf, "modified member card %lu in group %lu to %s", qqid, groupid, current.c_str());
+                addLog(LOG_INFO, "grp", buf);
+            }
+        }
+
+    }
+}
+
 void broadcastMsg(const char* msg, int64_t flag)
 {
     for (auto& [id, g] : grp::groups)
