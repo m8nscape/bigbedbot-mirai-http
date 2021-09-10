@@ -10,6 +10,9 @@ port: 23456
 # use_ws: 使用websocket获取事件、消息等
 use_ws: true
 
+# log_level: 日志等级  0:ERROR / 1:WARN / 2:INFO / 3:DEBUG
+log_level: 2
+
 # qq: 机器人qq号，必须是mirai已登录的账号
 qq: 1234567890
 

@@ -74,10 +74,12 @@ int config()
     botLoginQQId = cfg["qq"].as<int64_t>();
     rootQQId = cfg["qq_root"].as<int64_t>();
     useWebsocket = cfg["use_ws"].as<bool>();
+    gLogLevel = cfg["log_level"].as<int>();
 #else
     botLoginQQId = 888888;
     rootQQId = 12345678;
     useWebsocket = false;
+    gLogLevel = LOG_DEBUG;
 #endif
     return 0;
 }

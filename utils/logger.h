@@ -24,15 +24,20 @@ enum class BashColors: unsigned
     Gray
 };
 
-const BashColors LOG_ERROR = BashColors::Red;
-const BashColors LOG_WARNING = BashColors::Yellow;
-const BashColors LOG_INFO = BashColors::None;
-const BashColors LOG_DEBUG = BashColors::Cyan;
+enum LogLevel: unsigned
+{
+    LOG_ERROR = 0,
+    LOG_WARNING,
+    LOG_INFO,
+    LOG_DEBUG,
+    LOG_VERBOSE,
+};
+inline int gLogLevel = LOG_INFO;
 
-void addLog(BashColors c, const char* tag, const char* fmt, ...);
+void addLog(LogLevel c, const char* tag, const char* fmt, ...);
 
-#ifdef NDEBUG
-#define addLogDebug(tag, fmt, ...)
-#else
+// #ifdef NDEBUG
+// #define addLogDebug(tag, fmt, ...)
+// #else
 #define addLogDebug(tag, fmt, ...) addLog(LOG_DEBUG, tag, fmt, ##__VA_ARGS__)
-#endif
+// #endif
