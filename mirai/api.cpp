@@ -389,17 +389,17 @@ int sendEventResp(const std::string& path, const json& req, int operation, const
 int respNewFriendRequestEvent(const json& req, int operation, const std::string& message)
 {
     addLogDebug("api", "Send resp_newFriendRequestEvent: %d", operation);
-    return sendEventResp("resp_newFriendRequestEvent", req, operation, message);
+    return sendEventResp("/resp/newFriendRequestEvent", req, operation, message);
 }
 int respMemberJoinRequestEvent(const json& req, int operation, const std::string& message)
 {
     addLogDebug("api", "Send resp_memberJoinRequestEvent: %d", operation);
-    return sendEventResp("resp_memberJoinRequestEvent", req, operation, message);
+    return sendEventResp("/resp/memberJoinRequestEvent", req, operation, message);
 }
 int respBotInvitedJoinGroupRequestEvent(const json& req, int operation, const std::string& message)
 {
     addLogDebug("api", "Send resp_botInvitedJoinGroupRequestEvent: %d", operation);
-    return sendEventResp("resp_botInvitedJoinGroupRequestEvent", req, operation, message);
+    return sendEventResp("/resp/botInvitedJoinGroupRequestEvent", req, operation, message);
 }
 
 group_member_info getGroupMemberInfo(int64_t groupid, int64_t qqid)

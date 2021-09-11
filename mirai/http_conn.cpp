@@ -89,6 +89,8 @@ public:
         this->target = "POST "s + target;
         this->body = body;
 
+        addLogDebug("http", "POST %s", target);
+
         // Set up an HTTP POST request message
         req_.version(version);
         req_.method(http::verb::post);
@@ -102,6 +104,7 @@ public:
             req_.set(http::field::content_type, "application/json;charset=UTF-8");
             req_.set(http::field::content_length, std::to_string(b.length()));
             req_.body() = b;
+            addLogDebug("http", "Req: %s", req_.body().c_str());
         }
 
         // Look up the domain name
@@ -190,8 +193,10 @@ public:
             return;
         }
 
+        addLogDebug("http", "Resp: %s", res_.body().c_str());
+
         // callback
-        callback(target.c_str(), body, json::parse(res_.body()));
+        callback(target.c_str(), body, res_.body().empty() ? json() : json::parse(res_.body()));
 
         // Gracefully close the socket
         socket_.shutdown(tcp::socket::shutdown_both, ec);
