@@ -15,7 +15,7 @@ void NewFriendRequestEvent(const json& req)
     if (reqQQId == rootQQId || 
         (grp::groups.find(reqGroupId) != grp::groups.end() && user::plist.find(reqQQId) != user::plist.end()))
     {
-        mirai::respNewFriendRequestEvent(req, 0,);
+        mirai::respNewFriendRequestEvent(req, 0);
         // TODO help message?
     }
     else if (rootQQId > 0)
