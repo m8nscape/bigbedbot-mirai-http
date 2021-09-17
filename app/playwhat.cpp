@@ -349,7 +349,7 @@ int SteamAppListParser::proc_PAIR_FINISH()
         if (isGame)
         {
             games.push_back(std::move(g));
-            addLogDebug("play", "added %d: %s", g.appid, g.name);
+            addLog(LOG_VERBOSE, "play", "added %d: %s", g.appid, g.name);
         }
 
         appid_buf = 0;
