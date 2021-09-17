@@ -12,6 +12,7 @@ add_library(app STATIC
     weather.cpp weather.h
     gambol.cpp gambol.h
     apievent.cpp apievent.h
+    playwhat.cpp playwhat.h
 )
 set_target_properties(app PROPERTIES
     CXX_STANDARD 17)

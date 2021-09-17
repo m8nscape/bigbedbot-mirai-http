@@ -1,4 +1,7 @@
 #pragma once
+#include <string>
+#include <vector>
+#include <nlohmann/json.hpp>
 
 namespace playwhat
 {
@@ -21,9 +24,9 @@ private:
     } stat = Estat::IDLE;
     int brace_counter = 0;
 
-    char* c_pointer = NULL;
-    char key[256];
-    char value[256];
+    const char* c_pointer = NULL;
+    char key[512];
+    char value[512];
     char* kp = key;
     char* vp = value;
 
@@ -38,7 +41,7 @@ public:
     bool available = false;
 
 public:	
-    int parse(char* s);
+    int parse(const char* s);
     int proc_IDLE();
     int proc_KEY_LEFT();
     int proc_KEY_QUOTE();
@@ -52,5 +55,7 @@ public:
 };
 
 void updateSteamGameList();
-    
+
+using nlohmann::json;
+void msgCallback(const json& body);
 }

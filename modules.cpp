@@ -12,6 +12,7 @@
 #include "app/weather.h"
 #include "app/gambol.h"
 #include "app/apievent.h"
+#include "app/playwhat.h"
 
 #include "time_evt.h"
 
@@ -44,6 +45,10 @@ void init_modules()
 
     // app: weather
     weather::init("./config/weather.yaml");
+
+    // app: playwhat
+    playwhat::updateSteamGameList();
+    addTimedEvent(playwhat::updateSteamGameList, 0, 0);
 
     // announce startup
     //std::string boot_info = help::boot_info();
@@ -118,6 +123,8 @@ void add_msg_callbacks()
     mirai::regEventProc(evt::GroupMessage, {"weather::msgCallback", weather::msgCallback});
 
     mirai::regEventProc(evt::GroupMessage, {"gambol::msgDispatcher", gambol::msgDispatcher});
+    
+    mirai::regEventProc(evt::GroupMessage, {"playwhat::msgDispatcher", playwhat::msgCallback});
 }
 
 }
