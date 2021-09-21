@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "playwhat.h"
+#include "data/group.h"
 
 #include <curl/curl.h>
 #include <fstream>
@@ -487,12 +488,15 @@ json STEAM_RANDOM(::int64_t group, ::int64_t qq)
 
 void msgCallback(const json& body)
 {
+    auto m = mirai::parseMsgMetadata(body);
+    if (!grp::groups[m.groupid].getFlag(grp::Group::MASK_PLAYWHAT))
+        return;
+
     auto query = mirai::messageChainToStr(body);
     if (query.empty()) return;
 
     if (query == "玩什么" || query == "玩什麽")
     {
-        auto m = mirai::parseMsgMetadata(body);
         mirai::sendGroupMsg(m.groupid, STEAM_RANDOM(m.groupid, m.qqid));
     }
 }

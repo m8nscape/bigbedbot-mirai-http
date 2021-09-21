@@ -42,6 +42,7 @@ public:
     static const int64_t MASK_EVENT_CASE = 1 << 6;
     static const int64_t MASK_DAILYP = 1 << 7;
     static const int64_t MASK_BOOT_ANNOUNCE = 1 << 8;
+    static const int64_t MASK_PLAYWHAT = 1 << 9;
     void setFlag(int64_t mask, bool set = true);
     bool getFlag(int64_t mask);
 
