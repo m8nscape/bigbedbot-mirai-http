@@ -125,6 +125,14 @@ bool Group::getFlag(int64_t mask)
     return (mask == -1) || ((flags & mask) == mask);
 }
 
+bool Group::getFlag(int64_t groupid, int64_t mask)
+{
+    if (groups.find(groupid) != groups.end())
+        return groups[groupid].getFlag(mask);
+    else
+        return false;
+}
+
 void Group::updateMembers()
 {
     addLog(LOG_INFO, "grp", "updating members for group %ld", group_id);

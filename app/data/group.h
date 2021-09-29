@@ -49,6 +49,7 @@ public:
 
     void setFlag(int64_t mask, bool set = true);
     bool getFlag(int64_t mask);
+    static bool getFlag(int64_t groupid, int64_t mask);
 
 public:
     void updateMembers();

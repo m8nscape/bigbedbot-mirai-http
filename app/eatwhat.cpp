@@ -9,98 +9,122 @@
 
 namespace eatwhat {
 
-const int64_t GROUP_ID_SHARED = 100;
-std::map<int64_t, unsigned> foodCount;
-std::map<int64_t, unsigned> drinkCount;
+const int64_t GROUP_ID_ALL = 0;
+const int64_t GROUP_ID_OLD = 100;
 
-std::string getFoodTableName(int64_t groupid)
+std::string genSqlWhereGroupWithFlag(int64_t groupid)
 {
-    using namespace std::string_literals;
-    if (groupid == GROUP_ID_SHARED) 
-        return "food";
-    else 
-        return "food_"s + std::to_string(groupid);
+    char buf[64] = {0};
+    if (groupid == GROUP_ID_ALL || grp::Group::getFlag(groupid, grp::MASK_EAT_USE_UNIVERSE)) 
+        ;//sprintf(buf, "");
+    else if (grp::Group::getFlag(groupid, grp::MASK_EAT_USE_OLD))
+        sprintf(buf, "WHERE grp=%ld OR grp=%ld", GROUP_ID_OLD, groupid);
+    else
+        sprintf(buf, "WHERE grp=%ld", groupid);
+    return buf;
 }
-std::string getDrinkTableName(int64_t groupid)
+std::string genSqlWhereGroup(int64_t groupid)
 {
-    using namespace std::string_literals;
-    if (groupid == GROUP_ID_SHARED) 
-        return "drink";
-    else 
-        return "drink_"s + std::to_string(groupid);
+    char buf[64] = {0};
+    if (groupid == GROUP_ID_ALL) 
+        ;//sprintf(buf, "");
+    else
+        sprintf(buf, "WHERE grp=%ld", groupid);
+    return buf;
+}
+std::string genSqlWhereNameGroup(int64_t groupid)
+{
+    char buf[80] = {0};
+    if (groupid == GROUP_ID_ALL) 
+        sprintf(buf, "WHERE name=?");
+    else
+        sprintf(buf, "WHERE name=? AND grp=%ld", groupid);
+    return buf;
 }
 
 std::string food::to_string(int64_t group)
 {
-    std::string qqname = "隔壁群友";
-    if (group != 0 && offererType == food::QQ && offerer.qq != 0)
-    {
-        if (grp::groups.find(group) != grp::groups.end())
-        {
-            if (grp::groups[group].haveMember(offerer.qq))
-                qqname = grp::groups[group].members[offerer.qq].nameCard;
-        }
-        else
-        {
-            auto minfo = mirai::getGroupMemberInfo(group, offerer.qq);
-            qqname = minfo.nameCard;
-        }
-    }
-
     std::stringstream ss;
     ss << name;
-    switch (offererType)
+    if (offererType == food::NAME)
     {
-    case food::NAME:  ss << " (" << offerer.name << "提供)"; break;
-    case food::QQ:    ss << " (" << qqname << "提供)"; break;
-    default: break;
+        ss << " (" << offerer.name << "提供)";
+        return ss.str();
     }
+    else if (offererType == food::ANONYMOUS)
+    {
+        return ss.str();
+    }
+    else if (offererType == food::QQ)
+    {
+        std::string qqname;
+        if (offerer.qq != 0)
+        {
+            if (grp::groups.find(group) != grp::groups.end())
+            {
+                if (grp::groups[group].haveMember(offerer.qq))
+                    qqname = grp::groups[group].members[offerer.qq].nameCard;
+                else if (groupid == GROUP_ID_OLD)
+                {
+                    qqname = "隔壁群友";
+                }
+                else if (groupid != 0)
+                {
+                    std::stringstream ssqqname;
+                    ssqqname << groupid << "群友";
+                    qqname = ssqqname.str();
+                }
+            }
+            else
+            {
+                auto minfo = mirai::getGroupMemberInfo(group, offerer.qq);
+                qqname = minfo.nameCard;
+            }
+        }
+        else
+            qqname = "隔壁群友";
 
-    //std::stringstream ssd;
-    //ssd << offererType << ": " << name << " | " << offerer.name << " | " << offerer.qq;
-    //addLogDebug("eat", ssd.str().c_str());
-    return ss.str();
+        ss << " (" << qqname << "提供)";
+        return ss.str();
+    }
+    else
+    {
+        ss << "food offerer type error " << (int)offererType;
+        throw std::out_of_range(ss.str());
+    }
 }
 
-inline int addFood(food& f, int64_t groupid = GROUP_ID_SHARED)
+inline int addFood(food& f, int64_t groupid)
 {
     // insert into db
     char query[80] = {0};
-    sprintf(query, "INSERT INTO %s(name, adder, qq) VALUES (?,?,?)", getFoodTableName(groupid).c_str());
+    sprintf(query, "INSERT INTO food(name, adder, qq, grp) VALUES (?,?,?,?)");
     int ret;
     switch (f.offererType)
     {
-    case food::NAME:        ret = db.exec(query, { f.name, f.offerer.name, nullptr });  break;
-    case food::QQ:          ret = db.exec(query, { f.name, nullptr, f.offerer.qq });    break;
-    case food::ANONYMOUS:   ret = db.exec(query, { f.name, nullptr, nullptr });         break;
+    case food::NAME:        ret = db.exec(query, { f.name, f.offerer.name, nullptr, groupid });  break;
+    case food::QQ:          ret = db.exec(query, { f.name, nullptr, f.offerer.qq, groupid });    break;
+    case food::ANONYMOUS:   ret = db.exec(query, { f.name, nullptr, nullptr, groupid });         break;
     default: break;
     }
-    if (ret != SQLITE_OK)
+    if (ret == SQLITE_OK)
+    {
+        addLog(LOG_INFO, "eat", "Added food %s", f.name.c_str());
+        return 0;
+    }
+    else
     {
         addLog(LOG_WARNING, "eat", "Adding food %s failed (%s)", f.name.c_str(), db.errmsg());
         return 1;
     }
-
-    foodCount[groupid]++;
-    addLog(LOG_INFO, "eat", "Added food %s", f.name.c_str());
-    return 0;
 }
 
-int getFood(food& f, int64_t groupid = GROUP_ID_SHARED)
+int getFood(food& f, int64_t groupid)
 {
-    // decide which list to get from
-    if (groupid != GROUP_ID_SHARED)
-    {
-        int64_t countShared = foodCount[GROUP_ID_SHARED];
-        int64_t countGroup = foodCount[groupid];
-        if (randInt(0, countShared + countGroup) < countShared)
-            groupid = GROUP_ID_SHARED;
-    }
-
     // get from db
     char query[80] = {0};
-    sprintf(query, "SELECT * FROM %s ORDER BY RANDOM() limit 1", getFoodTableName(groupid).c_str());
-    auto list = db.query(query, 4);
+    sprintf(query, "SELECT * FROM food %s ORDER BY RANDOM() limit 1", genSqlWhereGroupWithFlag(groupid).c_str());
+    auto list = db.query(query, 5);
     if (list.empty()) return 1;
     else
     {
@@ -119,6 +143,7 @@ int getFood(food& f, int64_t groupid = GROUP_ID_SHARED)
         }
         else
             f.offererType = f.ANONYMOUS;
+        f.groupid = std::any_cast<int64_t>(row[4]);
     }
 
     return 0;
@@ -131,51 +156,32 @@ int getFood(food& f, int64_t groupid = GROUP_ID_SHARED)
     // return 0;
 }
 
-int getFood10(food(&f)[10], int64_t groupid = GROUP_ID_SHARED)
+int getFood10(food(&f)[10], int64_t groupid)
 {
-    // decide which list to get from
-    int countShared = 10;
-    if (groupid != GROUP_ID_SHARED)
-    {
-        int64_t countShared = foodCount[GROUP_ID_SHARED];
-        int64_t countGroup = foodCount[groupid];
-        for (int i = 0; i < 10; ++i)
-            if (randInt(0, countShared + countGroup) >= countShared)
-                countShared--;
-    }
-    std::string tableShared = getFoodTableName(GROUP_ID_SHARED);
-    std::string tableGroup = getFoodTableName(groupid);
-
     // get from db
     size_t idx = 0;
-    auto getFromDB = [&idx, &f](std::string& tableName, int count)
+    char query[80] = {0};
+    sprintf(query, "SELECT * FROM food %s ORDER BY RANDOM() limit ?", genSqlWhereGroupWithFlag(groupid).c_str());
+    auto list = db.query(query, 5, {10});
+    for (auto &row : list)
     {
-        char query[80] = {0};
-        sprintf(query, "SELECT * FROM %s ORDER BY RANDOM() limit ?", tableName.c_str());
-        auto list = db.query(query, 4, {count});
-        for (auto &row : list)
+        f[idx].name = std::any_cast<std::string>(row[1]);
+        if (row[2].has_value())
         {
-            f[idx].name = std::any_cast<std::string>(row[1]);
-            if (row[2].has_value())
-            {
-                f[idx].offererType = f[idx].NAME;
-                f[idx].offerer.name = std::any_cast<std::string>(row[2]);
-            }
-            else if (row[3].has_value())
-            {
-                f[idx].offererType = f[idx].QQ;
-                f[idx].offerer.qq = std::any_cast<int64_t>(row[3]);
-            }
-            else
-                f[idx].offererType = f[idx].ANONYMOUS;
-
-            idx++;
+            f[idx].offererType = f[idx].NAME;
+            f[idx].offerer.name = std::any_cast<std::string>(row[2]);
         }
-        return list.size();
-    };
-    getFromDB(tableShared, countShared);
-    if (countShared < 10) 
-        getFromDB(tableGroup, 10 - countShared);
+        else if (row[3].has_value())
+        {
+            f[idx].offererType = f[idx].QQ;
+            f[idx].offerer.qq = std::any_cast<int64_t>(row[3]);
+        }
+        else
+            f[idx].offererType = f[idx].ANONYMOUS;
+        f[idx].groupid = std::any_cast<int64_t>(row[4]);
+
+        idx++;
+    }
 
     return idx;
 
@@ -191,20 +197,21 @@ int getFood10(food(&f)[10], int64_t groupid = GROUP_ID_SHARED)
 }
 
 
-int delFood(const std::string& name, int64_t groupid = GROUP_ID_SHARED)
+int delFood(const std::string& name, int64_t groupid)
 {
-    std::string tableName = getFoodTableName(groupid);
-
     // del from db
+    char query[80] = {0};
+    sprintf(query, "DELETE FROM food %s", genSqlWhereNameGroup(groupid).c_str());
+    int ret = db.exec(query, { name });
+    if (ret == SQLITE_OK)
     {
-        char query[80] = {0};
-        sprintf(query, "DELETE FROM %s WHERE name=?", tableName.c_str());
-        int ret = db.exec(query, { name });
-        if (ret != SQLITE_OK)
-        {
-            addLog(LOG_ERROR, "eat", "Deleting food %s failed (%s)", name.c_str(), db.errmsg());
-            return 1;
-        }
+        addLog(LOG_INFO, "eat", "Deleted food %s from group %ld", name.c_str(), groupid);
+        return 0;
+    }
+    else
+    {
+        addLog(LOG_ERROR, "eat", "Deleting food %s failed (%s)", name.c_str(), db.errmsg());
+        return 1;
     }
 
     // del from cached list
@@ -221,26 +228,26 @@ int delFood(const std::string& name, int64_t groupid = GROUP_ID_SHARED)
     //         ++it;
     //     }
     // }
-
-    addLog(LOG_INFO, "eat", "Deleted food %s from group %ld", name.c_str(), groupid);
-    return 0;
 }
 
 // idx starts from 1
-inline int64_t getFoodCount(const std::string& name = "", int64_t groupid = GROUP_ID_SHARED)
+inline int64_t getFoodCount(const std::string& name = "", int64_t groupid = GROUP_ID_ALL)
 {
     auto getCount = [](const std::string& name, int64_t groupid) -> int64_t
     {
         if (!name.empty())
         {
             char query[80] = {0};
-            sprintf(query, "SELECT COUNT(*) FROM %s WHERE name=?", getFoodTableName(groupid).c_str());
+            sprintf(query, "SELECT COUNT(*) FROM food %s", genSqlWhereNameGroup(groupid).c_str());
             auto list = db.query(query, 1, { name });
             return list.empty()? 0 : std::any_cast<int64_t>(list[0][0]);
         }
         else
         {
-            return foodCount[groupid];
+            char query[80] = {0};
+            sprintf(query, "SELECT COUNT(*) FROM food %s", genSqlWhereGroup(groupid).c_str());
+            auto list = db.query(query, 1);
+            return list.empty()? 0 : std::any_cast<int64_t>(list[0][0]);
         }
     };
     //return (groupid == 0 ? 0 : getCount(name, 0)) + getCount(name, groupid);
@@ -252,10 +259,10 @@ inline int64_t getFoodCount(int64_t groupid)
     return getFoodCount("", groupid);
 }
 
-inline int addDrink(drink& d, int64_t groupid = GROUP_ID_SHARED)
+inline int addDrink(drink& d, int64_t groupid)
 {
     char query[80] = {0};
-    sprintf(query, "INSERT INTO %s(name, qq, grp) VALUES (?,?,?)", getDrinkTableName(groupid).c_str());
+    sprintf(query, "INSERT INTO drink(name, qq, grp) VALUES (?,?,?)");
     int ret;
     ret = db.exec(query, { d.name, d.qq, d.group });
     if (ret != SQLITE_OK)
@@ -265,24 +272,14 @@ inline int addDrink(drink& d, int64_t groupid = GROUP_ID_SHARED)
     }
 
     //foodList.push_back(f);
-    drinkCount[groupid]++;
     addLog(LOG_INFO, "eat", "Added drink %s", d.name.c_str());
     return 0;
 }
 
-int getDrink(drink& f, int64_t groupid = GROUP_ID_SHARED)
+int getDrink(drink& f, int64_t groupid)
 {
-    // decide which list to get from
-    if (groupid != GROUP_ID_SHARED)
-    {
-        int64_t countShared = foodCount[GROUP_ID_SHARED];
-        int64_t countGroup = foodCount[groupid];
-        if (randInt(0, countShared + countGroup) < countShared)
-            groupid = GROUP_ID_SHARED;
-    }
-
     char query[80] = {0};
-    sprintf(query, "SELECT id,name,qq FROM %s ORDER BY RANDOM() limit 1", getDrinkTableName(groupid).c_str());
+    sprintf(query, "SELECT id,name,qq FROM drink %s ORDER BY RANDOM() limit 1", genSqlWhereGroupWithFlag(groupid).c_str());
     auto list = db.query(query, 4);
     if (list.empty()) return 1;
     else
@@ -300,7 +297,7 @@ int getDrink(drink& f, int64_t groupid = GROUP_ID_SHARED)
 int delDrink(const std::string& name, int64_t groupid)
 {
     char query[80] = {0};
-    sprintf(query, "DELETE FROM %s WHERE name=?", getDrinkTableName(groupid).c_str());
+    sprintf(query, "DELETE FROM drink %s", genSqlWhereNameGroup(groupid).c_str());
     int ret = db.exec(query, { name });
     if (ret != SQLITE_OK)
     {
@@ -312,20 +309,23 @@ int delDrink(const std::string& name, int64_t groupid)
 }
 
 // idx starts from 1
-inline int64_t getDrinkCount(const std::string& name = "", int64_t groupid = GROUP_ID_SHARED)
+inline int64_t getDrinkCount(const std::string& name = "", int64_t groupid = GROUP_ID_ALL)
 {
-    auto getCount = [](const std::string& name = "", int64_t groupid = GROUP_ID_SHARED) -> int64_t
+    auto getCount = [](const std::string& name, int64_t groupid) -> int64_t
     {
         if (!name.empty())
         {
             char query[80] = {0};
-            sprintf(query, "SELECT COUNT(*) FROM %s WHERE name=?", getDrinkTableName(groupid).c_str());
+            sprintf(query, "SELECT COUNT(*) FROM drink %s", genSqlWhereNameGroup(groupid).c_str());
             auto list = db.query(query, 1, { name });
             return list.empty()? 0 : std::any_cast<int64_t>(list[0][0]);
         }
         else
         {
-            return drinkCount[groupid];
+            char query[80] = {0};
+            sprintf(query, "SELECT COUNT(*) FROM drink %s", genSqlWhereGroup(groupid).c_str());
+            auto list = db.query(query, 1);
+            return list.empty()? 0 : std::any_cast<int64_t>(list[0][0]);
         }
     };
     //return (groupid == 0 ? 0 : getCount(name, 0)) + getCount(name, groupid);
@@ -336,13 +336,52 @@ inline int64_t getDrinkCount(int64_t groupid)
     return getDrinkCount("", groupid);
 }
 
+bool hasFood(int64_t group)
+{
+    if (getFoodCount(group) == 0)
+    {
+        if (grp::Group::getFlag(group, grp::MASK_EAT_USE_UNIVERSE))
+        {
+            if (getFoodCount(GROUP_ID_ALL) == 0) return false;
+        }
+        else if (grp::Group::getFlag(group, grp::MASK_EAT_USE_OLD))
+        {
+            if (getFoodCount(GROUP_ID_OLD) == 0) return false;
+        }
+        else
+        {
+            return false;
+        }
+    }
+    return true;
+}
+bool hasDrink(int64_t group)
+{
+    if (getDrinkCount(group) == 0)
+    {
+        if (grp::Group::getFlag(group, grp::MASK_EAT_USE_UNIVERSE))
+        {
+            if (getDrinkCount(GROUP_ID_ALL) == 0) return false;
+        }
+        else if (grp::Group::getFlag(group, grp::MASK_EAT_USE_OLD))
+        {
+            if (getDrinkCount(GROUP_ID_OLD) == 0) return false;
+        }
+        else
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 
 const json ret_none = MSG_LINE("無");
 
 json EATWHAT(::int64_t group, ::int64_t qq, std::vector<std::string> args)
 {
-    if (getFoodCount(group) == 0 && getFoodCount(GROUP_ID_SHARED) == 0) return ret_none;
+    if (!hasFood(group)) return ret_none;
 
     food f;
     getFood(f, group);
@@ -357,7 +396,7 @@ json EATWHAT(::int64_t group, ::int64_t qq, std::vector<std::string> args)
 
 json DRINKWHAT(::int64_t group, ::int64_t qq, std::vector<std::string> args)
 {
-    if (getDrinkCount(group) == 0 && getDrinkCount(GROUP_ID_SHARED) == 0) return ret_none;
+    if (!hasDrink(group)) return ret_none;
 
     drink d;
     getDrink(d, group);
@@ -372,7 +411,7 @@ json DRINKWHAT(::int64_t group, ::int64_t qq, std::vector<std::string> args)
 
 json EATWHAT10(::int64_t group, ::int64_t qq, std::vector<std::string> args)
 {
-    if (getFoodCount(group) == 0 && getFoodCount(GROUP_ID_SHARED) == 0) return ret_none;
+    if (!hasFood(group)) return ret_none;
 
     json resp = mirai::MSG_TEMPLATE;
     json& r = resp["messageChain"];
@@ -430,7 +469,9 @@ std::string ADDFOOD(::int64_t group, ::int64_t qq, const std::string& r)
     }
 
     // check repeat
-    if (getFoodCount(r, group) > 0 || getFoodCount(r, GROUP_ID_SHARED) > 0)
+    if ((grp::Group::getFlag(group, grp::MASK_EAT_USE_UNIVERSE) && getFoodCount(r, GROUP_ID_ALL) > 0) ||
+        (grp::Group::getFlag(group, grp::MASK_EAT_USE_OLD) && getFoodCount(r, GROUP_ID_OLD) > 0) || 
+        getFoodCount(r, group) > 0)
         return r + "已经有了！！！";
 
     food f;
@@ -453,13 +494,25 @@ std::string DELFOOD(::int64_t group, ::int64_t qq, const std::string& r)
 
     if (r.empty()) return "空气不能吃的";
 
-    int64_t count = getFoodCount(r, group) + getFoodCount(r, GROUP_ID_SHARED);
 
-    std::stringstream ss;
-    if (count)
+    int64_t count = 0;
+    if (grp::Group::getFlag(group, grp::MASK_EAT_USE_UNIVERSE) && (count = getFoodCount(r, GROUP_ID_ALL)) > 0)
+    {
+        delFood(r, GROUP_ID_ALL);
+    }
+    else if (grp::Group::getFlag(group, grp::MASK_EAT_USE_OLD) && (count = getFoodCount(r, GROUP_ID_OLD)) > 0)
+    {
+        delFood(r, GROUP_ID_OLD);
+        delFood(r, group);
+    }
+    else if ((count = getDrinkCount(r, group)) > 0)
     {
         delFood(r, group);
-        delFood(r, GROUP_ID_SHARED);
+    }
+
+    std::stringstream ss;
+    if (count > 0)
+    {
         ss << "已删除" << count << "条" << r;
     }
     else
@@ -488,7 +541,9 @@ std::string ADDDRINK(::int64_t group, ::int64_t qq, const std::string& r)
     }
 
     // check repeat
-    if (getDrinkCount(r, group) > 0 || getDrinkCount(r, GROUP_ID_SHARED) > 0)
+    if ((grp::Group::getFlag(group, grp::MASK_EAT_USE_UNIVERSE) && getDrinkCount(r, GROUP_ID_ALL) > 0) ||
+        (grp::Group::getFlag(group, grp::MASK_EAT_USE_OLD) && getDrinkCount(r, GROUP_ID_OLD) > 0) || 
+        getDrinkCount(r, group) > 0)
         return r + "已经有了！！！";
 
     drink d;
@@ -511,15 +566,30 @@ std::string DELDRINK(::int64_t group, ::int64_t qq, const std::string& r)
 
     if (r.empty()) return "空气不能喝的";
         
-    int64_t count = getDrinkCount(r, group) + getDrinkCount(r, GROUP_ID_SHARED);
-    if (count)
+    int64_t count = 0;
+    if (grp::Group::getFlag(group, grp::MASK_EAT_USE_UNIVERSE) && (count = getDrinkCount(r, GROUP_ID_ALL)) > 0)
+    {
+        delDrink(r, GROUP_ID_ALL);
+    }
+    else if (grp::Group::getFlag(group, grp::MASK_EAT_USE_OLD) && (count = getDrinkCount(r, GROUP_ID_OLD)) > 0)
+    {
+        delDrink(r, GROUP_ID_OLD);
+        delDrink(r, group);
+    }
+    else if ((count = getDrinkCount(r, group)) > 0)
     {
         delDrink(r, group);
-        delDrink(r, GROUP_ID_SHARED);
     }
 
     std::stringstream ss;
-    ss << "已删除" << count << "条" << r;
+    if (count > 0)
+    {
+        ss << "已删除" << count << "条" << r;
+    }
+    else
+    {
+        ss << "没有";
+    }
     return ss.str();
 }
 
@@ -530,8 +600,20 @@ std::string MENU(::int64_t group, ::int64_t qq, std::vector<std::string> args)
 #else
     const int64_t MENU_ENTRY_COUNT = 5;
 #endif
-    int64_t count = getFoodCount(group) + getFoodCount(GROUP_ID_SHARED);
-    if (count == 0) return "无";
+    if (!hasFood(group)) return "无";
+
+    int64_t count = 0;
+    if (grp::Group::getFlag(group, grp::MASK_EAT_USE_UNIVERSE))
+    {
+        count = getFoodCount(GROUP_ID_ALL);
+    }
+    else
+    {
+        count = getFoodCount(group);
+
+        if (grp::Group::getFlag(group, grp::MASK_EAT_USE_OLD))
+            count += getFoodCount(GROUP_ID_OLD);
+    }
 
     // defuault: last MENU_ENTRY_COUNT entries
     int64_t range_mid = count - 1;
@@ -558,31 +640,17 @@ std::string MENU(::int64_t group, ::int64_t qq, std::vector<std::string> args)
     }
 
     char query[80] = {0};
-    sprintf(query, "SELECT * FROM %s LIMIT ? OFFSET ?", getFoodTableName(GROUP_ID_SHARED).c_str());
+    sprintf(query, "SELECT * FROM food %s LIMIT ? OFFSET ?", genSqlWhereGroupWithFlag(group).c_str());
     auto list = db.query(query, 4, {MENU_ENTRY_COUNT, range_min});
-    size_t countShared = list.size();
+
     std::stringstream ret;
     int i = range_min;
-
     for (auto &row : list) 
     {
         ret << i << ": " << std::any_cast<std::string>(row[1]);
         if (i++ < range_max) ret << '\n';
     }
 
-    if (group != GROUP_ID_SHARED && countShared < MENU_ENTRY_COUNT)
-    {
-        int64_t countGroup = MENU_ENTRY_COUNT - countShared;
-        int64_t offsetGroup = range_min + countShared - foodCount[GROUP_ID_SHARED];
-        sprintf(query, "SELECT * FROM %s LIMIT ? OFFSET ?", getFoodTableName(group).c_str());
-        auto list = db.query(query, 4, {countGroup, offsetGroup});
-        for (auto &row : list) 
-        {
-            ret << i << ": " << std::any_cast<std::string>(row[1]);
-            if (i++ < range_max) ret << '\n';
-        }
-    }
-    
     return ret.str();
 }
 
@@ -678,40 +746,44 @@ void msgDispatcher(const json& body)
 
 void init()
 {
-    foodCreateTable(GROUP_ID_SHARED);
-    foodLoadListFromDb(GROUP_ID_SHARED);
-    drinkCreateTable(GROUP_ID_SHARED);
-    drinkLoadListFromDb(GROUP_ID_SHARED);
+    foodCreateTable();
+    foodLoadListFromDb();
+    drinkCreateTable();
+    drinkLoadListFromDb();
+}
 
-    for (const auto& [groupid, grp]: grp::groups)
+void foodCreateTable()
+{
+    char query[256] = {0};
+    sprintf(query, 
+        "CREATE TABLE IF NOT EXISTS food( "
+            "id    INTEGER PRIMARY KEY AUTOINCREMENT, "
+            "name  TEXT    NOT NULL, "
+            "adder TEXT, "
+            "qq    INTEGER, "
+            "grp   INTEGER "
+        ")");
+    if (db.exec(query) != SQLITE_OK)
+        addLog(LOG_ERROR, "eat", db.errmsg());
+
+    sprintf(query, "SELECT name from sqlite_master where name='food' and sql like '%%grp%%'");
+    auto list = db.query(query, 1);
+    if (list.empty())
     {
-        foodCreateTable(groupid);
-        foodLoadListFromDb(groupid);
-        drinkCreateTable(groupid);
-        drinkLoadListFromDb(groupid);
+        sprintf(query, "ALTER TABLE food ADD COLUMN grp INTEGER");
+        if (db.exec(query) != SQLITE_OK)
+            addLog(LOG_ERROR, "eat", db.errmsg());
+        
+        sprintf(query, "UPDATE food SET grp=? WHERE grp IS NULL");
+        if (db.exec(query, {GROUP_ID_OLD}) != SQLITE_OK)
+            addLog(LOG_ERROR, "eat", db.errmsg());
     }
 }
 
-void foodCreateTable(int64_t groupid)
+void foodLoadListFromDb()
 {
-    std::string tableName = getFoodTableName(groupid);
-    char query[256] = {0};
-    sprintf(query, 
-        "CREATE TABLE IF NOT EXISTS %s( \
-            id    INTEGER PRIMARY KEY AUTOINCREMENT, \
-            name  TEXT    NOT NULL,       \
-            adder TEXT,                   \
-            qq    INTEGER                 \
-         )", tableName.c_str());
-    if (db.exec(query) != SQLITE_OK)
-        addLog(LOG_ERROR, "eat", db.errmsg());
-}
-
-void foodLoadListFromDb(int64_t groupid)
-{
-    std::string tableName = getFoodTableName(groupid);
     char query[80] = {0};
-    sprintf(query, "SELECT * FROM %s", tableName.c_str());
+    sprintf(query, "SELECT * FROM food");
     auto list = db.query(query, 4);
     for (auto& row : list)
     {
@@ -733,35 +805,35 @@ void foodLoadListFromDb(int64_t groupid)
         else
             f.offererType = f.ANONYMOUS;
     }
-    foodCount[groupid] = list.size();
-    addLogDebug("eat", "added %u foods for group %ld", foodCount[groupid], groupid);
+    addLogDebug("eat", "added %lu foods", list.size());
 }
 
 
-void drinkCreateTable(int64_t groupid)
+void drinkCreateTable()
 {
     char query[256] = {0};
     sprintf(query, 
-    "CREATE TABLE IF NOT EXISTS %s( \
-            id    INTEGER PRIMARY KEY AUTOINCREMENT, \
-            name  TEXT    NOT NULL,        \
-            qq    INTEGER                  \
-         )", getDrinkTableName(groupid).c_str());
+        "CREATE TABLE IF NOT EXISTS drink( "
+            "id    INTEGER PRIMARY KEY AUTOINCREMENT, "
+            "name  TEXT    NOT NULL, "
+            "qq    INTEGER, "
+            "grp   INTEGER "
+        ")");
     if (db.exec(query) != SQLITE_OK)
         addLog(LOG_ERROR, "drink", db.errmsg());
 }
 
-void drinkLoadListFromDb(int64_t groupid)
+void drinkLoadListFromDb()
 {
     // char query[80] = {0};
     // sprintf(query, "SELECT * FROM %s", tableName.c_str());
     // auto list = db.query(query, 4);
     // drinkCount[groupid] = list.size();
     char query[80] = {0};
-    sprintf(query, "SELECT COUNT(*) FROM %s", getDrinkTableName(groupid).c_str());
+    sprintf(query, "SELECT COUNT(*) FROM drink");
     auto list = db.query(query, 1);
-    drinkCount[groupid] = list.empty()? 0 : std::any_cast<int64_t>(list[0][0]);
-    addLogDebug("eat", "added %u drinks for group %ld", drinkCount[groupid], groupid);
+    int64_t drinkCountTotal = list.empty()? 0 : std::any_cast<int64_t>(list[0][0]);
+    addLogDebug("eat", "added %ld drinks", drinkCountTotal);
 }
 
 }
