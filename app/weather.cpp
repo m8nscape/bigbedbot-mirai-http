@@ -97,11 +97,15 @@ namespace weathercn
 int TIMEOUT_SEC = 5;
 SQLite db("weathercn_city.db", "weather");
 
-std::string getCityId(const std::string& name)
+std::vector<std::string> getCityId(const std::string& name)
 {
+    // I would like to use LIKE phrase but SQL injection should be considered
     auto ret = db.query("select id from cityid where name=?", 1, { name });
-    if (ret.empty()) return "";
-    return std::any_cast<std::string>(ret[0][0]);
+    if (ret.empty()) return {};
+    std::vector<std::string> idList;
+    for (auto& r: ret)
+        idList.push_back(std::any_cast<std::string>(r[0]));
+    return idList;
 }
 
 // https://www.sojson.com/blog/305.html
@@ -251,110 +255,117 @@ void weather_cn(const mirai::MsgMetadata& m, const std::string& name)
 {
     using namespace weathercn;
 
-    auto id = getCityId(name);
-    if (id.empty())
+    auto idList = getCityId(name);
+    if (idList.empty())
     {
         mirai::sendMsgRespStr(m, "未找到城市对应的ID");
         return;
     }
-
-    // get data from buffer if not expired
-    time_t time_req = time(NULL);
-    std::string buf;
-    if (api_buf.find(id) != api_buf.end())
+    for (const auto& id: idList)
     {
-        auto [time_buf, data] = api_buf.at(id);
-        if (time_req - time_buf < BUF_VALID_DURATION)
+        // get data from buffer if not expired
+        time_t time_req = time(NULL);
+        std::string buf;
+        if (api_buf.find(id) != api_buf.end())
         {
-            mirai::sendMsgRespStr(m, data.c_str());
-            return;
+            auto [time_buf, data] = api_buf.at(id);
+            if (time_req - time_buf < BUF_VALID_DURATION)
+            {
+                mirai::sendMsgRespStr(m, data.c_str());
+                return;
+            }
+        }
+        
+        auto url = getReqUrl(id);
+        if (CURLE_OK != curl_get(url, buf, TIMEOUT_SEC))
+        {
+            //mirai::sendMsgRespStr(m, buf);
+            addLog(LOG_WARNING, "weather", "CURL ERROR: %s", url.c_str());
+            continue;
+        }
+        
+        // data is not started with '{', likely 302
+        if (!buf.empty() && buf[0] != '{')
+        {
+            addLog(LOG_WARNING, "weather", "Response json parsing error. Body: \n%s", buf.c_str());
+            //mirai::sendMsgRespStr(m, "数据返回格式错误");
+            continue;
+        }
+
+        // parse data
+        nlohmann::json json = nlohmann::json::parse(buf);
+        //addLog(LOG_INFO, "weather", buf.c_str());
+        try
+        {
+            if (json.contains("cityInfo"))
+            {
+                int ibuf;
+                double dbuf;
+                char buf[16];
+                std::vector<std::string> args;
+
+                args.push_back(json["cityInfo"]["parent"]);
+                args.push_back(json["cityInfo"]["city"]);
+                args.push_back(json["data"]["wendu"]);
+                args.push_back(json["data"]["shidu"]);
+
+                dbuf = json["data"]["pm25"];
+                snprintf(buf, sizeof(buf)-1, "%.1f", dbuf);
+                args.push_back(buf);
+
+                dbuf = json["data"]["pm10"];
+                snprintf(buf, sizeof(buf)-1, "%.1f", dbuf);
+                args.push_back(buf);
+
+                args.push_back(json["data"]["forecast"][0]["type"]);
+                args.push_back(json["data"]["forecast"][0]["low"]);
+                args.push_back(json["data"]["forecast"][0]["high"]);
+
+                ibuf = json["data"]["forecast"][0]["aqi"];
+                snprintf(buf, sizeof(buf)-1, "%d", ibuf);
+                args.push_back(buf);
+
+                std::stringstream ss;
+                ss << args[0] << " " << args[1] << " " << args[6] << std::endl <<
+                    "温度：" << args[2] << "℃（" << args[7] << "，" << args[8] << "） " << std::endl <<
+                    "湿度：" << args[3] << std::endl <<
+                    "PM2.5: " << args[4] << std::endl << 
+                    "PM10: " << args[5] << std::endl << 
+                    "AQI: " << args[9];
+
+                int aqi = atoi(args[9].c_str());
+                if (0 <= aqi && aqi <= 50)
+                    ss << " 一级（优）";
+                else if (51 <= aqi && aqi <= 100)
+                    ss << " 二级（良）";
+                else if (101 <= aqi && aqi <= 150)
+                    ss << " 三级（轻度污染）";
+                else if (151 <= aqi && aqi <= 200)
+                    ss << " 四级（中度污染）";
+                else if (201 <= aqi && aqi <= 300)
+                    ss << " 五级（重度污染）";
+                else if (301 <= aqi)
+                    ss << " 六级（严重污染）";
+                else
+                    ss << " undefined（？）";
+
+                mirai::sendMsgRespStr(m, ss.str().c_str());
+                
+                // save to buffer
+                api_buf[id] = {time_req, ss.str()};
+                return;
+            }
+            else throw std::exception();
+        }
+        catch (...)
+        {
+            addLog(LOG_WARNING, "weather", "Response parsing error. Body: \n%s", json.dump().c_str());
+            //mirai::sendMsgRespStr(m, "天气解析失败");
         }
     }
-    
-    auto url = getReqUrl(id);
-    if (CURLE_OK != curl_get(url, buf, TIMEOUT_SEC))
-    {
-        mirai::sendMsgRespStr(m, buf);
-        return;
-    }
-    
-    // data is not started with '{', likely 302
-    if (!buf.empty() && buf[0] != '{')
-    {
-        addLog(LOG_WARNING, "weather", "Response json parsing error. Body: \n%s", buf.c_str());
-        mirai::sendMsgRespStr(m, "数据返回格式错误");
-        return;
-    }
 
-    // parse data
-    nlohmann::json json = nlohmann::json::parse(buf);
-    //addLog(LOG_INFO, "weather", buf.c_str());
-    try
-    {
-        if (json.contains("cityInfo"))
-        {
-            int ibuf;
-            double dbuf;
-            char buf[16];
-            std::vector<std::string> args;
-
-            args.push_back(json["cityInfo"]["parent"]);
-            args.push_back(json["cityInfo"]["city"]);
-            args.push_back(json["data"]["wendu"]);
-            args.push_back(json["data"]["shidu"]);
-
-            dbuf = json["data"]["pm25"];
-            snprintf(buf, sizeof(buf)-1, "%.1f", dbuf);
-            args.push_back(buf);
-
-            dbuf = json["data"]["pm10"];
-            snprintf(buf, sizeof(buf)-1, "%.1f", dbuf);
-            args.push_back(buf);
-
-            args.push_back(json["data"]["forecast"][0]["type"]);
-            args.push_back(json["data"]["forecast"][0]["low"]);
-            args.push_back(json["data"]["forecast"][0]["high"]);
-
-            ibuf = json["data"]["forecast"][0]["aqi"];
-            snprintf(buf, sizeof(buf)-1, "%d", ibuf);
-            args.push_back(buf);
-
-            std::stringstream ss;
-            ss << args[0] << " " << args[1] << " " << args[6] << std::endl <<
-                "温度：" << args[2] << "℃（" << args[7] << "，" << args[8] << "） " << std::endl <<
-                "湿度：" << args[3] << std::endl <<
-                "PM2.5: " << args[4] << std::endl << 
-                "PM10: " << args[5] << std::endl << 
-                "AQI: " << args[9];
-
-            int aqi = atoi(args[9].c_str());
-            if (0 <= aqi && aqi <= 50)
-                ss << " 一级（优）";
-            else if (51 <= aqi && aqi <= 100)
-                ss << " 二级（良）";
-            else if (101 <= aqi && aqi <= 150)
-                ss << " 三级（轻度污染）";
-            else if (151 <= aqi && aqi <= 200)
-                ss << " 四级（中度污染）";
-            else if (201 <= aqi && aqi <= 300)
-                ss << " 五级（重度污染）";
-            else if (301 <= aqi)
-                ss << " 六级（严重污染）";
-            else
-                ss << " undefined（？）";
-
-            mirai::sendMsgRespStr(m, ss.str().c_str());
-            
-            // save to buffer
-            api_buf[id] = {time_req, ss.str()};
-        }
-        else throw std::exception();
-    }
-    catch (...)
-    {
-        addLog(LOG_WARNING, "weather", "Response parsing error. Body: \n%s", json.dump().c_str());
-        mirai::sendMsgRespStr(m, "天气解析失败");
-    }
+    addLog(LOG_WARNING, "weather", "No valid request for %s", name.c_str());
+    mirai::sendMsgRespStr(m, "天气解析失败");
 }
 
 int init(const char* yaml)
