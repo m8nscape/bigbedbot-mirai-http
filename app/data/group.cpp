@@ -204,61 +204,55 @@ int newGroupIfNotExist(int64_t id)
     return 0;
 }
 
+const std::map<int64_t, std::pair<std::set<std::string>, std::string>> flagMap = 
+{
+    std::make_pair(MASK_P, 
+        std::make_pair(std::set<std::string>{"批"}, "批")),
+    std::make_pair(MASK_EAT, 
+        std::make_pair(std::set<std::string>{"吃什么"}, "吃什么")),
+    std::make_pair(MASK_GAMBOL, 
+        std::make_pair(std::set<std::string>{"翻批", "摇号"}, "翻批/摇号")),
+    std::make_pair(MASK_MONOPOLY, 
+        std::make_pair(std::set<std::string>{"抽卡"}, "抽卡")),
+    std::make_pair(MASK_SMOKE, 
+        std::make_pair(std::set<std::string>{"禁烟"}, "禁烟")),
+    std::make_pair(MASK_CASE, 
+        std::make_pair(std::set<std::string>{"开箱"}, "开箱")),
+    std::make_pair(MASK_EVENT_CASE, 
+        std::make_pair(std::set<std::string>{"活动开箱"}, "活动开箱")),
+    std::make_pair(MASK_DAILYP, 
+        std::make_pair(std::set<std::string>{"每日批池", "领批"}, "每日批池")),
+    std::make_pair(MASK_BOOT_ANNOUNCE, 
+        std::make_pair(std::set<std::string>{"启动信息"}, "启动信息")),
+    std::make_pair(MASK_PLAYWHAT, 
+        std::make_pair(std::set<std::string>{"玩什么"}, "玩什么")),
+    std::make_pair(MASK_EAT_USE_OLD, 
+        std::make_pair(std::set<std::string>{"吃什么旧菜单"}, "吃什么旧菜单")),
+    std::make_pair(MASK_EAT_USE_UNIVERSE, 
+        std::make_pair(std::set<std::string>{"吃什么宇宙"}, "吃什么能返回所有群加的菜")),
+};
+
 std::string ENABLE(::int64_t group, ::int64_t qq, std::vector<std::string> args)
 {
     if (checkPermission(group, qq, mirai::group_member_permission::ADMINISTRATOR, true))
     {
         auto subcmd = args[0].substr(strlen("开启"));
         auto& g = groups[group];
-        if (subcmd == "批")
+        for (const auto& [mask, info]: flagMap)
         {
-            g.setFlag(Group::MASK_P);
-            return "本群已开启批";
-        }
-        else if (subcmd == "吃什么")
-        {
-            g.setFlag(Group::MASK_EAT);
-            return "本群已开启吃什么";
-        }
-        else if (subcmd == "玩什么")
-        {
-            g.setFlag(Group::MASK_PLAYWHAT);
-            return "本群已开启玩什么";
-        }
-        else if (subcmd == "翻批" || subcmd == "摇号")
-        {
-            g.setFlag(Group::MASK_GAMBOL, false);
-            return "本群已关闭翻批/摇号";
-        }
-        else if (subcmd == "抽卡")
-        {
-            g.setFlag(Group::MASK_MONOPOLY);
-            return "本群已开启抽卡";
-        }
-        else if (subcmd == "禁烟")
-        {
-            g.setFlag(Group::MASK_SMOKE);
-            return "本群已开启禁烟";
-        }
-        else if (subcmd == "开箱")
-        {
-            g.setFlag(Group::MASK_CASE);
-            return "本群已开启开箱";
-        }
-        else if (subcmd == "活动开箱")
-        {
-            g.setFlag(Group::MASK_EVENT_CASE);
-            return "本群已开启活动开箱";
-        }
-        else if (subcmd == "每日批池")
-        {
-            g.setFlag(Group::MASK_DAILYP);
-            return "本群已开启每日批池";
-        }
-        else if (subcmd == "启动信息")
-        {
-            g.setFlag(Group::MASK_BOOT_ANNOUNCE);
-            return "本群已开启启动信息";
+            const auto& [keywords, msg] = info;
+            if (keywords.find(subcmd) == keywords.end()) continue;
+
+            if (mask == MASK_GAMBOL)
+            {
+                g.setFlag(mask, false);
+                using namespace std::string_literals;
+                return "本群已关闭"s + msg;
+            }
+
+            g.setFlag(mask, true);
+            using namespace std::string_literals;
+            return "本群已开启"s + msg;
         }
     }
     //return "你开个锤子？";
@@ -271,55 +265,14 @@ std::string DISABLE(::int64_t group, ::int64_t qq, std::vector<std::string> args
     {
         auto subcmd = args[0].substr(strlen("关闭"));
         auto& g = groups[group];
-        if (subcmd == "批")
+        for (const auto& [mask, info]: flagMap)
         {
-            g.setFlag(Group::MASK_EAT, false);
-            return "本群已关闭批";
-        }
-        else if (subcmd == "吃什么")
-        {
-            g.setFlag(Group::MASK_EAT, false);
-            return "本群已关闭吃什么";
-        }
-        else if (subcmd == "玩什么")
-        {
-            g.setFlag(Group::MASK_PLAYWHAT, false);
-            return "本群已关闭玩什么";
-        }
-        else if (subcmd == "翻批" || subcmd == "摇号")
-        {
-            g.setFlag(Group::MASK_GAMBOL, false);
-            return "本群已关闭翻批/摇号";
-        }
-        else if (subcmd == "抽卡")
-        {
-            g.setFlag(Group::MASK_MONOPOLY, false);
-            return "本群已关闭抽卡";
-        }
-        else if (subcmd == "禁烟")
-        {
-            g.setFlag(Group::MASK_SMOKE, false);
-            return "本群已关闭禁烟";
-        }
-        else if (subcmd == "开箱")
-        {
-            g.setFlag(Group::MASK_CASE, false);
-            return "本群已关闭开箱";
-        }
-        else if (subcmd == "活动开箱")
-        {
-            g.setFlag(Group::MASK_EVENT_CASE, false);
-            return "本群已关闭活动开箱";
-        }
-        else if (subcmd == "每日批池")
-        {
-            g.setFlag(Group::MASK_DAILYP);
-            return "本群已关闭每日批池";
-        }
-        else if (subcmd == "启动信息")
-        {
-            g.setFlag(Group::MASK_BOOT_ANNOUNCE);
-            return "本群已关闭启动信息";
+            const auto& [keywords, msg] = info;
+            if (keywords.find(subcmd) == keywords.end()) continue;
+
+            g.setFlag(mask, false);
+            using namespace std::string_literals;
+            return "本群已关闭"s + msg;
         }
     }
     //return "你关个锤子？";
@@ -332,16 +285,16 @@ std::string QUERY_FLAGS(::int64_t group, ::int64_t qq, std::vector<std::string> 
     {
         auto& g = groups[group];
         std::stringstream ss;
-        ss << "批: " << (g.getFlag(Group::MASK_P) ? "Y" : "N") << std::endl;
-        ss << "吃什么: " << (g.getFlag(Group::MASK_EAT) ? "Y" : "N") << std::endl;
-        ss << "玩什么：" << (g.getFlag(Group::MASK_PLAYWHAT) ? "Y" : "N") << std::endl;
-        //ss << "翻批: " << (g.getFlag(Group::MASK_GAMBOL) ? "Y" : "N") << std::endl;
-        ss << "抽卡: " << (g.getFlag(Group::MASK_MONOPOLY) ? "Y" : "N") << std::endl;
-        ss << "禁烟: " << (g.getFlag(Group::MASK_SMOKE) ? "Y" : "N") << std::endl;
-        ss << "开箱: " << (g.getFlag(Group::MASK_CASE) ? "Y" : "N") << std::endl;
-        //ss << "活动开箱: " << (g.getFlag(Group::MASK_EVENT_CASE) ? "Y" : "N") << std::endl;
-        ss << "领批: " << (g.getFlag(Group::MASK_DAILYP) ? "Y" : "N") << std::endl;
-        ss << "启动公告: " << (g.getFlag(Group::MASK_BOOT_ANNOUNCE) ? "Y" : "N");
+        bool isFirst = true;
+        for (const auto& [mask, info]: flagMap)
+        {
+            if (mask == grp::MASK_GAMBOL) continue;
+            if (mask == grp::MASK_EVENT_CASE) continue;
+            const auto& [keywords, msg] = info;
+            if (!isFirst) ss << std::endl;
+            isFirst = false;
+            ss << *keywords.begin() << ": " << (g.getFlag(mask) ? "Y" : "N");
+        }
         return ss.str();
     }
     return "就你也想看权限？";
@@ -352,12 +305,19 @@ std::string SUMMARY(int64_t group, ::int64_t qq, std::vector<std::string>& args)
     auto& g = groups[group];
     std::stringstream ss;
     ss << "本群一共" << std::endl;
-    ss << "赚到 " << g.sum_earned << " 个批" << std::endl;
-    ss << "花出 " << g.sum_spent << " 个批" << std::endl;
-    ss << "开了 " << g.sum_case << " 个箱" << std::endl;
-    ss << "抽了 " << g.sum_card << " 张卡" << std::endl;
-    ss << "吃了 " << g.sum_eatwhat << " 次什么" << std::endl;
-    ss << "禁烟群友 " << g.sum_smoke << " 分钟" << std::endl;
+    if (g.getFlag(MASK_P))
+    {
+        ss << "赚到 " << g.sum_earned << " 个批" << std::endl;
+        ss << "花出 " << g.sum_spent << " 个批" << std::endl;
+        if (g.getFlag(MASK_CASE))
+            ss << "开了 " << g.sum_case << " 个箱" << std::endl;
+        if (g.getFlag(MASK_MONOPOLY))
+            ss << "抽了 " << g.sum_card << " 张卡" << std::endl;
+    }
+    if (g.getFlag(MASK_EAT))
+        ss << "吃了 " << g.sum_eatwhat << " 次什么" << std::endl;
+    if (g.getFlag(MASK_SMOKE))
+        ss << "禁烟群友 " << g.sum_smoke << " 分钟" << std::endl;
     switch (randInt(0, 3))
     {
         case 0: ss << "各位水友继续努力/cy"; break;

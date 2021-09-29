@@ -202,7 +202,7 @@ void startEvent()
         event_case_tm = getLocalTime(TIMEZONE_HR, TIMEZONE_MIN);
         std::stringstream ss;
         ss << "限时活动已开始，这次是<" << pool_draw.getType(type) << ">，每次收费" << pool_draw.getTypeCost(type) << "批，请群员踊跃参加";
-        broadcastMsg(ss.str().c_str(), grp::Group::MASK_MONOPOLY);
+        broadcastMsg(ss.str().c_str(), grp::MASK_MONOPOLY);
     }
     else
     {
@@ -218,7 +218,7 @@ void stopEvent()
         auto event_case_time = time(nullptr);
         event_case_end_tm = getLocalTime(TIMEZONE_HR, TIMEZONE_MIN);
 
-		broadcastMsg("限时活动已结束！", grp::Group::MASK_MONOPOLY);
+		broadcastMsg("限时活动已结束！"MASK_::MASK_MONOPOLY);
     }
     else
     {

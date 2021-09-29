@@ -17,6 +17,20 @@ using nlohmann::json;
 
 inline SQLite db("group.db", "group");
 void init();
+
+const int64_t MASK_P = 1 << 0;
+const int64_t MASK_EAT = 1 << 1;
+const int64_t MASK_GAMBOL = 1 << 2;
+const int64_t MASK_MONOPOLY = 1 << 3;
+const int64_t MASK_SMOKE = 1 << 4;
+const int64_t MASK_CASE = 1 << 5;
+const int64_t MASK_EVENT_CASE = 1 << 6;
+const int64_t MASK_DAILYP = 1 << 7;
+const int64_t MASK_BOOT_ANNOUNCE = 1 << 8;
+const int64_t MASK_PLAYWHAT = 1 << 9;
+const int64_t MASK_EAT_USE_OLD = 1 << 10;
+const int64_t MASK_EAT_USE_UNIVERSE = 1 << 11;
+
 class Group
 {
 public:
@@ -33,16 +47,6 @@ protected:
 public:
     std::map<int64_t, mirai::group_member_info> members{};
 
-    static const int64_t MASK_P = 1 << 0;
-    static const int64_t MASK_EAT = 1 << 1;
-    static const int64_t MASK_GAMBOL = 1 << 2;
-    static const int64_t MASK_MONOPOLY = 1 << 3;
-    static const int64_t MASK_SMOKE = 1 << 4;
-    static const int64_t MASK_CASE = 1 << 5;
-    static const int64_t MASK_EVENT_CASE = 1 << 6;
-    static const int64_t MASK_DAILYP = 1 << 7;
-    static const int64_t MASK_BOOT_ANNOUNCE = 1 << 8;
-    static const int64_t MASK_PLAYWHAT = 1 << 9;
     void setFlag(int64_t mask, bool set = true);
     bool getFlag(int64_t mask);
 

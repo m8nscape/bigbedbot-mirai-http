@@ -476,7 +476,7 @@ void msgCallback(const json& body)
 
     auto m = mirai::parseMsgMetadata(body);
 
-    if (!grp::groups[m.groupid].getFlag(grp::Group::MASK_P | grp::Group::MASK_MONOPOLY))
+    if (!grp::groups[m.groupid].getFlag(grp::MASK_P | grp::MASK_MONOPOLY))
         return;
 
     if (user::plist.find(m.qqid) == user::plist.end()) 
@@ -538,7 +538,7 @@ void choukasuoha(const json& body)
 
     auto m = mirai::parseMsgMetadata(body);
 
-    if (!grp::groups[m.groupid].getFlag(grp::Group::MASK_P | grp::Group::MASK_MONOPOLY))
+    if (!grp::groups[m.groupid].getFlag(grp::MASK_P | grp::MASK_MONOPOLY))
         return;
 
     if (user::plist.find(m.qqid) == user::plist.end()) 

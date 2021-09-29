@@ -323,7 +323,7 @@ json DRAW_P(int64_t qq, int64_t group)
     if (plist.find(qq) == plist.end()) 
         return std::move(not_registered(qq));
         
-    if (!grp::groups[group].getFlag(grp::Group::MASK_DAILYP))
+    if (!grp::groups[group].getFlag(grp::MASK_DAILYP))
         return std::move(no_dailyp_flag());
         
     auto &p = plist[qq];
@@ -395,7 +395,7 @@ void msgCallback(const json& body)
 
     auto m = mirai::parseMsgMetadata(body);
 
-    if (!grp::groups[m.groupid].getFlag(grp::Group::MASK_P))
+    if (!grp::groups[m.groupid].getFlag(grp::MASK_P))
         return;
 
     json resp;
@@ -483,7 +483,7 @@ void flushDailyTimep(bool autotriggered)
         "刷了"
     };
 
-    grp::broadcastMsg(msgMap[randInt(int(msgMap.size()) - 1)].c_str(), grp::Group::MASK_DAILYP);
+    grp::broadcastMsg(msgMap[randInt(int(msgMap.size()) - 1)].c_str(), grp::MASK_DAILYP);
     //CQ_addLog(ac, CQLOG_DEBUG, "pee", std::to_string(daily_refresh_time).c_str());
 }
 

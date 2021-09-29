@@ -50,7 +50,7 @@ void init_modules()
 
     // announce startup
     //std::string boot_info = help::boot_info();
-    //broadcastMsg(boot_info.c_str(), grp::Group::MASK_BOOT_ANNOUNCE);
+    //broadcastMsg(boot_info.c_str(), grp::MASK_BOOT_ANNOUNCE);
 
 }
 

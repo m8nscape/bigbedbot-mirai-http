@@ -59,7 +59,7 @@ void msgDispatcher(const json& body)
     if (query.length() > 32) return;
 
     auto mm = mirai::parseMsgMetadata(body);
-    if (!grp::groups[mm.groupid].getFlag(grp::Group::MASK_GAMBOL))
+    if (!grp::groups[mm.groupid].getFlag(grp::MASK_GAMBOL))
         return;
 
     // cmd:

@@ -489,7 +489,7 @@ json STEAM_RANDOM(::int64_t group, ::int64_t qq)
 void msgCallback(const json& body)
 {
     auto m = mirai::parseMsgMetadata(body);
-    if (!grp::groups[m.groupid].getFlag(grp::Group::MASK_PLAYWHAT))
+    if (!grp::groups[m.groupid].getFlag(grp::MASK_PLAYWHAT))
         return;
 
     auto query = mirai::messageChainToStr(body);

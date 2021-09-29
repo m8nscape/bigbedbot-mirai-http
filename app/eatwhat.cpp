@@ -636,7 +636,7 @@ void msgDispatcher(const json& body)
         return;
     }
 
-    if (!grp::groups[m.groupid].getFlag(grp::Group::MASK_EAT))
+    if (!grp::groups[m.groupid].getFlag(grp::MASK_EAT))
         return;
 
     switch (c)
