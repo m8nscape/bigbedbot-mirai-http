@@ -505,7 +505,7 @@ std::string DELFOOD(::int64_t group, ::int64_t qq, const std::string& r)
         delFood(r, GROUP_ID_OLD);
         delFood(r, group);
     }
-    else if ((count = getDrinkCount(r, group)) > 0)
+    else if ((count = getFoodCount(r, group)) > 0)
     {
         delFood(r, group);
     }
