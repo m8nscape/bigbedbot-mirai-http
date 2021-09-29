@@ -568,7 +568,7 @@ void roundEnd(int64_t group)
         if (b_3rd && bet.amount[P3rd]) reward_tmp += bet.amount[P3rd] * 3;
         if (reward_tmp)
         {
-            addLogDebug("duel", ("reward: "s + std::to_string(qq) + " " + std::to_string(reward_tmp)).c_str());
+            addLogDebug("duel", "reward: %ld %ld", qq, reward_tmp);
 			plist[qq].modifyCurrency(reward_tmp);
             grp::groups[group].sum_earned += reward_tmp;
             reward[qq] = reward_tmp;

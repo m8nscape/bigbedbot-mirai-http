@@ -26,8 +26,9 @@ struct food
     std::string to_string(int64_t group = 0);
 };
 //inline std::vector<food> foodList;
-void foodCreateTable();
-void foodLoadListFromDb();
+void init();
+void foodCreateTable(int64_t groupid);
+void foodLoadListFromDb(int64_t groupid);
 
 struct drink
 {
@@ -35,7 +36,8 @@ struct drink
 	int64_t qq;
 	int64_t group;
 };
-inline std::vector<drink> drinkList;
-void drinkCreateTable();
+//inline std::vector<drink> drinkList;
+void drinkCreateTable(int64_t groupid);
+void drinkLoadListFromDb(int64_t groupid);
 
 }

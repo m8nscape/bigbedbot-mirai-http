@@ -33,10 +33,8 @@ void init_modules()
     // event_case::init("./app/event_case_draw.yaml", "./app/eent_case_drop.yaml");
 
     // app: eat
-    eatwhat::foodCreateTable();
-    eatwhat::drinkCreateTable();
+    eatwhat::init();
     addTimedEventEveryMin(std::bind(&SQLite::commit, &eatwhat::db, true));
-    eatwhat::foodLoadListFromDb();
     //eat::updateSteamGameList();
     
     // app: monopoly

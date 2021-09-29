@@ -39,5 +39,5 @@ void addLog(LogLevel c, const char* tag, const char* fmt, ...);
 // #ifdef NDEBUG
 // #define addLogDebug(tag, fmt, ...)
 // #else
-#define addLogDebug(tag, fmt, ...) addLog(LOG_DEBUG, tag, fmt, ##__VA_ARGS__)
+#define addLogDebug(tag, fmt, ...) addLog(LOG_DEBUG, tag, "<%s> " fmt, __FUNCTION__, ##__VA_ARGS__)
 // #endif
