@@ -97,7 +97,7 @@ std::string food::to_string(int64_t group)
 inline int addFood(food& f, int64_t groupid)
 {
     // insert into db
-    char query[80] = {0};
+    char query[256] = {0};
     sprintf(query, "INSERT INTO food(name, adder, qq, grp) VALUES (?,?,?,?)");
     int ret;
     switch (f.offererType)
@@ -122,7 +122,7 @@ inline int addFood(food& f, int64_t groupid)
 int getFood(food& f, int64_t groupid)
 {
     // get from db
-    char query[80] = {0};
+    char query[256] = {0};
     sprintf(query, "SELECT * FROM food %s ORDER BY RANDOM() limit 1", genSqlWhereGroupWithFlag(groupid).c_str());
     auto list = db.query(query, 5);
     if (list.empty()) return 1;
@@ -160,7 +160,7 @@ int getFood10(food(&f)[10], int64_t groupid)
 {
     // get from db
     size_t idx = 0;
-    char query[80] = {0};
+    char query[256] = {0};
     sprintf(query, "SELECT * FROM food %s ORDER BY RANDOM() limit ?", genSqlWhereGroupWithFlag(groupid).c_str());
     auto list = db.query(query, 5, {10});
     for (auto &row : list)
@@ -200,7 +200,7 @@ int getFood10(food(&f)[10], int64_t groupid)
 int delFood(const std::string& name, int64_t groupid)
 {
     // del from db
-    char query[80] = {0};
+    char query[256] = {0};
     sprintf(query, "DELETE FROM food %s", genSqlWhereNameGroup(groupid).c_str());
     int ret = db.exec(query, { name });
     if (ret == SQLITE_OK)
@@ -237,14 +237,14 @@ inline int64_t getFoodCount(const std::string& name = "", int64_t groupid = GROU
     {
         if (!name.empty())
         {
-            char query[80] = {0};
+            char query[256] = {0};
             sprintf(query, "SELECT COUNT(*) FROM food %s", genSqlWhereNameGroup(groupid).c_str());
             auto list = db.query(query, 1, { name });
             return list.empty()? 0 : std::any_cast<int64_t>(list[0][0]);
         }
         else
         {
-            char query[80] = {0};
+            char query[256] = {0};
             sprintf(query, "SELECT COUNT(*) FROM food %s", genSqlWhereGroup(groupid).c_str());
             auto list = db.query(query, 1);
             return list.empty()? 0 : std::any_cast<int64_t>(list[0][0]);
@@ -261,7 +261,7 @@ inline int64_t getFoodCount(int64_t groupid)
 
 inline int addDrink(drink& d, int64_t groupid)
 {
-    char query[80] = {0};
+    char query[256] = {0};
     sprintf(query, "INSERT INTO drink(name, qq, grp) VALUES (?,?,?)");
     int ret;
     ret = db.exec(query, { d.name, d.qq, d.group });
@@ -278,8 +278,8 @@ inline int addDrink(drink& d, int64_t groupid)
 
 int getDrink(drink& f, int64_t groupid)
 {
-    char query[80] = {0};
-    sprintf(query, "SELECT id,name,qq FROM drink %s ORDER BY RANDOM() limit 1", genSqlWhereGroupWithFlag(groupid).c_str());
+    char query[256] = {0};
+    sprintf(query, "SELECT id,name,qq,grp FROM drink %s ORDER BY RANDOM() limit 1", genSqlWhereGroupWithFlag(groupid).c_str());
     auto list = db.query(query, 4);
     if (list.empty()) return 1;
     else
@@ -296,7 +296,7 @@ int getDrink(drink& f, int64_t groupid)
 
 int delDrink(const std::string& name, int64_t groupid)
 {
-    char query[80] = {0};
+    char query[256] = {0};
     sprintf(query, "DELETE FROM drink %s", genSqlWhereNameGroup(groupid).c_str());
     int ret = db.exec(query, { name });
     if (ret != SQLITE_OK)
@@ -315,14 +315,14 @@ inline int64_t getDrinkCount(const std::string& name = "", int64_t groupid = GRO
     {
         if (!name.empty())
         {
-            char query[80] = {0};
+            char query[256] = {0};
             sprintf(query, "SELECT COUNT(*) FROM drink %s", genSqlWhereNameGroup(groupid).c_str());
             auto list = db.query(query, 1, { name });
             return list.empty()? 0 : std::any_cast<int64_t>(list[0][0]);
         }
         else
         {
-            char query[80] = {0};
+            char query[256] = {0};
             sprintf(query, "SELECT COUNT(*) FROM drink %s", genSqlWhereGroup(groupid).c_str());
             auto list = db.query(query, 1);
             return list.empty()? 0 : std::any_cast<int64_t>(list[0][0]);
@@ -639,7 +639,7 @@ std::string MENU(::int64_t group, ::int64_t qq, std::vector<std::string> args)
         range_min = std::max(0L, range_max - MENU_ENTRY_COUNT + 1);
     }
 
-    char query[80] = {0};
+    char query[256] = {0};
     sprintf(query, "SELECT * FROM food %s LIMIT ? OFFSET ?", genSqlWhereGroupWithFlag(group).c_str());
     auto list = db.query(query, 4, {MENU_ENTRY_COUNT, range_min});
 
