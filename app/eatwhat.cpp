@@ -10,6 +10,8 @@
 
 namespace eatwhat {
 
+std::set<std::string> blacklist;
+
 const int64_t GROUP_ID_ALL = 0;
 const int64_t GROUP_ID_OLD = 100;
 
@@ -439,7 +441,11 @@ CheckFoodResult checkFood(const std::string& r)
     if (r.length() > 30)
         return CheckFoodResult::TOO_LONG;
         
-    //TODO filter
+    for (const std::string& keyword: blacklist)
+    {
+        if (r.find(keyword) != r.npos)
+            return CheckFoodResult::FILTERED;
+    }
 
     return CheckFoodResult::OK;
 }
@@ -463,6 +469,12 @@ std::string ADDFOOD(::int64_t group, ::int64_t qq, const std::string& r)
         (grp::Group::getFlag(group, grp::MASK_EAT_USE_OLD) && getFoodCount(r, GROUP_ID_OLD) > 0) || 
         getFoodCount(r, group) > 0)
         return r + "已经有了！！！";
+        
+    // check drink
+    if ((grp::Group::getFlag(group, grp::MASK_EAT_USE_UNIVERSE) && getDrinkCount(r, GROUP_ID_ALL) > 0) ||
+        (grp::Group::getFlag(group, grp::MASK_EAT_USE_OLD) && getDrinkCount(r, GROUP_ID_OLD) > 0) || 
+        getDrinkCount(r, group) > 0)
+        return r + "已经是一种饮料";
 
     food f;
     f.name = r;
@@ -536,6 +548,12 @@ std::string ADDDRINK(::int64_t group, ::int64_t qq, const std::string& r)
         getDrinkCount(r, group) > 0)
         return r + "已经有了！！！";
 
+    // check repeat
+    if ((grp::Group::getFlag(group, grp::MASK_EAT_USE_UNIVERSE) && getFoodCount(r, GROUP_ID_ALL) > 0) ||
+        (grp::Group::getFlag(group, grp::MASK_EAT_USE_OLD) && getFoodCount(r, GROUP_ID_OLD) > 0) || 
+        getFoodCount(r, group) > 0)
+        return r + "已经是一种菜";
+        
     drink d;
     d.name = r;
     d.qq = qq;
@@ -733,14 +751,6 @@ void msgDispatcher(const json& body)
 
 ///////////////////////////////////////////////////////////////////////////////
 
-void init()
-{
-    foodCreateTable();
-    foodLoadListFromDb();
-    drinkCreateTable();
-    drinkLoadListFromDb();
-}
-
 void foodCreateTable()
 {
     std::string query;
@@ -820,6 +830,37 @@ void drinkLoadListFromDb()
     auto list = db.query(query, 1);
     int64_t drinkCountTotal = list.empty()? 0 : std::any_cast<int64_t>(list[0][0]);
     addLogDebug("eat", "added %ld drinks", drinkCountTotal);
+}
+
+void loadBlacklist()
+{
+    const char* path = "config/eat_blacklist.txt";
+    std::ifstream ifs(path);
+    if (ifs.good())
+    {
+        std::string buf;
+        while (!ifs.eof())
+        {
+            std::getline(ifs, buf);
+            if ((ifs.good() || ifs.eof()) && !buf.empty())
+                blacklist.insert(buf);
+        }
+
+        addLogDebug("eat", "added %lu blacklist entries", blacklist.size());
+    }
+    else
+    {
+        addLog(LOG_WARNING, "eat", "bad blacklist file %s", path);
+    }
+}
+
+void init()
+{
+    foodCreateTable();
+    foodLoadListFromDb();
+    drinkCreateTable();
+    drinkLoadListFromDb();
+    loadBlacklist();
 }
 
 }
