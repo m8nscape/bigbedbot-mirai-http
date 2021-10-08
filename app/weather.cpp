@@ -19,6 +19,7 @@ namespace fs = std::experimental::filesystem;
 
 #include "common/dbconn.h"
 #include "utils/logger.h"
+#include "utils/strutil.h"
 #include "mirai/api.h"
 #include "mirai/msg.h"
 
@@ -111,11 +112,10 @@ std::vector<std::string> getCityId(const std::string& name)
 // https://www.sojson.com/blog/305.html
 std::string getReqUrl(const std::string& id)
 {
-    char buf[128];
-    snprintf(buf, sizeof(buf)-1,
+    std::string ret = strfmt(
         "http://t.weather.itboy.net/api/weather/city/%s",
         id.c_str());
-    return buf;
+    return ret;
 }
 
 // 1.接口每8小时更新一次，机制是  CDN  缓存8小时更新一次。注意：“自己做缓存，因为你每请求我一次，我就是有费用的，又拍云 CDN加速回源是按次收费，你可以了解下”。
@@ -130,12 +130,11 @@ std::string APIKEY;
 int TIMEOUT_SEC = 5;
 std::string getReqUrl(const std::string& name)
 {
-    char buf[128];
-    snprintf(buf, sizeof(buf)-1,
+    std::string ret = strfmt(
         "https://api.openweathermap.org/data/2.5/weather?q=%s&appid=%s",
         name.c_str(),
         APIKEY.c_str());
-    return buf;
+    return ret;
 }
 }
 
@@ -301,7 +300,7 @@ void weather_cn(const mirai::MsgMetadata& m, const std::string& name)
             {
                 int ibuf;
                 double dbuf;
-                char buf[16];
+                std::string sbuf;
                 std::vector<std::string> args;
 
                 args.push_back(json["cityInfo"]["parent"]);
@@ -310,20 +309,20 @@ void weather_cn(const mirai::MsgMetadata& m, const std::string& name)
                 args.push_back(json["data"]["shidu"]);
 
                 dbuf = json["data"]["pm25"];
-                snprintf(buf, sizeof(buf)-1, "%.1f", dbuf);
-                args.push_back(buf);
+                sbuf = strfmt("%.1f", dbuf);
+                args.push_back(sbuf);
 
                 dbuf = json["data"]["pm10"];
-                snprintf(buf, sizeof(buf)-1, "%.1f", dbuf);
-                args.push_back(buf);
+                sbuf = strfmt("%.1f", dbuf);
+                args.push_back(sbuf);
 
                 args.push_back(json["data"]["forecast"][0]["type"]);
                 args.push_back(json["data"]["forecast"][0]["low"]);
                 args.push_back(json["data"]["forecast"][0]["high"]);
 
                 ibuf = json["data"]["forecast"][0]["aqi"];
-                snprintf(buf, sizeof(buf)-1, "%d", ibuf);
-                args.push_back(buf);
+                sbuf = strfmt("%d", ibuf);
+                args.push_back(sbuf);
 
                 std::stringstream ss;
                 ss << args[0] << " " << args[1] << " " << args[6] << std::endl <<

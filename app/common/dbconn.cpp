@@ -11,7 +11,7 @@
 #include <sqlite3.h>
 #include "utils/logger.h"
 
-SQLite::SQLite(const char* path, const char* log) { strcpy(logGrp, log); sqlite3_open(path, &_db); }
+SQLite::SQLite(const char* path, const char* log) { strncpy(logGrp, log, sizeof(logGrp) - 1); sqlite3_open(path, &_db); }
 SQLite::~SQLite() { sqlite3_close(_db); }
 const char* SQLite::errmsg() { return sqlite3_errmsg(_db); }
 

@@ -53,8 +53,7 @@ void LoadListFromDb()
     for (const auto& g: groups)
     {
         int64_t id = g.first;
-        const char query1[] = "INSERT OR IGNORE INTO grpsum(id) VALUES (?)";
-        auto ret = db.exec(query1, { id });
+        auto ret = db.exec("INSERT OR IGNORE INTO grpsum(id) VALUES (?)", { id });
         if (ret != SQLITE_OK)
         {
             addLog(LOG_ERROR, "grp", "insert group summary error: id=%ld", id);
@@ -112,8 +111,7 @@ void Group::setFlag(int64_t mask, bool set)
     else
         flags ^= mask;
 
-    const char query[] = "UPDATE grp SET flags=? WHERE id=?";
-    auto ret = db.exec(query, { flags, group_id });
+    auto ret = db.exec("UPDATE grp SET flags=? WHERE id=?", { flags, group_id });
     if (ret != SQLITE_OK)
     {
         addLog(LOG_ERROR, "grp", "update flag error: id=%ld, flags=%ld", group_id, flags);
@@ -193,15 +191,13 @@ int newGroupIfNotExist(int64_t id)
     {
         groups[id].updateMembers();
 
-        const char query[] = "INSERT INTO grp(id,flags) VALUES (?,?)";
-        auto ret = db.exec(query, { id, 0 });
+        auto ret = db.exec("INSERT INTO grp(id,flags) VALUES (?,?)", { id, 0 });
         if (ret != SQLITE_OK)
         {
             addLog(LOG_ERROR, "grp", "insert group error: id=%ld", id);
         }
         
-        const char query1[] = "INSERT INTO grpsum(id) VALUES (?)";
-        ret = db.exec(query1, { id });
+        ret = db.exec("INSERT INTO grpsum(id) VALUES (?)", { id });
         if (ret != SQLITE_OK)
         {
             addLog(LOG_ERROR, "grp", "insert group summary error: id=%ld", id);

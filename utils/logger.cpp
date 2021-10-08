@@ -5,6 +5,7 @@
 #include <cstring>
 
 #include "utils/logger.h"
+#include "utils/strutil.h"
 
 #ifdef WIN32
 const char* BashColorStrs[] =
@@ -79,13 +80,10 @@ void addLog(LogLevel level, const char* tag, const char* fmt, ...)
             break;
     }
 
-    static char logbuf[4096];
-    logbuf[sizeof(logbuf) - 1] = 0;
     va_list args;
     va_start(args, fmt);
-    vsnprintf(logbuf, sizeof(logbuf), fmt, args);
+    os << vstrfmt(fmt, args, false);
     va_end(args);
-    os << logbuf;
     
     if (!use_fstream)
         os << BashColorStrs[static_cast<unsigned>(BashColors::None)];

@@ -17,7 +17,7 @@ if (WIN32)
 endif()
 
 add_executable(bbb 
-    utils/logger.cpp utils/logger.h utils/rand.h
+    utils/logger.cpp utils/logger.h utils/rand.h utils/strutil.cpp utils/strutil.h
     time_evt.cpp time_evt.h modules.cpp core.cpp core.h main.cpp  )
 set_target_properties(bbb PROPERTIES
     CXX_STANDARD 17)
