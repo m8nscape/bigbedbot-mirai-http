@@ -15,6 +15,112 @@ std::set<std::string> blacklist;
 const int64_t GROUP_ID_ALL = 0;
 const int64_t GROUP_ID_OLD = 100;
 
+void foodCreateTable()
+{
+    std::string query;
+    query = strfmt(
+        "CREATE TABLE IF NOT EXISTS food( "
+            "id    INTEGER PRIMARY KEY AUTOINCREMENT, "
+            "name  TEXT    NOT NULL, "
+            "adder TEXT, "
+            "qq    INTEGER, "
+            "grp   INTEGER "
+        ")");
+    if (db.exec(query) != SQLITE_OK)
+        addLog(LOG_ERROR, "eat", db.errmsg());
+
+    query = strfmt("SELECT name from sqlite_master where name='food' and sql like '%%grp%%'");
+    auto list = db.query(query, 1);
+    if (list.empty())
+    {
+        query = strfmt("ALTER TABLE food ADD COLUMN grp INTEGER");
+        if (db.exec(query) != SQLITE_OK)
+            addLog(LOG_ERROR, "eat", db.errmsg());
+        
+        query = strfmt("UPDATE food SET grp=? WHERE grp IS NULL");
+        if (db.exec(query, {GROUP_ID_OLD}) != SQLITE_OK)
+            addLog(LOG_ERROR, "eat", db.errmsg());
+    }
+}
+
+void foodLoadListFromDb()
+{
+    std::string query = strfmt("SELECT * FROM food");
+    auto list = db.query(query, 4);
+    for (auto& row : list)
+    {
+        food f;
+        auto id = static_cast<unsigned>(std::any_cast<int64_t>(row[0]));
+        //f.name = utf82gbk(std::any_cast<std::string>(row[1]));
+        f.name = std::any_cast<std::string>(row[1]);
+        if (row[2].has_value())
+        {
+            f.offererType = f.NAME;
+            //f.offerer.name = utf82gbk(std::any_cast<std::string>(row[2]));
+            f.offerer.name = std::any_cast<std::string>(row[2]);
+        }
+        else if (row[3].has_value())
+        {
+            f.offererType = f.QQ;
+            f.offerer.qq = std::any_cast<int64_t>(row[3]);
+        }
+        else
+            f.offererType = f.ANONYMOUS;
+    }
+    // wtf, nothing is done after loading
+    addLogDebug("eat", "added %lu foods", list.size());
+}
+
+
+void drinkCreateTable()
+{
+    std::string query;
+    query = strfmt(
+        "CREATE TABLE IF NOT EXISTS drink( "
+            "id    INTEGER PRIMARY KEY AUTOINCREMENT, "
+            "name  TEXT    NOT NULL, "
+            "qq    INTEGER, "
+            "grp   INTEGER "
+        ")");
+    if (db.exec(query) != SQLITE_OK)
+        addLog(LOG_ERROR, "drink", db.errmsg());
+}
+
+void drinkLoadListFromDb()
+{
+    // std::string query = strfmt("SELECT * FROM %s", tableName.c_str());
+    // auto list = db.query(query, 4);
+    // drinkCount[groupid] = list.size();
+    std::string query = strfmt("SELECT COUNT(*) FROM drink");
+    auto list = db.query(query, 1);
+    int64_t drinkCountTotal = list.empty()? 0 : std::any_cast<int64_t>(list[0][0]);
+    // wtf, nothing is done after loading
+    addLogDebug("eat", "added %ld drinks", drinkCountTotal);
+}
+
+void loadBlacklist()
+{
+    const char* path = "config/eat_blacklist.txt";
+    std::ifstream ifs(path);
+    if (ifs.good())
+    {
+        blacklist.clear();
+        std::string buf;
+        while (!ifs.eof())
+        {
+            std::getline(ifs, buf);
+            if ((ifs.good() || ifs.eof()) && !buf.empty())
+                blacklist.insert(buf);
+        }
+
+        addLogDebug("eat", "added %lu blacklist entries", blacklist.size());
+    }
+    else
+    {
+        addLog(LOG_WARNING, "eat", "bad blacklist file %s", path);
+    }
+}
+
 std::string genSqlWhereGroupWithFlag(int64_t groupid)
 {
     std::string ret;
@@ -661,6 +767,15 @@ std::string MENU(::int64_t group, ::int64_t qq, std::vector<std::string> args)
     return ret.str();
 }
 
+std::string RELOAD(::int64_t group, ::int64_t qq, std::vector<std::string> args)
+{
+    if (!grp::checkPermission(group, qq, mirai::group_member_permission::ROOT, true))
+        return "";
+
+    loadBlacklist();
+    return "好";
+}
+
 enum class commands: size_t {
     EATWHAT,
     DRINKWHAT,
@@ -671,6 +786,7 @@ enum class commands: size_t {
 	DELDRINK,
     MENU,
     DROPTABLE,
+    RELOAD,
 };
 
 const std::map<std::string, commands> commands_str
@@ -694,6 +810,8 @@ const std::map<std::string, commands> commands_str
     {"菜单", commands::MENU},
     {"菜單", commands::MENU},   //繁體化
     //{"drop", commands::删库},
+    {"刷新菜单", commands::RELOAD},
+    {"重載菜單", commands::RELOAD},   //繁體化
 };
 
 void msgDispatcher(const json& body)
@@ -744,6 +862,9 @@ void msgDispatcher(const json& body)
     case commands::MENU:
         mirai::sendMsgRespStr(m, MENU(m.groupid, m.qqid, query));
         break;
+    case commands::RELOAD:
+        mirai::sendMsgRespStr(m, RELOAD(m.groupid, m.qqid, query));
+        break;
     default: 
         break;
     }
@@ -751,115 +872,12 @@ void msgDispatcher(const json& body)
 
 ///////////////////////////////////////////////////////////////////////////////
 
-void foodCreateTable()
-{
-    std::string query;
-    query = strfmt(
-        "CREATE TABLE IF NOT EXISTS food( "
-            "id    INTEGER PRIMARY KEY AUTOINCREMENT, "
-            "name  TEXT    NOT NULL, "
-            "adder TEXT, "
-            "qq    INTEGER, "
-            "grp   INTEGER "
-        ")");
-    if (db.exec(query) != SQLITE_OK)
-        addLog(LOG_ERROR, "eat", db.errmsg());
-
-    query = strfmt("SELECT name from sqlite_master where name='food' and sql like '%%grp%%'");
-    auto list = db.query(query, 1);
-    if (list.empty())
-    {
-        query = strfmt("ALTER TABLE food ADD COLUMN grp INTEGER");
-        if (db.exec(query) != SQLITE_OK)
-            addLog(LOG_ERROR, "eat", db.errmsg());
-        
-        query = strfmt("UPDATE food SET grp=? WHERE grp IS NULL");
-        if (db.exec(query, {GROUP_ID_OLD}) != SQLITE_OK)
-            addLog(LOG_ERROR, "eat", db.errmsg());
-    }
-}
-
-void foodLoadListFromDb()
-{
-    std::string query = strfmt("SELECT * FROM food");
-    auto list = db.query(query, 4);
-    for (auto& row : list)
-    {
-        food f;
-        auto id = static_cast<unsigned>(std::any_cast<int64_t>(row[0]));
-        //f.name = utf82gbk(std::any_cast<std::string>(row[1]));
-        f.name = std::any_cast<std::string>(row[1]);
-        if (row[2].has_value())
-        {
-            f.offererType = f.NAME;
-            //f.offerer.name = utf82gbk(std::any_cast<std::string>(row[2]));
-            f.offerer.name = std::any_cast<std::string>(row[2]);
-        }
-        else if (row[3].has_value())
-        {
-            f.offererType = f.QQ;
-            f.offerer.qq = std::any_cast<int64_t>(row[3]);
-        }
-        else
-            f.offererType = f.ANONYMOUS;
-    }
-    addLogDebug("eat", "added %lu foods", list.size());
-}
-
-
-void drinkCreateTable()
-{
-    std::string query;
-    query = strfmt(
-        "CREATE TABLE IF NOT EXISTS drink( "
-            "id    INTEGER PRIMARY KEY AUTOINCREMENT, "
-            "name  TEXT    NOT NULL, "
-            "qq    INTEGER, "
-            "grp   INTEGER "
-        ")");
-    if (db.exec(query) != SQLITE_OK)
-        addLog(LOG_ERROR, "drink", db.errmsg());
-}
-
-void drinkLoadListFromDb()
-{
-    // std::string query = strfmt("SELECT * FROM %s", tableName.c_str());
-    // auto list = db.query(query, 4);
-    // drinkCount[groupid] = list.size();
-    std::string query = strfmt("SELECT COUNT(*) FROM drink");
-    auto list = db.query(query, 1);
-    int64_t drinkCountTotal = list.empty()? 0 : std::any_cast<int64_t>(list[0][0]);
-    addLogDebug("eat", "added %ld drinks", drinkCountTotal);
-}
-
-void loadBlacklist()
-{
-    const char* path = "config/eat_blacklist.txt";
-    std::ifstream ifs(path);
-    if (ifs.good())
-    {
-        std::string buf;
-        while (!ifs.eof())
-        {
-            std::getline(ifs, buf);
-            if ((ifs.good() || ifs.eof()) && !buf.empty())
-                blacklist.insert(buf);
-        }
-
-        addLogDebug("eat", "added %lu blacklist entries", blacklist.size());
-    }
-    else
-    {
-        addLog(LOG_WARNING, "eat", "bad blacklist file %s", path);
-    }
-}
-
 void init()
 {
     foodCreateTable();
-    foodLoadListFromDb();
+    //foodLoadListFromDb();
     drinkCreateTable();
-    drinkLoadListFromDb();
+    //drinkLoadListFromDb();
     loadBlacklist();
 }
 

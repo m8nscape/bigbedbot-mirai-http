@@ -19,7 +19,7 @@ std::string vstrfmt(const char* fmt, va_list& args, bool log)
     va_end(argTmp);
 
     std::string res;
-    static char buf[256];
+    static char buf[2048];
     if (bufSize > sizeof(buf))
     {
         if (log)

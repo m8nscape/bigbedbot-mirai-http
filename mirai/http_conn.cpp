@@ -304,7 +304,8 @@ int GET(const std::string& target, std::function<int(const char*, const json&, c
 
 int POST(const std::string& target, const json& body, std::function<int(const char*, const json&, const json&)> callback)
 {
-    addLogDebug("http", "POST %s %s", target.c_str(), body.dump().c_str());
+    std::string bodystr = body.dump();
+    addLogDebug("http", "POST %s %s", target.c_str(), bodystr.c_str());
     callback(target.c_str(), body, SUCCESS_RETURN);
     return 0;
 }

@@ -12,14 +12,6 @@ namespace opencase
 using nlohmann::json;
 void init(const char* cfg_yml);
 
-enum class commands : size_t {
-	OPEN_1,
-	OPEN_10,
-	OPEN_SP1,
-	OPEN_SP2,
-	OPEN_ENDLESS,
-};
-
 void msgDispatcher(const json& body);
 
 ////////////////////////////////////////////////////////////////////////////////

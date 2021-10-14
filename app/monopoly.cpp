@@ -31,6 +31,8 @@ namespace monopoly
 
 using namespace std::placeholders;
 
+static std::string cfg_path;
+
 std::map<int64_t, std::map<int64_t, time_t>> starveFloodCtrlExpire;
 const int STARVE_FLOOD_CTRL_DURATION = 5; // introduce 5s cooldown if stamina runs out
 
@@ -296,7 +298,7 @@ void do_all(int64_t groupid, efunc f, double x, double y)
 
 }
 
-int init(const char* yaml)
+int loadCfg(const char* yaml)
 {
     fs::path cfgPath(yaml);
     if (!fs::is_regular_file(cfgPath))
@@ -308,6 +310,7 @@ int init(const char* yaml)
 
     YAML::Node cfg = YAML::LoadFile(yaml);
     chance::total_prob = 0.0;
+    chanceList.clear();
     for (const auto& u : cfg)
     {
         chance c;
@@ -395,6 +398,12 @@ int init(const char* yaml)
     return 0;
 }
 
+int init(const char* chance_list_path)
+{
+    cfg_path = chance_list_path;
+    return loadCfg(chance_list_path);
+}
+
 std::string convertRespMsg(const std::string& raw, int64_t qqid, int64_t groupid, int64_t target, const user::pdata& pre, const user::pdata& post)
 {
     std::string s;
@@ -472,12 +481,22 @@ void msgCallback(const json& body)
 {
     auto query = mirai::messageChainToArgs(body);
     if (query.empty()) return;
-    if (query[0] != "抽卡") return;
 
     auto m = mirai::parseMsgMetadata(body);
-
     if (!grp::groups[m.groupid].getFlag(grp::MASK_P | grp::MASK_MONOPOLY))
         return;
+
+    if (query[0] == "刷新事件" || query[0] == "重載事件")
+    {
+        if (grp::checkPermission(m.groupid, m.qqid, mirai::group_member_permission::ROOT, true))
+        {
+            loadCfg(cfg_path.c_str());
+            mirai::sendMsgRespStr(m, "好");
+        }
+        return;
+    }
+
+    if (query[0] != "抽卡") return;
 
     if (user::plist.find(m.qqid) == user::plist.end()) 
     {

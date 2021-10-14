@@ -23,6 +23,8 @@ namespace opencase
 {
 using user::plist;
 
+static std::string cfg_path;
+
 int FEE_PER_CASE = 5;
 // 技能设定
 int OPEN_RUN_SP1_COST = 255;
@@ -46,10 +48,70 @@ const case_type& case_detail::type() const { return CASE_TYPES[_type_idx]; }
 
 std::vector<std::vector<case_detail>> CASE_POOL{{{0, "菠菜种子", 1}}, {{1, "菠菜叶子", 1}}};
 
+int loadCfg(const char* yaml)
+{
+    fs::path cfgPath(yaml);
+    if (!fs::is_regular_file(cfgPath))
+    {
+        addLog(LOG_ERROR, "case", "Case config file %s not found", fs::absolute(cfgPath).c_str());
+        return -1;
+    }
+    addLog(LOG_INFO, "case", "Loading case config from %s", fs::absolute(cfgPath).c_str());
+
+    YAML::Node cfg = YAML::LoadFile(yaml);
+
+    // 配置
+    FEE_PER_CASE = cfg["cost_draw"].as<int>(FEE_PER_CASE);
+    OPEN_RUN_SP1_COST = cfg["open_run_sp1_cost"].as<int>(OPEN_RUN_SP1_COST);
+    SP1_TYPE = cfg["sp1_type"].as<int>(SP1_TYPE);
+    OPEN_RUN_SP2_COST = cfg["open_run_sp2_cost"].as<int>(OPEN_RUN_SP2_COST);
+    OPEN_RUN_SP2_STAMINA = cfg["open_run_sp2_stamina"].as<int>(OPEN_RUN_SP2_STAMINA);
+    SP2_TYPE = cfg["sp2_type"].as<int>(SP2_TYPE);
+    OPEN_RUN_ENDLESS_COST = cfg["open_run_endless_cost"].as<int>(OPEN_RUN_ENDLESS_COST);
+    OPEN_RUN_ENDLESS_STAMINA = cfg["open_run_endless_stamina"].as<int>(OPEN_RUN_ENDLESS_STAMINA);
+
+    // 箱子等级列表
+    CASE_TYPES.clear();
+    double p = 0;
+    for (const auto& it: cfg["levels"])
+    {
+        if (it.size() >= 2)
+        {
+            double pp = it[1].as<double>();
+            CASE_TYPES.push_back({it[0].as<std::string>(), pp});
+            p += pp;
+        }
+        else
+        {
+            CASE_TYPES.push_back({it[0].as<std::string>(), 1.0 - p});
+            break;
+        }
+    }
+    if (p > 1.0)
+    {
+        addLog(LOG_WARNING, "case", "sum of level probabilities %lf exceeds 1.0", p);
+    }
+
+    // 箱池
+    CASE_POOL.clear();
+    CASE_POOL.resize(CASE_TYPES.size());
+    size_t case_count = 0;
+    for (const auto& it: cfg["list"])
+    {
+        size_t level = it[0].as<size_t>();
+        if (level < CASE_POOL.size())
+            CASE_POOL[level].push_back({level, it[1].as<std::string>(), it[2].as<int>()});
+        ++case_count;
+    }
+
+    addLog(LOG_INFO, "case", "Loaded %u cases", case_count);
+    return 0;
+}
+
 
 json not_registered(int64_t qq)
 {
-    json resp = R"({ "messageChain": [] })"_json;
+    json resp = mirai::MSG_TEMPLATE;
     resp["messageChain"].push_back(mirai::buildMessageAt(qq));
     resp["messageChain"].push_back(mirai::buildMessagePlain("，你还没有开通菠菜"));
     return resp;
@@ -57,7 +119,7 @@ json not_registered(int64_t qq)
 
 json not_enough_currency(int64_t qq)
 {
-    json resp = R"({ "messageChain": [] })"_json;
+    json resp = mirai::MSG_TEMPLATE;
     resp["messageChain"].push_back(mirai::buildMessageAt(qq));
     resp["messageChain"].push_back(mirai::buildMessagePlain("，你的余额不足"));
     return resp;
@@ -65,14 +127,13 @@ json not_enough_currency(int64_t qq)
 
 json not_enough_stamina(int64_t qq, time_t rtime)
 {
-    json resp = R"({ "messageChain": [] })"_json;
+    json resp = mirai::MSG_TEMPLATE;
     resp["messageChain"].push_back(mirai::buildMessageAt(qq));
     std::stringstream ss;
     ss << "，你的体力不足，回满还需" << rtime / (60 * 60) << "小时" << rtime / 60 % 60 << "分钟";
     resp["messageChain"].push_back(mirai::buildMessagePlain(ss.str()));
     return resp;
 }
-
 
 json OPEN_1(::int64_t group, ::int64_t qq, std::vector<std::string> args)
 {
@@ -371,11 +432,11 @@ json OPEN_SP2(::int64_t group, ::int64_t qq, std::vector<std::string> args)
 
 json OPEN_ENDLESS(::int64_t group, ::int64_t qq, std::vector<std::string> args)
 {
-    json resp = R"({ "messageChain": [] })"_json;
+    json resp = mirai::MSG_TEMPLATE;
     json& r = resp["messageChain"];
     r.push_back(mirai::buildMessagePlain("梭哈台被群主偷了，没得梭了"));
     return resp;
-}
+
     /*
 case commands::开箱endless:
     c.func = [](::int64_t group, ::int64_t qq, std::vector<std::string> args) -> std::string
@@ -433,6 +494,29 @@ case commands::开箱endless:
     };
     break;
     */
+}
+   
+json RELOAD(::int64_t group, ::int64_t qq, std::vector<std::string> args)
+{
+    if (!grp::checkPermission(group, qq, mirai::group_member_permission::ROOT, true))
+        return json();
+
+    loadCfg(cfg_path.c_str());
+
+    json resp = mirai::MSG_TEMPLATE;
+    json& r = resp["messageChain"];
+    r.push_back(mirai::buildMessagePlain("好"));
+    return resp;
+}
+
+enum class commands : size_t {
+	OPEN_1,
+	OPEN_10,
+	OPEN_SP1,
+	OPEN_SP2,
+	OPEN_ENDLESS,
+    RELOAD,
+};
 
 const std::map<std::string, commands> commands_str
 {
@@ -448,6 +532,8 @@ const std::map<std::string, commands> commands_str
     {"开箱照破", commands::OPEN_ENDLESS},  //梭哈在FF14的翻译是[照破]
     {"開箱梭哈", commands::OPEN_ENDLESS},  //繁體化
     {"開箱照破", commands::OPEN_ENDLESS},  //繁體化
+    {"刷新箱子", commands::RELOAD},  //繁體化
+    {"重載箱子", commands::RELOAD},  //繁體化
 
 };
 void msgDispatcher(const json& body)
@@ -481,6 +567,9 @@ void msgDispatcher(const json& body)
     case commands::OPEN_ENDLESS:
         resp = OPEN_ENDLESS(m.groupid, m.qqid, query);
         break;
+    case commands::RELOAD:
+        resp = RELOAD(m.groupid, m.qqid, query);
+        break;
     default: 
         break;
     }
@@ -510,68 +599,9 @@ const case_detail& draw_case(double p)
     return CASE_POOL[idx][detail_idx];
 }
 
-int loadCfg(const char* yaml)
-{
-    fs::path cfgPath(yaml);
-    if (!fs::is_regular_file(cfgPath))
-    {
-        addLog(LOG_ERROR, "case", "Case config file %s not found", fs::absolute(cfgPath).c_str());
-        return -1;
-    }
-    addLog(LOG_INFO, "case", "Loading case config from %s", fs::absolute(cfgPath).c_str());
-
-    YAML::Node cfg = YAML::LoadFile(yaml);
-
-    // 配置
-    FEE_PER_CASE = cfg["cost_draw"].as<int>(FEE_PER_CASE);
-    OPEN_RUN_SP1_COST = cfg["open_run_sp1_cost"].as<int>(OPEN_RUN_SP1_COST);
-    SP1_TYPE = cfg["sp1_type"].as<int>(SP1_TYPE);
-    OPEN_RUN_SP2_COST = cfg["open_run_sp2_cost"].as<int>(OPEN_RUN_SP2_COST);
-    OPEN_RUN_SP2_STAMINA = cfg["open_run_sp2_stamina"].as<int>(OPEN_RUN_SP2_STAMINA);
-    SP2_TYPE = cfg["sp2_type"].as<int>(SP2_TYPE);
-    OPEN_RUN_ENDLESS_COST = cfg["open_run_endless_cost"].as<int>(OPEN_RUN_ENDLESS_COST);
-    OPEN_RUN_ENDLESS_STAMINA = cfg["open_run_endless_stamina"].as<int>(OPEN_RUN_ENDLESS_STAMINA);
-
-    // 箱子等级列表
-    CASE_TYPES.clear();
-    double p = 0;
-    for (const auto& it: cfg["levels"])
-    {
-        if (it.size() >= 2)
-        {
-            double pp = it[1].as<double>();
-            CASE_TYPES.push_back({it[0].as<std::string>(), pp});
-            p += pp;
-        }
-        else
-        {
-            CASE_TYPES.push_back({it[0].as<std::string>(), 1.0 - p});
-            break;
-        }
-    }
-    if (p > 1.0)
-    {
-        addLog(LOG_WARNING, "case", "sum of level probabilities %lf exceeds 1.0", p);
-    }
-
-    // 箱池
-    CASE_POOL.clear();
-    CASE_POOL.resize(CASE_TYPES.size());
-    size_t case_count = 0;
-    for (const auto& it: cfg["list"])
-    {
-        size_t level = it[0].as<size_t>();
-        if (level < CASE_POOL.size())
-            CASE_POOL[level].push_back({level, it[1].as<std::string>(), it[2].as<int>()});
-        ++case_count;
-    }
-
-    addLog(LOG_INFO, "case", "Loaded %u cases", case_count);
-    return 0;
-}
-
 void init(const char* case_list_yml)
 {
+    cfg_path = case_list_yml;
     loadCfg(case_list_yml);
 }
 }
