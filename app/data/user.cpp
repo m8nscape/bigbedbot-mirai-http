@@ -69,12 +69,13 @@ int pdata::getExtraStamina() const
 pdata::resultStamina pdata::modifyStamina(int delta, bool extra)
 {
     int stamina = getStamina(false).staminaAfterUpdate;
+    int staminaOld = stamina;
 
     bool enough = false;
 
-    int cost = -delta;
-    if (cost > 0)
+    if (delta < 0)
     {
+        int cost = -delta;
         if (stamina_extra >= cost)
         {
             enough = true;
@@ -92,17 +93,23 @@ pdata::resultStamina pdata::modifyStamina(int delta, bool extra)
             enough = false;
         }
     }
-    else if (cost < 0)
+    else if (delta > 0)
     {
         enough = true;
-        stamina += delta;
-        if (stamina >= MAX_STAMINA)
+        if (extra) // directly goes to extra
         {
-            if (extra) // part of cost(recovery) goes to extra
+            stamina_extra += delta;
+        }
+        {
+            stamina += delta;
+            if (stamina >= MAX_STAMINA)
             {
-                stamina_extra += stamina - MAX_STAMINA;
+                // if (extra) // part of cost(recovery) goes to extra
+                // {
+                //     stamina_extra += stamina - MAX_STAMINA;
+                // }
+                stamina = MAX_STAMINA;
             }
-            stamina = MAX_STAMINA;
         }
     }
 
@@ -111,12 +118,14 @@ pdata::resultStamina pdata::modifyStamina(int delta, bool extra)
     if (enough)
     {
         if (last > t)
-            stamina_recovery_time += STAMINA_TIME * cost;
+            stamina_recovery_time += STAMINA_TIME * (staminaOld - stamina);
         else
-            stamina_recovery_time = t + STAMINA_TIME * cost;
+            stamina_recovery_time = t + STAMINA_TIME * (staminaOld - stamina);
+
+        if (stamina >= MAX_STAMINA) 
+            stamina_recovery_time = t;
     }
 
-    if (enough && stamina >= MAX_STAMINA) stamina_recovery_time = t;
     return { enough, stamina, stamina_recovery_time - t };
 }
 
