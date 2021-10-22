@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <climits>
 #include "nlohmann/json.hpp"
+#include "utils/logger.h"
 
 namespace mirai
 {
@@ -39,24 +40,50 @@ inline const json MSG_TEMPLATE = R"({ "messageChain": [] })"_json;
 inline json buildMessagePlain(const std::string& s)
 {
     json v;
-    v["type"] = "Plain";
-    v["text"] = s;
-    return std::move(v);
+    try 
+    {
+        v["type"] = "Plain";
+        v["text"] = s;
+        return v;
+    }
+    catch (std::exception& e)
+    {
+        addLog(LOG_ERROR, "json", "buildMessagePlain exception: %s", e.what());
+        addLog(LOG_ERROR, "json", "Content: %s", s.c_str());
+        throw e;
+    }
 }
 
 inline json buildMessageAt(int64_t qqid)
 {
     json v;
-    v["type"] = "At";
-    v["target"] = qqid;
-    return std::move(v);
+    try
+    {
+        v["type"] = "At";
+        v["target"] = qqid;
+        return v;
+    }
+    catch (std::exception& e)
+    {
+        addLog(LOG_ERROR, "json", "buildMessageAt exception: %s", e.what());
+        addLog(LOG_ERROR, "json", "target: %ld", qqid);
+        throw e;
+    }
 }
 
 inline json buildMessageAtAll()
 {
     json v;
-    v["type"] = "AtAll";
-    return std::move(v);
+    try
+    {
+        v["type"] = "AtAll";
+        return v;
+    }
+    catch (std::exception& e)
+    {
+        addLog(LOG_ERROR, "json", "buildMessageAtAll exception: %s", e.what());
+        throw e;
+    }
 }
 
 }

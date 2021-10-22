@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "api.h"
+#include "msg.h"
 #include "http_conn.h"
 #include "ws_conn.h"
 
@@ -244,10 +245,7 @@ int sendTempMsgStr(int64_t qqid, int64_t groupid, const std::string& msg, int64_
         std::string buf;
         std::getline(ss, buf);
         if (!ss.eof()) buf += "\n";
-        json v;
-        v["type"] = "Plain";
-        v["text"] = buf;
-        messageChain.push_back(v);
+        messageChain.push_back(buildMessagePlain(buf));
     }
     return sendTempMsg(qqid, groupid, req, quotemsgid);
 }
@@ -276,10 +274,7 @@ int sendFriendMsgStr(int64_t qqid, const std::string& msg, int64_t quotemsgid)
         std::string buf;
         std::getline(ss, buf);
         if (!ss.eof()) buf += "\n";
-        json v;
-        v["type"] = "Plain";
-        v["text"] = buf;
-        messageChain.push_back(v);
+        messageChain.push_back(buildMessagePlain(buf));
     }
     return sendFriendMsg(qqid, req, quotemsgid);
 }
