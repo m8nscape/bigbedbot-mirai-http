@@ -19,6 +19,4 @@ void init_modules();
 void shutdown_modules();
 void add_timed_events();
 void add_msg_callbacks();
-
-
 }
