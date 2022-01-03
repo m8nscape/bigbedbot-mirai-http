@@ -1,4 +1,4 @@
-.vscode/**
+.vs/**
 CMakeFiles
 out
 app/private

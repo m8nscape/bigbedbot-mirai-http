@@ -6,7 +6,10 @@
                 "${workspaceFolder}",
                 "${workspaceFolder}/thirdparty",
                 "${workspaceFolder}/thirdparty/nlohmann/json/single-include/**",
-                "${workspaceFolder}/thirdparty/yaml-cpp/include/**"
+                "${workspaceFolder}/thirdparty/yaml-cpp/include/**",
+                "/usr/include/boost",
+                "/usr/include/curl",
+                "/usr/include"
             ],
             "defines": [],
             "compilerPath": "/usr/bin/gcc",
