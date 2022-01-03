@@ -171,22 +171,26 @@ void pdata::modifyCurrency(int64_t c)
     if (currency < 0) currency = 0;
     db.exec("UPDATE pee SET currency=? WHERE qqid=?", { currency, qq });
 }
+
 void pdata::multiplyCurrency(double a)
 {
     currency *= a;
     if (currency < 0) currency = 0;
     db.exec("UPDATE pee SET currency=? WHERE qqid=?", { currency, qq });
 }
+
 void pdata::modifyBoxCount(int64_t c)
 {
     opened_box_count += c;
     db.exec("UPDATE pee SET cases=? WHERE qqid=?", { opened_box_count, qq });
 }
+
 void pdata::modifyDrawTime(time_t c)
 {
     last_draw_time = c;
     db.exec("UPDATE pee SET dailytime=? WHERE qqid=?", { last_draw_time, qq });
 }
+
 void pdata::modifyKeyCount(int64_t c)
 {
     key_count += c;
@@ -352,25 +356,6 @@ json DRAW_P(int64_t qq, int64_t group)
     return std::move(draw_p(qq, FREE_BALANCE_ON_NEW_DAY, bonus, remain_daily_bonus));
 }
 
-/*
-    case commands::生批:
-        c.func = [](::int64_t group, ::int64_t qq, std::vector<std::string> args, std::string raw) -> std::string
-        {
-            if (plist.find(qq) == plist.end()) return std::string(CQ_At(qq)) + "，你还没有开通菠菜";
-            auto &p = plist[qq];
-
-            auto[enough, stamina, rtime] = p.modifyStamina(1);
-
-            std::stringstream ss;
-            if (!enough) ss << CQ_At(qq) << "，你的体力不足，回满还需"
-                << rtime / (60 * 60) << "小时" << rtime / 60 % 60 << "分钟";
-
-            p.modifyCurrency(1);
-
-            return std::string(CQ_At(qq)) + "消耗1点体力得到1个批";
-        };
-        */
-
 const std::map<std::string, commands> commands_str
 {
     {"开通", commands::REG_HINT},
@@ -383,15 +368,15 @@ const std::map<std::string, commands> commands_str
     {"余额", commands::BALANCE},
     {"领批", commands::DRAW_P},
 
-    {"開通", commands::REG_HINT},  //繁體化
-    {"開通菠菜", commands::REG_HINT},  //繁體化
-    {"給我開通菠菜", commands::REG_HINT},  //繁體化
-    {"註冊", commands::REG_HINT},  //繁體化
-    {"註冊菠菜", commands::REG_HINT},  //繁體化
-    {"我要註冊菠菜", commands::REG_HINT},  //繁體化
-    {"我要開通菠菜", commands::REG},  //繁體化
-    {"餘額", commands::BALANCE},  //繁體化
-    {"領批", commands::DRAW_P},  //繁體化
+    {"開通", commands::REG_HINT},           //繁體化
+    {"開通菠菜", commands::REG_HINT},       //繁體化
+    {"給我開通菠菜", commands::REG_HINT},   //繁體化
+    {"註冊", commands::REG_HINT},           //繁體化
+    {"註冊菠菜", commands::REG_HINT},       //繁體化
+    {"我要註冊菠菜", commands::REG_HINT},   //繁體化
+    {"我要開通菠菜", commands::REG},        //繁體化
+    {"餘額", commands::BALANCE},            //繁體化
+    {"領批", commands::DRAW_P},             //繁體化
 };
 
 void msgCallback(const json& body)
@@ -502,5 +487,4 @@ void init(const char* user_alias_yml)
     peeLoadFromDb();
     loadUserAlias(user_alias_yml);
 }
-
 }

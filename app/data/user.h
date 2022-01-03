@@ -13,9 +13,7 @@ inline SQLite db("pee.db", "pee");
 
 void init(const char* user_alias_yml);
 
-////////////////////////////////////////////////////////////////////////////////
-// p
-
+// %%%%%%%%%%%%%%%% 批相关数据 %%%%%%%%%%%%%%%%
 class pdata
 {
 public:
@@ -35,9 +33,6 @@ protected:
 	int		stamina_extra = 0;
 
 public:
-    // counter
-    //int     event_drop_count = 0;
-
 	friend void peeLoadFromDb();
 
 public:
@@ -62,13 +57,11 @@ public:
 	void modifyKeyCount(int64_t delta);
 
 	int createAccount(int64_t qq, int64_t initialBalance);
-
 };
 
 inline std::map<int64_t, pdata> plist;
 
-
-////////////////////////////////////////////////////////////////////////////////
+// %%%%%%%%%%%%%%%% 个人数据 %%%%%%%%%%%%%%%%
 const int INITIAL_BALANCE = 200;
 
 using nlohmann::json;
@@ -83,8 +76,7 @@ enum class commands : size_t
 
 void msgCallback(const json& body);
 
-////////////////////////////////////////////////////////////////////////////////
-// 体力
+// %%%%%%%%%%%%%%%% 体力 %%%%%%%%%%%%%%%%
 #ifdef _DEBUG
 const int MAX_STAMINA = 100;
 #else
@@ -92,8 +84,7 @@ const int MAX_STAMINA = 10;
 #endif
 const int STAMINA_TIME = 30 * 60; // 30min
 
-////////////////////////////////////////////////////////////////////////////////
-// 领p
+// %%%%%%%%%%%%%%%% 领批 %%%%%%%%%%%%%%%%
 const int FREE_BALANCE_ON_NEW_DAY = 10;
 const int NEW_DAY_TIME_HOUR = 11;
 const int NEW_DAY_TIME_MIN = 0;
@@ -108,9 +99,7 @@ inline int remain_daily_bonus;
 
 void flushDailyTimep(bool autotriggered = false);
 
-////////////////////////////////////////////////////////////////////////////////
-// 昵称
+// %%%%%%%%%%%%%%%% 昵称 %%%%%%%%%%%%%%%%
 int loadUserAlias(const char* yaml);
 int64_t getUser(const std::string& alias);
-
 }

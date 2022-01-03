@@ -254,13 +254,6 @@ int getFood(food& f, int64_t groupid)
     }
 
     return 0;
-
-    // get from cached list
-    // if (foodList.empty()) return 1;
-    // std::vector<food> tmpList{foodList.begin(), foodList.end()};
-    // std::random_shuffle(tmpList.begin(), tmpList.end());
-    // f = tmpList[0];
-    // return 0;
 }
 
 int getFood10(food(&f)[10], int64_t groupid)
@@ -290,16 +283,6 @@ int getFood10(food(&f)[10], int64_t groupid)
     }
 
     return idx;
-
-    // get from cached list
-    // std::vector<food> tmpList{foodList.begin(), foodList.end()};
-    // std::random_shuffle(tmpList.begin(), tmpList.end());
-    // size_t upper_bound = std::min(10ul, tmpList.size());
-    // for (size_t i = 0; i < upper_bound; ++i)
-    // {
-    //     f[i] = tmpList[i];
-    // }
-    // return upper_bound;
 }
 
 
@@ -318,21 +301,6 @@ int delFood(const std::string& name, int64_t groupid)
         addLog(LOG_ERROR, "eat", "Deleting food %s failed (%s)", name.c_str(), db.errmsg());
         return 1;
     }
-
-    // del from cached list
-    // int count = 0;
-    // for (auto it = foodList.begin(); it != foodList.end();)
-    // {
-    //     if (it->name == name)
-    //     {
-    //         ++count;
-    //         it = foodList.erase(it);
-    //     }
-    //     else
-    //     {
-    //         ++it;
-    //     }
-    // }
 }
 
 // idx starts from 1
@@ -353,7 +321,6 @@ inline int64_t getFoodCount(const std::string& name = "", int64_t groupid = GROU
             return list.empty()? 0 : std::any_cast<int64_t>(list[0][0]);
         }
     };
-    //return (groupid == 0 ? 0 : getCount(name, 0)) + getCount(name, groupid);
     return getCount(name, groupid);
 }
 
@@ -373,7 +340,6 @@ inline int addDrink(drink& d, int64_t groupid)
         return 1;
     }
 
-    //foodList.push_back(f);
     addLog(LOG_INFO, "eat", "Added drink %s", d.name.c_str());
     return 0;
 }
@@ -426,9 +392,9 @@ inline int64_t getDrinkCount(const std::string& name = "", int64_t groupid = GRO
             return list.empty()? 0 : std::any_cast<int64_t>(list[0][0]);
         }
     };
-    //return (groupid == 0 ? 0 : getCount(name, 0)) + getCount(name, groupid);
     return getCount(name, groupid);
 }
+
 inline int64_t getDrinkCount(int64_t groupid)
 {
     return getDrinkCount("", groupid);
@@ -453,6 +419,7 @@ bool hasFood(int64_t group)
     }
     return true;
 }
+
 bool hasDrink(int64_t group)
 {
     if (getDrinkCount(group) == 0)
@@ -601,7 +568,6 @@ std::string DELFOOD(::int64_t group, ::int64_t qq, const std::string& r)
         return "你删个锤子？";
 
     if (r.empty()) return "空气不能吃的";
-
 
     int64_t count = 0;
     if (grp::Group::getFlag(group, grp::MASK_EAT_USE_UNIVERSE) && (count = getFoodCount(r, GROUP_ID_ALL)) > 0)
@@ -792,26 +758,26 @@ enum class commands: size_t {
 const std::map<std::string, commands> commands_str
 {
     {"吃什么", commands::EATWHAT},
-    {"吃什麼", commands::EATWHAT},   //繁體化
+    {"吃什麼", commands::EATWHAT},          //繁體化
     {"喝什么", commands::DRINKWHAT},
-    {"喝什麼", commands::DRINKWHAT},   //繁體化
+    {"喝什麼", commands::DRINKWHAT},        //繁體化
     {"吃什么十连", commands::EATWHAT10},
-    {"吃什麼十連", commands::EATWHAT10},   //繁體化
+    {"吃什麼十連", commands::EATWHAT10},    //繁體化
     {"加菜", commands::ADDFOOD},
-    {"加菜", commands::ADDFOOD},   //繁體化
+    {"加菜", commands::ADDFOOD},            //繁體化
 	{"减菜", commands::DELFOOD},
-    {"減菜", commands::DELFOOD},   //繁體化
+    {"減菜", commands::DELFOOD},            //繁體化
 	{"删菜", commands::DELFOOD},
-    {"刪菜", commands::DELFOOD},   //繁體化
+    {"刪菜", commands::DELFOOD},            //繁體化
 	{"加饮料", commands::ADDDRINK},
-    {"加飲料", commands::ADDDRINK},   //繁體化
+    {"加飲料", commands::ADDDRINK},         //繁體化
 	{"删饮料", commands::DELDRINK},
-    {"刪飲料", commands::DELDRINK},   //繁體化
+    {"刪飲料", commands::DELDRINK},         //繁體化
     {"菜单", commands::MENU},
-    {"菜單", commands::MENU},   //繁體化
-    //{"drop", commands::删库},
+    {"菜單", commands::MENU},               //繁體化
+    // {"drop", commands::删库},
     {"刷新菜单", commands::RELOAD},
-    {"重載菜單", commands::RELOAD},   //繁體化
+    {"重載菜單", commands::RELOAD},         //繁體化
 };
 
 void msgDispatcher(const json& body)
@@ -880,5 +846,4 @@ void init()
     //drinkLoadListFromDb();
     loadBlacklist();
 }
-
 }

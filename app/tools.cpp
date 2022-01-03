@@ -10,7 +10,6 @@ namespace tools
 
 enum class commands : size_t {
 	roll,
-
 };
 
 const std::map<std::string, commands> commands_str
@@ -54,7 +53,5 @@ void msgDispatcher(const json& body)
     {
         mirai::sendMsgRespStr(m, resp);
     }
-
 }
-
 }

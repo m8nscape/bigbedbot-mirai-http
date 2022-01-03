@@ -34,7 +34,6 @@ void CreateTable()
         addLog(LOG_ERROR, "grp", db.errmsg());
 }
 
-
 void LoadListFromDb()
 {
     auto list = db.query("SELECT * FROM grp", 2);
@@ -59,7 +58,6 @@ void LoadListFromDb()
             addLog(LOG_ERROR, "grp", "insert group summary error: id=%ld", id);
         }
     }
-
 }
 
 void Group::LoadSumFromDb()
@@ -83,13 +81,14 @@ void Group::LoadSumFromDb()
 void Group::SaveSumIntoDb()
 {
     auto ret = db.exec("UPDATE grpsum SET \
-sum_earned=?, \
-sum_spent=?, \
-sum_case=?, \
-sum_card=?, \
-sum_eatwhat=?, \
-sum_smoke=? \
-WHERE id=?", {
+                        sum_earned=?, \
+                        sum_spent=?, \
+                        sum_case=?, \
+                        sum_card=?, \
+                        sum_eatwhat=?, \
+                        sum_smoke=? \
+                        WHERE id=?",
+    {
     sum_earned,
     sum_spent,
     sum_case,
@@ -163,13 +162,13 @@ int64_t Group::getMember(const char* name) const
         if (!strcmp(qqid_s.c_str(), name))
             return m;
 
-        // card
+        // card, 群名片
         if (!strcmp(v.nameCard.c_str(), name))
             return m;
 
         // nickname
-        //if (!strcmp(v.nick.c_str(), name))
-        //    return m;
+        // if (!strcmp(v.nick.c_str(), name))
+        //     return m;
     }
 
     return 0;
@@ -480,5 +479,4 @@ void init()
         groupObj.LoadSumFromDb();
     }
 }
-
 }

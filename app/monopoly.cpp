@@ -270,7 +270,6 @@ const std::map<std::string, void*> strMap
     {"currency_digit_unify", (void*)currency_digit_unify},
 };
 
-
 void do_all(int64_t groupid, efunc f, double x, double y)
 {
     bool check_skip_mul_all_currency_sub1 = false;
@@ -294,8 +293,6 @@ void do_all(int64_t groupid, efunc f, double x, double y)
             f(qqid, groupid, x, y);
     }
 }
-
-
 }
 
 int loadCfg(const char* yaml)
@@ -455,7 +452,6 @@ void doChance(const mirai::MsgMetadata& m, const chance& c, bool isInFever)
     r.push_back(mirai::buildMessageAt(m.qqid));
     r.push_back(mirai::buildMessagePlain(convertRespMsg(c.msg, m.qqid, m.groupid, target, pre, user::plist[m.qqid])));
     mirai::sendMsgResp(m, resp);
-
 }
 
 json not_registered(int64_t qq)
@@ -608,6 +604,5 @@ void choukasuoha(const json& body)
             std::this_thread::sleep_for(200ms);
         }
     }).detach();
-
 }
 }
