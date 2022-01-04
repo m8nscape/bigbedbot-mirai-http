@@ -35,10 +35,10 @@ void init_modules()
     // app: eat
     eatwhat::init();
     addTimedEventEveryMin(std::bind(&SQLite::commit, &eatwhat::db, true));
-    //eat::updateSteamGameList();
+    // eat::updateSteamGameList();
     
     // app: monopoly
-    //mnp::calc_event_max();
+    // mnp::calc_event_max();
     monopoly::init("./config/monopoly_chance.yaml");
 
     // app: weather
@@ -49,8 +49,8 @@ void init_modules()
     addTimedEvent(playwhat::updateSteamGameList, 0, 0);
 
     // announce startup
-    //std::string boot_info = help::boot_info();
-    //broadcastMsg(boot_info.c_str(), grp::MASK_BOOT_ANNOUNCE);
+    // std::string boot_info = help::boot_info();
+    // broadcastMsg(boot_info.c_str(), grp::MASK_BOOT_ANNOUNCE);
 
 }
 
@@ -71,23 +71,17 @@ void add_timed_events()
 
     // 每天刷批
     user::daily_refresh_time = time(nullptr) - 60 * 60 * 24; // yesterday
-    //user::daily_refresh_tm_auto = getLocalTime(TIMEZONE_HR, TIMEZONE_MIN);
     user::daily_refresh_tm_auto = *localtime(&user::daily_refresh_time);
     addTimedEvent(std::bind(user::flushDailyTimep, true), user::NEW_DAY_TIME_HOUR, user::NEW_DAY_TIME_MIN);
 
     /*
-    // steam game list
+    %%%%%%%% steam game list %%%%%%%%
     addTimedEvent([&]() { eat::updateSteamGameList(); }, 0, 0);
 
-    // 照顾美国人
-    addTimedEvent([&]() { event_case::startEvent(); }, 4, 0);
-    addTimedEvent([&]() { event_case::stopEvent(); }, 5, 0);
-
-    // 下午6点活动开箱
+    %%%%%%%% 下午6点活动开箱 %%%%%%%%
     addTimedEvent([&]() { event_case::startEvent(); }, event_case::EVENT_CASE_TIME_HOUR_START, event_case::EVENT_CASE_TIME_MIN_START);
     addTimedEvent([&]() { event_case::stopEvent(); }, event_case::EVENT_CASE_TIME_HOUR_END, event_case::EVENT_CASE_TIME_MIN_END);
     */
-
 }
 
 void add_msg_callbacks()
@@ -124,5 +118,4 @@ void add_msg_callbacks()
     
     mirai::regEventProc(evt::GroupMessage, {"playwhat::msgDispatcher", playwhat::msgCallback});
 }
-
 }

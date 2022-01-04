@@ -16,8 +16,7 @@ inline SQLite db("eat.db", "eat");
 
 void msgDispatcher(const json& body);
 
-////////////////////////////////////////////////////////////////////////////////
-
+// %%%%%%%%%% 吃什么 %%%%%%%%%%
 struct food
 {
     std::string name;
@@ -26,19 +25,17 @@ struct food
     int64_t groupid;
     std::string to_string(int64_t group = 0);
 };
-//inline std::vector<food> foodList;
 void init();
 void foodCreateTable();
 void foodLoadListFromDb();
 
+// %%%%%%%%%% 喝什么 %%%%%%%%%%
 struct drink
 {
     std::string name;
 	int64_t qq;
 	int64_t group;
 };
-//inline std::vector<drink> drinkList;
 void drinkCreateTable();
 void drinkLoadListFromDb();
-
 }

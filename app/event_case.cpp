@@ -2,8 +2,6 @@
 
 #include <iostream>
 #include <sstream>
-#include "cqp.h"
-#include "appmain.h"
 
 #include "utils/rand.h"
 #include "utils/string_util.h"
@@ -85,7 +83,6 @@ case_detail case_pool::draw(int type)
 std::string case_pool::casePartName(const case_detail& c) const
 {
     std::stringstream ss;
-    //if (c.type >= 0 && c.type < getTypeCount()) ss << "[" << getType(c.type) << "] ";
     if (c.level >= 0 && c.level < getLevelCount()) ss << "<" << getLevel(c.level) << "> ";
     ss << c.name;
     ss << " (" << c.worth << "批)";
@@ -182,9 +179,6 @@ command msgDispatcher(const json& body)
                 grp::groups[group].sum_earned += dcase.worth;
                 grp::groups[group].sum_case += 1;
             }
-
-            //modifyBoxCount(qq, ++plist[qq].opened_box_count);
-            //ss << "你还有" << stamina << "点体力，";
 
             return ss.str();
         };
@@ -285,5 +279,4 @@ void init(const char* event_case_draw_yml, const char* event_case_drop_yml)
     pool_draw = loadCfg(event_case_draw_yml);
     pool_drop = loadCfg(event_case_drop_yml);
 }
-
 }

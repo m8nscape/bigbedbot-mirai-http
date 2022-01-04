@@ -25,5 +25,4 @@ void NewFriendRequestEvent(const json& req)
         mirai::sendFriendMsgStr(rootQQId, ss.str());
     }
 }
-
 }

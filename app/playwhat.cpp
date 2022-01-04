@@ -322,7 +322,6 @@ int SteamAppListParser::proc_PAIR_FINISH()
     {
         game g;
         g.appid = appid_buf;
-        //g.name = utf82gbk(value);
         g.name = value;
         g.name.shrink_to_fit();
 
@@ -500,6 +499,4 @@ void msgCallback(const json& body)
         mirai::sendGroupMsg(m.groupid, STEAM_RANDOM(m.groupid, m.qqid));
     }
 }
-
-
 }

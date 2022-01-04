@@ -81,6 +81,7 @@ std::vector<std::vector<std::any>> SQLite::query(const char* zsql, size_t retSiz
     sqlite3_finalize(stmt);
     return ret;
 }
+
 std::vector<std::vector<std::any>> SQLite::query(const char* zsql, size_t retSize, std::initializer_list<std::any> args)
 {
     size_t argc = args.size();
@@ -178,6 +179,7 @@ void SQLite::transactionStart()
     }
     sqlite3_finalize(stmt);
 }
+
 void SQLite::transactionStop()
 {
     if (inTransaction)
@@ -200,6 +202,7 @@ void SQLite::transactionStop()
     }
     sqlite3_finalize(stmt);
 }
+
 void SQLite::commit(bool restart_transaction)
 {
     transactionStop();

@@ -118,10 +118,11 @@ std::string getReqUrl(const std::string& id)
     return ret;
 }
 
-// 1.接口每8小时更新一次，机制是  CDN  缓存8小时更新一次。注意：“自己做缓存，因为你每请求我一次，我就是有费用的，又拍云 CDN加速回源是按次收费，你可以了解下”。
+// 1.接口每8小时更新一次，机制是CDN缓存8小时更新一次。
+// ! 注意 !
+// ! 自己做缓存，因为你每请求我一次，我就是有费用的，又拍云CDN加速回源是按次收费，你可以了解下
 std::map<std::string, std::pair<time_t, std::string>> api_buf;
 const time_t BUF_VALID_DURATION = 8 * 60 * 60;
-
 }
 
 namespace openweather
@@ -139,19 +140,6 @@ std::string getReqUrl(const std::string& name)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-
-/*
-std::string success(::int64_t, ::int64_t, std::vector<std::string>& args, const char*)
-{
-    std::stringstream ss;
-    ss <<
-        args[1] << "," << args[0] << ": " <<
-        args[2] << ", " <<
-        args[3] << "°C (" <<  args[4]<< "°C~" << args[5] << "°C), " <<
-        args[6] << "%";
-    return ss.str();
-}
-*/
 
 enum class commands : size_t {
     _,
@@ -287,13 +275,13 @@ void weather_cn(const mirai::MsgMetadata& m, const std::string& name)
         if (!buf.empty() && buf[0] != '{')
         {
             addLog(LOG_WARNING, "weather", "Response json parsing error. Body: \n%s", buf.c_str());
-            //mirai::sendMsgRespStr(m, "数据返回格式错误");
+            // mirai::sendMsgRespStr(m, "数据返回格式错误");
             continue;
         }
 
         // parse data
         nlohmann::json json = nlohmann::json::parse(buf);
-        //addLog(LOG_INFO, "weather", buf.c_str());
+        // addLog(LOG_INFO, "weather", buf.c_str());
         try
         {
             if (json.contains("cityInfo"))

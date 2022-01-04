@@ -226,9 +226,7 @@ void msgDispatcher(const json& body)
     c.func(mm.groupid, mm.qqid, c.args, query.c_str());
 }
 
-///////////////////////////////////////////////////////////////////////////////
-// flipcoin
-
+// %%%%%%%%%%%%%%%% 翻批 %%%%%%%%%%%%%%%%
 namespace flipcoin
 {
 
@@ -664,6 +662,4 @@ void put(int64_t group, int64_t qq, grid g, int64_t amount)
     mirai::sendGroupMsgStr(group, ss.str());
 }
 }
-
 }
-
