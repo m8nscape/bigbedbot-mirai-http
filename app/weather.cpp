@@ -26,6 +26,8 @@ namespace fs = std::experimental::filesystem;
 namespace weather
 {
 
+// %%%%%%%%%%%%%%% CURL %%%%%%%%%%%%%%%
+
 bool inQuery = false;
 
 struct curl_buffer
@@ -91,7 +93,7 @@ int curl_get(const std::string& url, std::string& content, int timeout_sec = 5)
     return CURLE_OK;
 }
 
-///////////////////////////////////////////////////////////////////////////////
+// %%%%%%%%%%%%%%% API Specific Function %%%%%%%%%%%%%%%
 
 namespace weathercn
 {
@@ -135,6 +137,36 @@ std::string getReqUrl(const std::string& name)
         "https://api.openweathermap.org/data/2.5/weather?q=%s&appid=%s",
         name.c_str(),
         APIKEY.c_str());
+    return ret;
+}
+}
+
+namespace ns_weather_mj
+{
+std::string APIKEY;
+int TIMEOUT_SEC = 5;
+SQLite db("weatherMJ_cityID.db", "weatherMJ");
+
+// [墨迹天气] 输入城市名，获取城市ID
+std::vector<std::string> getCityId(const std::string& name)
+{
+    // TODO 更新代码
+    auto ret = db.query("select id from cityid where name=?", 1, { name });
+    if (ret.empty()) return {};
+    std::vector<std::string> idList;
+    for (auto& r: ret)
+        idList.push_back(std::any_cast<std::string>(r[0]));
+    return idList;
+}
+
+// [墨迹天气] 输入城市ID，获取request链接
+std::string getReqUrl(const std::string& id)
+{
+    // TODO 更新代码
+    // curl -i -k -X POST 'https://aliv18.data.moji.com/whapi/json/alicityweather/limit'  -H 'Authorization:APPCODE [你自己的AppCode]' --data 'cityId=2&token=27200005b3475f8b0e26428f9bfb13e9'
+    std::string ret = strfmt(
+        "http://t.weather.itboy.net/api/weather/city/%s",
+        id.c_str());
     return ret;
 }
 }
@@ -286,6 +318,135 @@ void weather_cn(const mirai::MsgMetadata& m, const std::string& name)
         {
             if (json.contains("cityInfo"))
             {
+                int ibuf;
+                double dbuf;
+                std::string sbuf;
+                std::vector<std::string> args;
+
+                args.push_back(json["cityInfo"]["parent"]);
+                args.push_back(json["cityInfo"]["city"]);
+                args.push_back(json["data"]["wendu"]);
+                args.push_back(json["data"]["shidu"]);
+
+                dbuf = json["data"]["pm25"];
+                sbuf = strfmt("%.1f", dbuf);
+                args.push_back(sbuf);
+
+                dbuf = json["data"]["pm10"];
+                sbuf = strfmt("%.1f", dbuf);
+                args.push_back(sbuf);
+
+                args.push_back(json["data"]["forecast"][0]["type"]);
+                args.push_back(json["data"]["forecast"][0]["low"]);
+                args.push_back(json["data"]["forecast"][0]["high"]);
+
+                ibuf = json["data"]["forecast"][0]["aqi"];
+                sbuf = strfmt("%d", ibuf);
+                args.push_back(sbuf);
+
+                std::stringstream ss;
+                ss << args[0] << " " << args[1] << " " << args[6] << std::endl <<
+                    "温度：" << args[2] << "℃（" << args[7] << "，" << args[8] << "） " << std::endl <<
+                    "湿度：" << args[3] << std::endl <<
+                    "PM2.5: " << args[4] << std::endl << 
+                    "PM10: " << args[5] << std::endl << 
+                    "AQI: " << args[9];
+
+                int aqi = atoi(args[9].c_str());
+                if (0 <= aqi && aqi <= 50)
+                    ss << " 一级（优）";
+                else if (51 <= aqi && aqi <= 100)
+                    ss << " 二级（良）";
+                else if (101 <= aqi && aqi <= 150)
+                    ss << " 三级（轻度污染）";
+                else if (151 <= aqi && aqi <= 200)
+                    ss << " 四级（中度污染）";
+                else if (201 <= aqi && aqi <= 300)
+                    ss << " 五级（重度污染）";
+                else if (301 <= aqi)
+                    ss << " 六级（严重污染）";
+                else
+                    ss << " undefined（？）";
+
+                mirai::sendMsgRespStr(m, ss.str().c_str());
+                
+                // save to buffer
+                api_buf[id] = {time_req, ss.str()};
+                return;
+            }
+            else throw std::exception();
+        }
+        catch (...)
+        {
+            addLog(LOG_WARNING, "weather", "Response parsing error. Body: \n%s", json.dump().c_str());
+            //mirai::sendMsgRespStr(m, "天气解析失败");
+        }
+    }
+
+    addLog(LOG_WARNING, "weather", "No valid request for %s", name.c_str());
+    mirai::sendMsgRespStr(m, "天气解析失败");
+}
+
+void weather_mj(const mirai::MsgMetadata& m, const std::string& city_keyword)
+{
+    // TODO 更新代码
+    using namespace ns_weather_mj;
+
+    // 搜索城市关键词，待更新
+    auto idList = getCityId(city_keyword);
+    if (idList.empty())
+    {
+        mirai::sendMsgRespStr(m, "[墨迹]未找到城市对应的ID");
+        return;
+    }
+
+    // 遍历搜索到的list
+    // ? 为什么使用的时候只返回一个城市的天气？
+    for (const auto& id: idList)
+    {
+        // No need to use buffer
+        time_t time_req = time(NULL);
+        std::string buf;
+
+        // ? 这段代码是做什么的？api_buf.find在哪？
+        if (api_buf.find(id) != api_buf.end())
+        {
+            auto [time_buf, data] = api_buf.at(id);
+            if (time_req - time_buf < BUF_VALID_DURATION)
+            {
+                mirai::sendMsgRespStr(m, data.c_str());
+                return;
+            }
+        }
+        
+        // 从ID 生成request链接
+        auto url = getReqUrl(id);
+        if (CURLE_OK != curl_get(url, buf, TIMEOUT_SEC))
+        {
+            // 测试用代码，是否可以直接用log不同的等级达成？，LOG_DEBUG if in python
+            // mirai::sendMsgRespStr(m, buf);
+            addLog(LOG_WARNING, "weather_mj", "CURL ERROR: %s", url.c_str());
+            continue;
+        }
+        
+        // data is not started with '{', likely 302
+        // 野蛮！
+        if (!buf.empty() && buf[0] != '{')
+        {
+            addLog(LOG_WARNING, "weather_mj", "Response json parsing error. Body: \n%s", buf.c_str());
+            // mirai::sendMsgRespStr(m, "数据返回格式错误");
+            // 同样是否应该用logging
+            continue;
+        }
+
+        // parse data
+        nlohmann::json json = nlohmann::json::parse(buf);
+        // addLog(LOG_INFO, "weather", buf.c_str());
+        try
+        {
+            if (json.contains("cityInfo"))
+            {
+                // TODO 重写
                 int ibuf;
                 double dbuf;
                 std::string sbuf;
