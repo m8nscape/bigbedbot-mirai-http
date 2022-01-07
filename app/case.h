@@ -14,20 +14,16 @@ void init(const char* cfg_yml);
 
 void msgDispatcher(const json& body);
 
-////////////////////////////////////////////////////////////////////////////////
-// 开箱
+// %%%%%%%%%%%%%%%%%%%%  开箱  %%%%%%%%%%%%%%%%%%%%
 class case_type
 {
 private:
 	std::string _name;
-	//int _worth;
 	double _prob;
 public:
-	case_type(std::string n, /*int w,*/ double p) : _name(n), /*_worth(w),*/ _prob(p) {}
+	case_type(std::string n, double p) : _name(n), _prob(p) {}
 	std::string name() const { return _name; }
-	//int worth() const { return _worth; }
 	double prob() const { return _prob; }
-	//operator int() const { return worth(); }
 };
 
 class case_detail
@@ -50,6 +46,4 @@ public:
 };
 
 const case_detail& draw_case(double p);
-
-
 }

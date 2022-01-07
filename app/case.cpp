@@ -278,8 +278,6 @@ json OPEN_SP1(::int64_t group, ::int64_t qq, std::vector<std::string> args)
         return not_registered(qq);
 
     auto &p = plist[qq];
-    //CQ_setGroupBan(ac, group, qq, 60);
-    //return "不准开";
 
     if (p.getCurrency() < OPEN_RUN_SP1_COST)
         return not_enough_currency(qq);
@@ -341,8 +339,6 @@ json OPEN_SP1(::int64_t group, ::int64_t qq, std::vector<std::string> args)
     p.modifyCurrency(pee - p.getCurrency());
     p.modifyBoxCount(count);
     return resp;
-
-    //ss << "你还有" << stamina << "点体力，";
 }
 
 json OPEN_SP2(::int64_t group, ::int64_t qq, std::vector<std::string> args)
@@ -426,8 +422,6 @@ json OPEN_SP2(::int64_t group, ::int64_t qq, std::vector<std::string> args)
     p.modifyCurrency(pee - p.getCurrency());
     p.modifyBoxCount(count);
     return resp;
-
-    //ss << "你还有" << stamina << "点体力，";
 }
 
 json OPEN_ENDLESS(::int64_t group, ::int64_t qq, std::vector<std::string> args)
@@ -437,13 +431,11 @@ json OPEN_ENDLESS(::int64_t group, ::int64_t qq, std::vector<std::string> args)
     r.push_back(mirai::buildMessagePlain("梭哈台被群主偷了，没得梭了"));
     return resp;
 
-    /*
-case commands::开箱endless:
+    /* %%%%%%%%%%%%%%%% 梭哈 %%%%%%%%%%%%%%%%
+    case commands::开箱endless:
     c.func = [](::int64_t group, ::int64_t qq, std::vector<std::string> args) -> std::string
     {
         if (plist.find(qq) == plist.end()) return std::string(CQ_At(qq)) + "，你还没有开通菠菜";
-        //CQ_setGroupBan(ac, group, qq, 60);
-        //return "不准开";
 
         if (plist[qq].currency < OPEN_RUN_ENDLESS_COST)
             return std::string(CQ_At(qq)) + "，你的余额不足";
@@ -486,8 +478,6 @@ case commands::开箱endless:
             modifyCurrency(qq, plist[qq].currency);
             modifyBoxCount(qq, plist[qq].opened_box_count);
             return ss.str();
-
-            //ss << "你还有" << stamina << "点体力，";
         }
 
         return ss.str();
@@ -521,19 +511,19 @@ enum class commands : size_t {
 const std::map<std::string, commands> commands_str
 {
     {"开箱", commands::OPEN_1},
-    {"開箱", commands::OPEN_1},  //繁體化
+    {"開箱", commands::OPEN_1},             //繁體化
     {"开箱十连", commands::OPEN_10},
-    {"開箱十連", commands::OPEN_10},  //繁體化
+    {"開箱十連", commands::OPEN_10},        //繁體化
     {"开黄箱", commands::OPEN_SP1},
-    {"開黃箱", commands::OPEN_SP1},  //繁體化
+    {"開黃箱", commands::OPEN_SP1},         //繁體化
     {"开红箱", commands::OPEN_SP2},
-    {"開紅箱", commands::OPEN_SP2},  //繁體化
+    {"開紅箱", commands::OPEN_SP2},         //繁體化
     {"开箱梭哈", commands::OPEN_ENDLESS},
-    {"开箱照破", commands::OPEN_ENDLESS},  //梭哈在FF14的翻译是[照破]
-    {"開箱梭哈", commands::OPEN_ENDLESS},  //繁體化
-    {"開箱照破", commands::OPEN_ENDLESS},  //繁體化
-    {"刷新箱子", commands::RELOAD},  //繁體化
-    {"重載箱子", commands::RELOAD},  //繁體化
+    {"开箱照破", commands::OPEN_ENDLESS},   //梭哈在FF14的翻译是[照破]
+    {"開箱梭哈", commands::OPEN_ENDLESS},   //繁體化
+    {"開箱照破", commands::OPEN_ENDLESS},   //繁體化
+    {"刷新箱子", commands::RELOAD},         //繁體化
+    {"重載箱子", commands::RELOAD},         //繁體化
 
 };
 void msgDispatcher(const json& body)
@@ -592,7 +582,6 @@ const case_detail& draw_case(double p)
             totalp += CASE_TYPES[idx].prob();
             if (p < totalp) break;
         }
-        // idx = CASE_TYPES.size()-1 if not match any case
     }
 
     size_t detail_idx = randInt(0, CASE_POOL[idx].size() - 1);

@@ -17,13 +17,6 @@ void timedEventLoop()
 	{
 		auto t = std::time(nullptr);
 		auto tm = *std::localtime(&t);
-		/*
-		if (prev_min == tm.tm_min)
-		{
-			std::this_thread::sleep_for(30s);
-			continue;
-		}
-		*/
 
 		for (auto& f : timedEventQueue[tm.tm_hour][tm.tm_min])
 		{

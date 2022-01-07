@@ -46,7 +46,6 @@ enum class commands : size_t {
     DRAW
 };
 typedef std::function<std::string(::int64_t, ::int64_t, std::vector<std::string>&, const char*)> callback;
-//typedef std::string(*callback)(::int64_t, ::int64_t, std::vector<std::string>);
 struct command
 {
     commands c = (commands)0;
@@ -91,5 +90,4 @@ const int EVENT_CASE_TIME_MIN_END = 0;
 
 int loadEventCaseDraw(const char* yaml);
 int loadEventCaseDrop(const char* yaml);
-
 }

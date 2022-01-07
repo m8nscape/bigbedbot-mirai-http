@@ -51,7 +51,7 @@ int initialize()
     curl_global_init(CURL_GLOBAL_ALL);
 
     addLog(LOG_INFO, "core", "Initialization succeeded.");
-    
+
     return 0;
 }
 
@@ -107,7 +107,6 @@ int init_app_and_start()
     // 每分钟保存群统计
     for (auto it = grp::groups.begin(); it != grp::groups.end(); ++it)
         addTimedEventEveryMin(std::bind(&grp::Group::SaveSumIntoDb, &it->second));
-        
 
     init_modules();
     add_timed_events();
@@ -125,10 +124,9 @@ int init_app_and_start()
 #else
     std::thread([](){mirai::consoleInputHandle(); core::shutdown();}).detach();
 #endif
-    
+
     return 0;
 }
-
 
 int shutdown()
 {
@@ -155,45 +153,4 @@ int shutdown()
     curl_global_cleanup();
     return 0;
 }
-
-
-/*
-* Type=21 私聊消息
-* subType 子类型，11/来自好友 1/来自在线状态 2/来自群 3/来自讨论组
-*/
-/*
-int onPrivateMsg(int32_t msgId, int64_t fromQQ, const char *msg, int32_t font) 
-{
-    if (!strcmp(msg, "接近我") || !strcmp(msg, "解禁我"))
-    {
-        CQ_sendPrivateMsg(ac, fromQQ, smoke::selfUnsmoke(fromQQ).c_str());
-        return EVENT_BLOCK;
-    }
-
-    //如果要回复消息，请调用酷Q方法发送，并且这里 return EVENT_BLOCK - 截断本条消息，不再继续处理  注意：应用优先级设置为"最高"(10000)时，不得使用本返回值
-    //如果不回复消息，交由之后的应用/过滤器处理，这里 return EVENT_IGNORE - 忽略本条消息
-    return EVENT_IGNORE;
-}
-*/
-
-//time_t banTime_me = 0;
-
-/*
-CQEVENT(int32_t, __unsmokeAll, 0)() 
-{
-    time_t t = time(nullptr);
-    for (auto& c : smoke::smokeTimeInGroups)
-        for (auto& g : c.second)
-            if (t < g.second)
-                mirai::unmute(g.first, c.first);
-    return 0;
-}
-
-
-CQEVENT(int32_t, __updateSteamGameList, 0)() 
-{
-    eat::updateSteamGameList();
-    return 0;
-}
-*/
 }

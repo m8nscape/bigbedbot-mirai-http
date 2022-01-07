@@ -106,8 +106,6 @@ public:
     }
 } smokeTimeMgr;
 
-
-
 RetVal nosmoking(int64_t group, int64_t target, int duration_min)
 {
     if (duration_min < 0) return RetVal::INVALID_DURATION;
@@ -321,10 +319,6 @@ void groupMsgCallback(const json& body)
     int64_t m1target = groupLastTalkedMember[m.groupid];
     groupLastTalkedMember[m.groupid] = m.qqid;
 
-    // one must not being smoked if it is still able to talk
-    // ^ nope: network lag may happens
-    //smokeTimeMgr.remove(m.qqid, m.groupid);
-
     if (!grp::groups[m.groupid].getFlag(grp::MASK_P | grp::MASK_SMOKE))
         return;
 
@@ -367,7 +361,6 @@ void groupMsgCallback(const json& body)
     default:
         break;
     }
-
 }
 
 std::string selfUnsmoke(int64_t qq)
@@ -493,5 +486,4 @@ bool isSmoking(int64_t qqid, int64_t groupid)
 {
     return smokeTimeMgr.isSmoking(qqid, groupid);
 }
-
 }

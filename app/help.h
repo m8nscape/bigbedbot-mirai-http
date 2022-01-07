@@ -16,10 +16,6 @@ enum class commands : size_t {
 
 void msgDispatcher(const json& body);
 
-////////////////////////////////////////////////////////////////////////////////
-
 std::string boot_info();
-
 std::string help();
-
 }
