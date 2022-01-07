@@ -104,19 +104,19 @@ int loadUserAlias(const char* yaml);
 int64_t getUser(const std::string& alias);
 
 // %%%%%%%%%%%%%%%% 盒盒 %%%%%%%%%%%%%%%%
-class city_data
-{
-public:
-    city_data() {}
-    city_data(int64_t my_qq): qq(my_qq) {}
-    city_data(int64_t my_qq, int64_t my_city_id):
-        qq(my_qq), city_id(my_city_id) {}
-    ~city_data() = default;
+// class city_data
+// {
+// public:
+//     city_data() {}
+//     city_data(int64_t my_qq): qq(my_qq) {}
+//     city_data(int64_t my_qq, int64_t my_city_id):
+//         qq(my_qq), city_id(my_city_id) {}
+//     ~city_data() = default;
 
-    int64_t get_city_id() {return city_id;}
+//     int64_t get_city_id() {return city_id;}
 
-private:
-    int64_t qq = -1;
-    int64_t city_id = 0;
-}
+// private:
+//     int64_t qq = -1;
+//     int64_t city_id = 0;
+// };
 }

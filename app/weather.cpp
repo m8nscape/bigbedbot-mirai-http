@@ -93,7 +93,7 @@ int curl_get(const std::string& url, std::string& content, int timeout_sec = 5)
     return CURLE_OK;
 }
 
-int curl_post_mj(const int search_type, const std::string& city_id, std::string& content, int timeout_sec = 5)
+int curl_post_mj(const std::string& appcode, const int search_type, const std::string& city_id, std::string& content, int timeout_sec = 5)
 {
     // Search type
     // 0    限行数据
@@ -152,25 +152,28 @@ int curl_post_mj(const int search_type, const std::string& city_id, std::string&
 
     // HTTP HEADERS, remember to replace <MJ_APPCODE> with real appcode
     curl_slist *plist = NULL;
-    plist = curl_slist_append(plist, "appcode: " + APPCODE); 
+
+    std::string arg_app = "appcode: " + appcode;
+    std::string arg_auth = "Authorization: APPCODE " + appcode;
+    plist = curl_slist_append(plist, arg_app.c_str()); 
     plist = curl_slist_append(plist, "Content-Type: application/x-www-form-urlencoded; charset=UTF-8"); 
-    plist = curl_slist_append(plist, "Authorization: APPCODE " + APPCODE);
+    plist = curl_slist_append(plist, arg_auth.c_str());
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, plist);
 
     // POST body
-    std::string strJsonData = strfmt("cityId=%s&token=%s", city_id, mj_token[search_type]);
+    std::string strJsonData = strfmt("cityId=%s&token=%s", city_id.c_str(), mj_token[search_type].c_str());
 
     // Setting POST variables for curl
     curl_easy_setopt(curl, CURLOPT_POST, 1L);
     curl_easy_setopt(curl, CURLOPT_POSTFIELDS, strJsonData.c_str());
-    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, strJsonData.size());
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, strJsonData.size());
 
     // Do NOT verify for SSL
     curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
 
     // Setting other options for curl
     curl_buffer curlbuf;
-    curl_easy_setopt(curl, CURLOPT_URL, mj_url);
+    curl_easy_setopt(curl, CURLOPT_URL, mj_url.c_str());
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, perform_write);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &curlbuf);
     curl_easy_setopt(curl, CURLOPT_TIMEOUT, timeout_sec);
@@ -251,13 +254,14 @@ namespace ns_weather_mj
 {
 std::string APPCODE;
 int TIMEOUT_SEC = 5;
-SQLite db("weatherMJ_cityID.db", "weatherMJ");
+SQLite db("weatherMJ_cityID.db", "weather_mj");
 
 // [墨迹天气] 输入城市名，获取城市ID
 std::vector<std::string> getCityId(const std::string& name)
 {
-    // TODO 更新代码
-    auto ret = db.query("select id from cityid where name=?", 1, { name });
+    // TODO 更新代码进行关键词搜索
+    addLog(LOG_DEBUG, "weather_mj", "Now Selecting ID with name: %s", name.c_str());
+    auto ret = db.query("select id from cityID where dname=?", 1, { name });
     if (ret.empty()) return {};
     std::vector<std::string> idList;
     for (auto& r: ret)
@@ -268,10 +272,12 @@ std::vector<std::string> getCityId(const std::string& name)
 
 // %%%%%%%%%%%%%% BUILD RES MSG %%%%%%%%%%%%%%
 
+// %%%%%%%%%%%%%% COMMANDS %%%%%%%%%%%%%%
 enum class commands : size_t {
     _,
     WEATHER_GLOBAL,
-    WEATHER_CN
+    WEATHER_CN,
+    WEATHER_MJ
 };
 const std::vector<std::pair<std::regex, commands>> commands_regex
 {
@@ -281,6 +287,7 @@ const std::vector<std::pair<std::regex, commands>> commands_regex
     {std::regex(R"(^(.+) *天氣$)", std::regex::optimize | std::regex::extended), commands::WEATHER_CN},
     {std::regex(R"(^天气 +(.+)$)", std::regex::optimize | std::regex::extended), commands::WEATHER_CN},
     {std::regex(R"(^天氣 +(.+)$)", std::regex::optimize | std::regex::extended), commands::WEATHER_CN},
+    {std::regex(R"(^(.+) *MJ$)", std::regex::optimize | std::regex::extended), commands::WEATHER_MJ},
 };
 
 void msgCallback(const json& body)
@@ -311,6 +318,9 @@ void msgCallback(const json& body)
         break;
     case commands::WEATHER_CN:
         weather_cn(m, city);
+        break;
+    case commands::WEATHER_MJ:
+        weather_mj(m, city);
         break;
     default:
         break;
@@ -502,13 +512,14 @@ void weather_mj(const mirai::MsgMetadata& m, const std::string& city_keyword)
     {
         time_t time_req = time(NULL);
         std::string buf;
+        //std::string test_str = "1000";
         
         // get real time weather by default
         // TODO get different data later.
-        if (CURLE_OK != curl_post_mj(6, id, buf, TIMEOUT_SEC))
+        if (CURLE_OK != curl_post_mj(APPCODE, 6, id, buf, TIMEOUT_SEC))
         {
             // mirai::sendMsgRespStr(m, buf);
-            addLog(LOG_WARNING, "weather_mj", "CURL ERROR: %s", url.c_str());
+            addLog(LOG_WARNING, "weather_mj", "CURL ERROR: %d, %s", 6, id.c_str());
             continue;
         }
         
@@ -539,13 +550,17 @@ void weather_mj(const mirai::MsgMetadata& m, const std::string& city_keyword)
                 args.push_back(json["data"]["condition"]["humidity"]);
                 args.push_back(json["data"]["condition"]["windDir"]);
                 args.push_back(json["data"]["condition"]["windLevel"]);
+                args.push_back(json["data"]["condition"]["tips"]);
+
+                if (args[0].compare(args[1]) == 0) {args[1] = "";}
+                if (args[0].compare(args[2]) == 0) {args[2] = "";}
 
                 std::stringstream ss;
                 ss << args[0] << " " << args[1] << " " << args[2] << " " << args[3] << std::endl <<
                     "实时温度：" << args[4] << "℃" << std::endl <<
                     "湿度：" << args[5] << "%" << std::endl <<
-                    "风向：" << args[6] << std::endl <<
-                    "Tips：" << args[7];
+                    "风向：" << args[6] << "@" << args[7] << "级" << std::endl <<
+                    "Tips：" << args[8];
 
                 mirai::sendMsgRespStr(m, ss.str().c_str());
                 
@@ -559,7 +574,7 @@ void weather_mj(const mirai::MsgMetadata& m, const std::string& city_keyword)
         }
     }
 
-    addLog(LOG_WARNING, "weather", "No valid request for %s", name.c_str());
+    addLog(LOG_WARNING, "weather", "No valid request for %s", city_keyword.c_str());
     mirai::sendMsgRespStr(m, "天气解析失败");
 }
 
