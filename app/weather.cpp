@@ -270,7 +270,7 @@ std::vector<std::string> getCityId(const std::string& name)
 }
 }
 
-///////////////////////////////////////////////////////////////////////////////
+// %%%%%%%%%%%%%% BUILD RES MSG %%%%%%%%%%%%%%
 
 enum class commands : size_t {
     _,
@@ -491,7 +491,6 @@ void weather_cn(const mirai::MsgMetadata& m, const std::string& name)
 // [墨迹天气] Construct bot reply message for moji weather from location keyword
 void weather_mj(const mirai::MsgMetadata& m, const std::string& city_keyword)
 {
-    // TODO 更新代码
     using namespace ns_weather_mj;
 
     // 搜索城市关键词，待更新
@@ -503,95 +502,57 @@ void weather_mj(const mirai::MsgMetadata& m, const std::string& city_keyword)
     }
 
     // 遍历搜索到的list
-    // ? 为什么使用的时候只返回一个城市的天气？
     for (const auto& id: idList)
     {
-        // No need to use buffer
         time_t time_req = time(NULL);
         std::string buf;
         
-        // 从ID 生成request链接
-        auto url = getReqUrl(id);
-        if (CURLE_OK != curl_get(url, buf, TIMEOUT_SEC))
+        // get real time weather by default
+        // TODO get different data later.
+        if (CURLE_OK != curl_post_mj(6, id, buf, TIMEOUT_SEC))
         {
-            // 测试用代码，是否可以直接用log不同的等级达成？，LOG_DEBUG if in python
             // mirai::sendMsgRespStr(m, buf);
             addLog(LOG_WARNING, "weather_mj", "CURL ERROR: %s", url.c_str());
             continue;
         }
         
         // data is not started with '{', likely 302
-        // 野蛮！
         if (!buf.empty() && buf[0] != '{')
         {
             addLog(LOG_WARNING, "weather_mj", "Response json parsing error. Body: \n%s", buf.c_str());
             // mirai::sendMsgRespStr(m, "数据返回格式错误");
-            // 同样是否应该用logging
             continue;
         }
 
-        // parse data
+        // Parsing data
         nlohmann::json json = nlohmann::json::parse(buf);
         // addLog(LOG_INFO, "weather", buf.c_str());
         try
         {
-            if (json.contains("cityInfo"))
+            if (json.contains("data"))
             {
-                // TODO 重写
-                int ibuf;
-                double dbuf;
+                // TODO 输出到ss的时候判断，删除重复的secondaryname和name（北京为直辖市）
                 std::string sbuf;
                 std::vector<std::string> args;
 
-                args.push_back(json["cityInfo"]["parent"]);
-                args.push_back(json["cityInfo"]["city"]);
-                args.push_back(json["data"]["wendu"]);
-                args.push_back(json["data"]["shidu"]);
-
-                dbuf = json["data"]["pm25"];
-                sbuf = strfmt("%.1f", dbuf);
-                args.push_back(sbuf);
-
-                dbuf = json["data"]["pm10"];
-                sbuf = strfmt("%.1f", dbuf);
-                args.push_back(sbuf);
-
-                args.push_back(json["data"]["forecast"][0]["type"]);
-                args.push_back(json["data"]["forecast"][0]["low"]);
-                args.push_back(json["data"]["forecast"][0]["high"]);
-
-                ibuf = json["data"]["forecast"][0]["aqi"];
-                sbuf = strfmt("%d", ibuf);
-                args.push_back(sbuf);
+                args.push_back(json["data"]["city"]["pname"]);
+                args.push_back(json["data"]["city"]["secondaryname"]);
+                args.push_back(json["data"]["city"]["name"]);
+                args.push_back(json["data"]["condition"]["condition"]);
+                args.push_back(json["data"]["condition"]["temp"]);
+                args.push_back(json["data"]["condition"]["humidity"]);
+                args.push_back(json["data"]["condition"]["windDir"]);
+                args.push_back(json["data"]["condition"]["windLevel"]);
 
                 std::stringstream ss;
-                ss << args[0] << " " << args[1] << " " << args[6] << std::endl <<
-                    "温度：" << args[2] << "℃（" << args[7] << "，" << args[8] << "） " << std::endl <<
-                    "湿度：" << args[3] << std::endl <<
-                    "PM2.5: " << args[4] << std::endl << 
-                    "PM10: " << args[5] << std::endl << 
-                    "AQI: " << args[9];
-
-                int aqi = atoi(args[9].c_str());
-                if (0 <= aqi && aqi <= 50)
-                    ss << " 一级（优）";
-                else if (51 <= aqi && aqi <= 100)
-                    ss << " 二级（良）";
-                else if (101 <= aqi && aqi <= 150)
-                    ss << " 三级（轻度污染）";
-                else if (151 <= aqi && aqi <= 200)
-                    ss << " 四级（中度污染）";
-                else if (201 <= aqi && aqi <= 300)
-                    ss << " 五级（重度污染）";
-                else if (301 <= aqi)
-                    ss << " 六级（严重污染）";
-                else
-                    ss << " undefined（？）";
+                ss << args[0] << " " << args[1] << " " << args[2] << " " << args[3] << std::endl <<
+                    "实时温度：" << args[4] << "℃" << std::endl <<
+                    "湿度：" << args[5] << "%" << std::endl <<
+                    "风向：" << args[6] << std::endl <<
+                    "Tips：" << args[7];
 
                 mirai::sendMsgRespStr(m, ss.str().c_str());
                 
-                // save to buffer
-                api_buf[id] = {time_req, ss.str()};
                 return;
             }
             else throw std::exception();
@@ -599,7 +560,6 @@ void weather_mj(const mirai::MsgMetadata& m, const std::string& city_keyword)
         catch (...)
         {
             addLog(LOG_WARNING, "weather", "Response parsing error. Body: \n%s", json.dump().c_str());
-            //mirai::sendMsgRespStr(m, "天气解析失败");
         }
     }
 
