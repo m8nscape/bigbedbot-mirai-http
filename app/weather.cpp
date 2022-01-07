@@ -152,17 +152,13 @@ int curl_post_mj(const int search_type, const std::string& city_id, std::string&
 
     // HTTP HEADERS, remember to replace <MJ_APPCODE> with real appcode
     curl_slist *plist = NULL;
-    plist = curl_slist_append(plist, "appcode: <MJ_APPCODE>"); 
+    plist = curl_slist_append(plist, "appcode: " + APPCODE); 
     plist = curl_slist_append(plist, "Content-Type: application/x-www-form-urlencoded; charset=UTF-8"); 
-    plist = curl_slist_append(plist, "Authorization: APPCODE <MJ_APPCODE>");
+    plist = curl_slist_append(plist, "Authorization: APPCODE " + APPCODE);
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, plist);
 
     // POST body
-    std::string strJsonData;
-    strJsonData = "cityId=";
-    strJsonData += city_id;
-    strJsonData += "&token=";
-    strJsonData += mj_token[search_type];
+    std::string strJsonData = strfmt("cityId=%s&token=%s", city_id, mj_token[search_type]);
 
     // Setting POST variables for curl
     curl_easy_setopt(curl, CURLOPT_POST, 1L);
@@ -253,7 +249,7 @@ std::string getReqUrl(const std::string& name)
 
 namespace ns_weather_mj
 {
-std::string APIKEY;
+std::string APPCODE;
 int TIMEOUT_SEC = 5;
 SQLite db("weatherMJ_cityID.db", "weatherMJ");
 
@@ -583,6 +579,8 @@ int init(const char* yaml)
     openweather::APIKEY = cfg["openweather_apikey"].as<std::string>();
     openweather::TIMEOUT_SEC = cfg["openweather_timeout"].as<int>();
     weathercn::TIMEOUT_SEC = cfg["weathercn_timeout"].as<int>();
+    ns_weather_mj::APPCODE = cfg["mjweather_appcode"].as<std::string>();
+    ns_weather_mj::TIMEOUT_SEC = cfg["mjweather_timeout"].as<int>();
     
     addLog(LOG_INFO, "weather", "Config loaded");
 
