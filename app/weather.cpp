@@ -93,6 +93,116 @@ int curl_get(const std::string& url, std::string& content, int timeout_sec = 5)
     return CURLE_OK;
 }
 
+int curl_post_mj(const int search_type, const std::string& city_id, std::string& content, int timeout_sec = 5)
+{
+    // Search type
+    // 0    限行数据
+    // 1    空气质量指数
+    // 2    生活指数
+    // 3    天气预警
+    // 4    天气预报24小时
+    // 5    天气预报15天
+    // 6    天气实况
+    // 7    AQI预报5天
+    if (inQuery)
+    {
+        content = "API is busy";
+        return -2;
+    }
+
+    inQuery = true;
+
+    // check if search_type is OOB
+    if (search_type < 0 || search_type > 7)
+    {
+        content = "search_type out of bound";
+        return -3;
+    }
+
+    // Place Moji Tokens here for test
+    std::vector<std::string> mj_token = 
+    {
+        "27200005b3475f8b0e26428f9bfb13e9",
+        "8b36edf8e3444047812be3a59d27bab9",
+        "5944a84ec4a071359cc4f6928b797f91",
+        "7ebe966ee2e04bbd8cdbc0b84f7f3bc7",
+        "008d2ad9197090c5dddc76f583616606",
+        "f9f212e1996e79e0e602b08ea297ffb0",
+        "50b53ff8dd7d9fa320d3d3ca32cf8ed1",
+        "0418c1f4e5e66405d33556418189d2d0"
+    };
+
+    std::vector<std::string> mj_url_append = 
+    {
+        "limit", "aqi", "index", "alert",
+        "forecast24hours", "forecast15days", "condition", "aqiforecast5days"
+    };
+
+    std::string mj_url = "https://aliv18.mojicb.com/whapi/json/alicityweather/";
+    mj_url += mj_url_append[search_type];
+
+    // Initializing CURL
+    CURL* curl = curl_easy_init();
+    if (!curl)
+    {
+        content = "curl init failed";
+        inQuery = false;
+        return -1;
+    }
+
+    // HTTP HEADERS, remember to replace <MJ_APPCODE> with real appcode
+    curl_slist *plist = NULL;
+    plist = curl_slist_append(plist, "appcode: <MJ_APPCODE>"); 
+    plist = curl_slist_append(plist, "Content-Type: application/x-www-form-urlencoded; charset=UTF-8"); 
+    plist = curl_slist_append(plist, "Authorization: APPCODE <MJ_APPCODE>");
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, plist);
+
+    // POST body
+    std::string strJsonData;
+    strJsonData = "cityId=";
+    strJsonData += city_id;
+    strJsonData += "&token=";
+    strJsonData += mj_token[search_type];
+
+    // Setting POST variables for curl
+    curl_easy_setopt(curl, CURLOPT_POST, 1L);
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, strJsonData.c_str());
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, strJsonData.size());
+
+    // Do NOT verify for SSL
+    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
+
+    // Setting other options for curl
+    curl_buffer curlbuf;
+    curl_easy_setopt(curl, CURLOPT_URL, mj_url);
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, perform_write);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &curlbuf);
+    curl_easy_setopt(curl, CURLOPT_TIMEOUT, timeout_sec);
+    memset(curlbuf.content, 0, CURL_MAX_WRITE_SIZE);
+
+    if (int ret; CURLE_OK != (ret = curl_easy_perform(curl)))
+    {
+        using namespace std::string_literals;
+        switch (ret)
+        {
+        case CURLE_OPERATION_TIMEDOUT:
+            content = "网络连接超时";
+            break;
+            
+        default:
+            content = "网络连接失败("s + std::to_string(ret) + ")";
+            break;
+        }
+        inQuery = false;
+        curl_easy_cleanup(curl);
+        return ret;
+    }
+
+    content = std::string(curlbuf.content, curlbuf.length); // ? might need to change .content to .text
+    inQuery = false;
+    return CURLE_OK;
+}
+
 // %%%%%%%%%%%%%%% API Specific Function %%%%%%%%%%%%%%%
 
 namespace weathercn
@@ -158,17 +268,6 @@ std::vector<std::string> getCityId(const std::string& name)
         idList.push_back(std::any_cast<std::string>(r[0]));
     return idList;
 }
-
-// [墨迹天气] 输入城市ID，获取request链接
-std::string getReqUrl(const std::string& id)
-{
-    // TODO 更新代码
-    // curl -i -k -X POST 'https://aliv18.data.moji.com/whapi/json/alicityweather/limit'  -H 'Authorization:APPCODE [你自己的AppCode]' --data 'cityId=2&token=27200005b3475f8b0e26428f9bfb13e9'
-    std::string ret = strfmt(
-        "http://t.weather.itboy.net/api/weather/city/%s",
-        id.c_str());
-    return ret;
-}
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -222,6 +321,7 @@ void msgCallback(const json& body)
     }
 }
 
+// [全球天气] Construct bot reply message for weather_global from city name
 void weather_global(const mirai::MsgMetadata& m, const std::string& city)
 {
     //auto url = seniverse::getReqUrl(name);
@@ -270,6 +370,7 @@ void weather_global(const mirai::MsgMetadata& m, const std::string& city)
     }
 }
 
+// [中国天气] Construct bot reply message for weather_cn from city name
 void weather_cn(const mirai::MsgMetadata& m, const std::string& name)
 {
     using namespace weathercn;
@@ -387,6 +488,7 @@ void weather_cn(const mirai::MsgMetadata& m, const std::string& name)
     mirai::sendMsgRespStr(m, "天气解析失败");
 }
 
+// [墨迹天气] Construct bot reply message for moji weather from location keyword
 void weather_mj(const mirai::MsgMetadata& m, const std::string& city_keyword)
 {
     // TODO 更新代码
@@ -407,17 +509,6 @@ void weather_mj(const mirai::MsgMetadata& m, const std::string& city_keyword)
         // No need to use buffer
         time_t time_req = time(NULL);
         std::string buf;
-
-        // ? 这段代码是做什么的？api_buf.find在哪？
-        if (api_buf.find(id) != api_buf.end())
-        {
-            auto [time_buf, data] = api_buf.at(id);
-            if (time_req - time_buf < BUF_VALID_DURATION)
-            {
-                mirai::sendMsgRespStr(m, data.c_str());
-                return;
-            }
-        }
         
         // 从ID 生成request链接
         auto url = getReqUrl(id);
