@@ -70,7 +70,12 @@ int curl_get(const std::string& url, std::string& content, int timeout_sec = 5)
     curl_easy_setopt(curl, CURLOPT_TIMEOUT, timeout_sec);
     memset(curlbuf.content, 0, CURL_MAX_WRITE_SIZE);
 
-    if (int ret; CURLE_OK != (ret = curl_easy_perform(curl)))
+    int ret = curl_easy_perform(curl);
+    if (CURLE_OK == ret)
+    {
+        content = std::string(curlbuf.content, curlbuf.length);
+    }
+    else
     {
         using namespace std::string_literals;
         switch (ret)
@@ -83,13 +88,10 @@ int curl_get(const std::string& url, std::string& content, int timeout_sec = 5)
             content = "网络连接失败("s + std::to_string(ret) + ")";
             break;
         }
-        inQuery = false;
-        curl_easy_cleanup(curl);
-        return ret;
     }
 
-    content = std::string(curlbuf.content, curlbuf.length);
     inQuery = false;
+    curl_easy_cleanup(curl);
     return CURLE_OK;
 }
 
@@ -168,8 +170,15 @@ int curl_post_mj(const std::string& appcode, const int search_type, const std::s
     curl_easy_setopt(curl, CURLOPT_POSTFIELDS, strJsonData.c_str());
     curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, strJsonData.size());
 
-    // Do NOT verify for SSL
+    // verify SSL
+#ifdef __linux__
+    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 1L);
+    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 2L);
+    curl_easy_setopt(curl, CURLOPT_CAPATH, "/etc/ssl/certs");
+#else
+    // not sure about other systems
     curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
+#endif
 
     // Setting other options for curl
     curl_buffer curlbuf;
@@ -179,7 +188,13 @@ int curl_post_mj(const std::string& appcode, const int search_type, const std::s
     curl_easy_setopt(curl, CURLOPT_TIMEOUT, timeout_sec);
     memset(curlbuf.content, 0, CURL_MAX_WRITE_SIZE);
 
-    if (int ret; CURLE_OK != (ret = curl_easy_perform(curl)))
+    int ret = curl_easy_perform(curl);
+    if (CURLE_OK == ret)
+    {
+        content = std::string(curlbuf.content, curlbuf.length); // ? might need to change .content to .text
+        inQuery = false;
+    }
+    else
     {
         using namespace std::string_literals;
         switch (ret)
@@ -192,14 +207,12 @@ int curl_post_mj(const std::string& appcode, const int search_type, const std::s
             content = "网络连接失败("s + std::to_string(ret) + ")";
             break;
         }
-        inQuery = false;
-        curl_easy_cleanup(curl);
-        return ret;
     }
 
-    content = std::string(curlbuf.content, curlbuf.length); // ? might need to change .content to .text
     inQuery = false;
-    return CURLE_OK;
+    curl_slist_free_all(plist);
+    curl_easy_cleanup(curl);
+    return ret;
 }
 
 // %%%%%%%%%%%%%%% API Specific Function %%%%%%%%%%%%%%%
@@ -283,12 +296,20 @@ const std::vector<std::pair<std::regex, commands>> commands_regex
 {
     {std::regex(R"(^weather +(.+)$)", std::regex::optimize | std::regex::extended | std::regex::icase), commands::WEATHER_GLOBAL},
     {std::regex(R"(^(.+) +weather$)", std::regex::optimize | std::regex::extended | std::regex::icase), commands::WEATHER_GLOBAL},
+
     {std::regex(R"(^(.+) *天气$)", std::regex::optimize | std::regex::extended), commands::WEATHER_CN},
     {std::regex(R"(^(.+) *天氣$)", std::regex::optimize | std::regex::extended), commands::WEATHER_CN},
     {std::regex(R"(^天气 +(.+)$)", std::regex::optimize | std::regex::extended), commands::WEATHER_CN},
     {std::regex(R"(^天氣 +(.+)$)", std::regex::optimize | std::regex::extended), commands::WEATHER_CN},
+
     {std::regex(R"(^(.+) *实时$)", std::regex::optimize | std::regex::extended), commands::WEATHER_MJ},
     {std::regex(R"(^实时 +(.+)$)", std::regex::optimize | std::regex::extended), commands::WEATHER_MJ},
+    {std::regex(R"(^(.+) *实时天气$)", std::regex::optimize | std::regex::extended), commands::WEATHER_MJ},
+    {std::regex(R"(^实时天气 +(.+)$)", std::regex::optimize | std::regex::extended), commands::WEATHER_MJ},
+    {std::regex(R"(^(.+) *實時$)", std::regex::optimize | std::regex::extended), commands::WEATHER_MJ},
+    {std::regex(R"(^實時 +(.+)$)", std::regex::optimize | std::regex::extended), commands::WEATHER_MJ},
+    {std::regex(R"(^(.+) *實時$)", std::regex::optimize | std::regex::extended), commands::WEATHER_MJ},
+    {std::regex(R"(^實時天氣 +(.+)$)", std::regex::optimize | std::regex::extended), commands::WEATHER_MJ},
 };
 
 void msgCallback(const json& body)
@@ -525,9 +546,15 @@ void weather_mj(const mirai::MsgMetadata& m, const std::string& city_keyword)
         }
         
         // data is not started with '{', likely 302
-        if (!buf.empty() && buf[0] != '{')
+        if (buf.empty())
         {
-            addLog(LOG_WARNING, "weather_mj", "Response json parsing error. Body: \n%s", buf.c_str());
+            addLog(LOG_WARNING, "weather_mj", "Response is empty. id:%s Body: \n", id.c_str());
+            // mirai::sendMsgRespStr(m, "数据返回格式错误");
+            continue;
+        }
+        else if (buf[0] != '{')
+        {
+            addLog(LOG_WARNING, "weather_mj", "Response json parsing error. id:%s Body: \n%s", id.c_str(), buf.c_str());
             // mirai::sendMsgRespStr(m, "数据返回格式错误");
             continue;
         }
