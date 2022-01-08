@@ -237,6 +237,7 @@ int sendMsgCallback(const char* target, const json& body, const json& v)
 
 int sendTempMsgStr(int64_t qqid, int64_t groupid, const std::string& msg, int64_t quotemsgid)
 {
+    if (msg.empty()) return -1;
 	json req = R"({ "messageChain": [] })"_json;
     json &messageChain = req["messageChain"];
     std::stringstream ss(msg);
@@ -266,6 +267,7 @@ int sendTempMsg(int64_t qqid, int64_t groupid, const json& messageChain, int64_t
 
 int sendFriendMsgStr(int64_t qqid, const std::string& msg, int64_t quotemsgid)
 {
+    if (msg.empty()) return -1;
 	json req = R"({ "messageChain": [] })"_json;
     json &messageChain = req["messageChain"];
     std::stringstream ss(msg);
@@ -303,6 +305,7 @@ int sendFriendMsg(int64_t qqid, const json& messageChain, int64_t quotemsgid)
 
 int sendGroupMsgStr(int64_t groupid, const std::string& msg, int64_t quotemsgid)
 {
+    if (msg.empty()) return -1;
 	json resp = R"({ "messageChain": [] })"_json;
     json &messageChain = resp["messageChain"];
     std::stringstream ss(msg);
@@ -311,10 +314,7 @@ int sendGroupMsgStr(int64_t groupid, const std::string& msg, int64_t quotemsgid)
         std::string buf;
         std::getline(ss, buf);
         if (!ss.eof()) buf += "\n";
-        json v;
-        v["type"] = "Plain";
-        v["text"] = buf;
-        messageChain.push_back(v);
+        messageChain.push_back(buildMessagePlain(buf));
     }
     return sendGroupMsg(groupid, resp, quotemsgid);
 }

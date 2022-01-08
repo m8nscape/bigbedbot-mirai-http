@@ -61,7 +61,7 @@ int config()
     fs::path cfgPath(cfgFile);
     if (!fs::is_regular_file(cfgPath))
     {
-        addLog(LOG_ERROR, "core", "Config file %s not found", fs::absolute(cfgPath));
+        addLog(LOG_ERROR, "core", "Config file %s not found", fs::absolute(cfgPath).c_str());
         return -1;
     }
     addLog(LOG_INFO, "core", "Loading config from %s", fs::absolute(cfgPath).c_str());
