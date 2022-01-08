@@ -308,7 +308,7 @@ const std::vector<std::pair<std::regex, commands>> commands_regex
     {std::regex(R"(^实时天气 +(.+)$)", std::regex::optimize | std::regex::extended), commands::WEATHER_MJ},
     {std::regex(R"(^(.+) *實時$)", std::regex::optimize | std::regex::extended), commands::WEATHER_MJ},
     {std::regex(R"(^實時 +(.+)$)", std::regex::optimize | std::regex::extended), commands::WEATHER_MJ},
-    {std::regex(R"(^(.+) *實時$)", std::regex::optimize | std::regex::extended), commands::WEATHER_MJ},
+    {std::regex(R"(^(.+) *實時天氣$)", std::regex::optimize | std::regex::extended), commands::WEATHER_MJ},
     {std::regex(R"(^實時天氣 +(.+)$)", std::regex::optimize | std::regex::extended), commands::WEATHER_MJ},
 };
 
