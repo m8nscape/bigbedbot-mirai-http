@@ -26,6 +26,8 @@ namespace fs = std::experimental::filesystem;
 namespace weather
 {
 
+// %%%%%%%%%%%%%%% CURL %%%%%%%%%%%%%%%
+
 bool inQuery = false;
 
 struct curl_buffer
@@ -91,7 +93,116 @@ int curl_get(const std::string& url, std::string& content, int timeout_sec = 5)
     return CURLE_OK;
 }
 
-///////////////////////////////////////////////////////////////////////////////
+int curl_post_mj(const std::string& appcode, const int search_type, const std::string& city_id, std::string& content, int timeout_sec = 5)
+{
+    // Search type
+    // 0    限行数据
+    // 1    空气质量指数
+    // 2    生活指数
+    // 3    天气预警
+    // 4    天气预报24小时
+    // 5    天气预报15天
+    // 6    天气实况
+    // 7    AQI预报5天
+    if (inQuery)
+    {
+        content = "API is busy";
+        return -2;
+    }
+
+    inQuery = true;
+
+    // check if search_type is OOB
+    if (search_type < 0 || search_type > 7)
+    {
+        content = "search_type out of bound";
+        return -3;
+    }
+
+    // Place Moji Tokens here for test
+    std::vector<std::string> mj_token = 
+    {
+        "27200005b3475f8b0e26428f9bfb13e9",
+        "8b36edf8e3444047812be3a59d27bab9",
+        "5944a84ec4a071359cc4f6928b797f91",
+        "7ebe966ee2e04bbd8cdbc0b84f7f3bc7",
+        "008d2ad9197090c5dddc76f583616606",
+        "f9f212e1996e79e0e602b08ea297ffb0",
+        "50b53ff8dd7d9fa320d3d3ca32cf8ed1",
+        "0418c1f4e5e66405d33556418189d2d0"
+    };
+
+    std::vector<std::string> mj_url_append = 
+    {
+        "limit", "aqi", "index", "alert",
+        "forecast24hours", "forecast15days", "condition", "aqiforecast5days"
+    };
+
+    std::string mj_url = "https://aliv18.mojicb.com/whapi/json/alicityweather/";
+    mj_url += mj_url_append[search_type];
+
+    // Initializing CURL
+    CURL* curl = curl_easy_init();
+    if (!curl)
+    {
+        content = "curl init failed";
+        inQuery = false;
+        return -1;
+    }
+
+    // HTTP HEADERS, remember to replace <MJ_APPCODE> with real appcode
+    curl_slist *plist = NULL;
+
+    std::string arg_app = "appcode: " + appcode;
+    std::string arg_auth = "Authorization: APPCODE " + appcode;
+    plist = curl_slist_append(plist, arg_app.c_str()); 
+    plist = curl_slist_append(plist, "Content-Type: application/x-www-form-urlencoded; charset=UTF-8"); 
+    plist = curl_slist_append(plist, arg_auth.c_str());
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, plist);
+
+    // POST body
+    std::string strJsonData = strfmt("cityId=%s&token=%s", city_id.c_str(), mj_token[search_type].c_str());
+
+    // Setting POST variables for curl
+    curl_easy_setopt(curl, CURLOPT_POST, 1L);
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, strJsonData.c_str());
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, strJsonData.size());
+
+    // Do NOT verify for SSL
+    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
+
+    // Setting other options for curl
+    curl_buffer curlbuf;
+    curl_easy_setopt(curl, CURLOPT_URL, mj_url.c_str());
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, perform_write);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &curlbuf);
+    curl_easy_setopt(curl, CURLOPT_TIMEOUT, timeout_sec);
+    memset(curlbuf.content, 0, CURL_MAX_WRITE_SIZE);
+
+    if (int ret; CURLE_OK != (ret = curl_easy_perform(curl)))
+    {
+        using namespace std::string_literals;
+        switch (ret)
+        {
+        case CURLE_OPERATION_TIMEDOUT:
+            content = "网络连接超时";
+            break;
+            
+        default:
+            content = "网络连接失败("s + std::to_string(ret) + ")";
+            break;
+        }
+        inQuery = false;
+        curl_easy_cleanup(curl);
+        return ret;
+    }
+
+    content = std::string(curlbuf.content, curlbuf.length); // ? might need to change .content to .text
+    inQuery = false;
+    return CURLE_OK;
+}
+
+// %%%%%%%%%%%%%%% API Specific Function %%%%%%%%%%%%%%%
 
 namespace weathercn
 {
@@ -139,12 +250,34 @@ std::string getReqUrl(const std::string& name)
 }
 }
 
-///////////////////////////////////////////////////////////////////////////////
+namespace ns_weather_mj
+{
+std::string APPCODE;
+int TIMEOUT_SEC = 5;
+SQLite db("weatherMJ_cityID.db", "weather_mj");
+
+// [墨迹天气] 输入城市名，获取城市ID
+std::vector<std::string> getCityId(const std::string& name)
+{
+    // Using LIKE as the database files are seperated and the cityID table does not contain sensitive data
+    auto ret = db.query("select id from cityID where dname like ?", 1, { '%' + name + '%' });
+    if (ret.empty()) return {};
+    std::vector<std::string> idList;
+    for (auto& r: ret)
+        idList.push_back(std::any_cast<std::string>(r[0]));
+    return idList;
+}
+}
+
+// %%%%%%%%%%%%%% BUILD RES MSG %%%%%%%%%%%%%%
+
+// %%%%%%%%%%%%%% COMMANDS %%%%%%%%%%%%%%
 
 enum class commands : size_t {
     _,
     WEATHER_GLOBAL,
-    WEATHER_CN
+    WEATHER_CN,
+    WEATHER_MJ
 };
 const std::vector<std::pair<std::regex, commands>> commands_regex
 {
@@ -154,6 +287,8 @@ const std::vector<std::pair<std::regex, commands>> commands_regex
     {std::regex(R"(^(.+) *天氣$)", std::regex::optimize | std::regex::extended), commands::WEATHER_CN},
     {std::regex(R"(^天气 +(.+)$)", std::regex::optimize | std::regex::extended), commands::WEATHER_CN},
     {std::regex(R"(^天氣 +(.+)$)", std::regex::optimize | std::regex::extended), commands::WEATHER_CN},
+    {std::regex(R"(^(.+) *实时$)", std::regex::optimize | std::regex::extended), commands::WEATHER_MJ},
+    {std::regex(R"(^实时 +(.+)$)", std::regex::optimize | std::regex::extended), commands::WEATHER_MJ},
 };
 
 void msgCallback(const json& body)
@@ -185,11 +320,15 @@ void msgCallback(const json& body)
     case commands::WEATHER_CN:
         weather_cn(m, city);
         break;
+    case commands::WEATHER_MJ:
+        weather_mj(m, city);
+        break;
     default:
         break;
     }
 }
 
+// [全球天气] Construct bot reply message for weather_global from city name
 void weather_global(const mirai::MsgMetadata& m, const std::string& city)
 {
     //auto url = seniverse::getReqUrl(name);
@@ -238,6 +377,7 @@ void weather_global(const mirai::MsgMetadata& m, const std::string& city)
     }
 }
 
+// [中国天气] Construct bot reply message for weather_cn from city name
 void weather_cn(const mirai::MsgMetadata& m, const std::string& name)
 {
     using namespace weathercn;
@@ -355,6 +495,90 @@ void weather_cn(const mirai::MsgMetadata& m, const std::string& name)
     mirai::sendMsgRespStr(m, "天气解析失败");
 }
 
+// [墨迹天气] Construct bot reply message for moji weather from location keyword
+void weather_mj(const mirai::MsgMetadata& m, const std::string& city_keyword)
+{
+    using namespace ns_weather_mj;
+
+    // 搜索城市关键词，待更新
+    auto idList = getCityId(city_keyword);
+    if (idList.empty())
+    {
+        mirai::sendMsgRespStr(m, "[墨迹]未找到城市对应的ID");
+        return;
+    }
+
+    // 遍历搜索到的list
+    for (const auto& id: idList)
+    {
+        time_t time_req = time(NULL);
+        std::string buf;
+        //std::string test_str = "1000";
+        
+        // get real time weather by default
+        // TODO get different data later.
+        if (CURLE_OK != curl_post_mj(APPCODE, 6, id, buf, TIMEOUT_SEC))
+        {
+            // mirai::sendMsgRespStr(m, buf);
+            addLog(LOG_WARNING, "weather_mj", "CURL ERROR: %d, %s", 6, id.c_str());
+            continue;
+        }
+        
+        // data is not started with '{', likely 302
+        if (!buf.empty() && buf[0] != '{')
+        {
+            addLog(LOG_WARNING, "weather_mj", "Response json parsing error. Body: \n%s", buf.c_str());
+            // mirai::sendMsgRespStr(m, "数据返回格式错误");
+            continue;
+        }
+
+        // Parsing data
+        nlohmann::json json = nlohmann::json::parse(buf);
+        // addLog(LOG_INFO, "weather", buf.c_str());
+        try
+        {
+            if (json.contains("data"))
+            {
+                std::string sbuf;
+                std::vector<std::string> args;
+
+                args.push_back(json["data"]["city"]["pname"]);
+                args.push_back(json["data"]["city"]["secondaryname"]);
+                args.push_back(json["data"]["city"]["name"]);
+                args.push_back(json["data"]["condition"]["condition"]);
+                args.push_back(json["data"]["condition"]["temp"]);
+                args.push_back(json["data"]["condition"]["humidity"]);
+                args.push_back(json["data"]["condition"]["windDir"]);
+                args.push_back(json["data"]["condition"]["windLevel"]);
+                args.push_back(json["data"]["condition"]["tips"]);
+
+                // 删除重复的secondaryname和name（例如：北京为直辖市，输出不应为北京市北京市）
+                if (args[0].compare(args[1]) == 0) args[1] = "";
+                if (args[0].compare(args[2]) == 0) args[2] = "";
+
+                std::stringstream ss;
+                ss << args[0] << " " << args[1] << " " << args[2] << " " << args[3] << std::endl <<
+                    "实时温度：" << args[4] << "℃" << std::endl <<
+                    "湿度：" << args[5] << "%" << std::endl <<
+                    "风向：" << args[6] << "@" << args[7] << "级" << std::endl <<
+                    args[8];
+
+                mirai::sendMsgRespStr(m, ss.str().c_str());
+                
+                return;
+            }
+            else throw std::exception();
+        }
+        catch (...)
+        {
+            addLog(LOG_WARNING, "weather", "Response parsing error. Body: \n%s", json.dump().c_str());
+        }
+    }
+
+    addLog(LOG_WARNING, "weather", "No valid request for %s", city_keyword.c_str());
+    mirai::sendMsgRespStr(m, "天气解析失败");
+}
+
 int init(const char* yaml)
 {
     fs::path cfgPath(yaml);
@@ -371,6 +595,8 @@ int init(const char* yaml)
     openweather::APIKEY = cfg["openweather_apikey"].as<std::string>();
     openweather::TIMEOUT_SEC = cfg["openweather_timeout"].as<int>();
     weathercn::TIMEOUT_SEC = cfg["weathercn_timeout"].as<int>();
+    ns_weather_mj::APPCODE = cfg["mjweather_appcode"].as<std::string>();
+    ns_weather_mj::TIMEOUT_SEC = cfg["mjweather_timeout"].as<int>();
     
     addLog(LOG_INFO, "weather", "Config loaded");
 
