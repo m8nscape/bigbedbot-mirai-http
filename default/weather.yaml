@@ -1,5 +1,5 @@
 openweather_apikey: 00000000000000000000000000000000
 openweather_timeout: 10
 weathercn_timeout: 1
-mjweather_appcode: 00000000000000000000000000000000
+mjweather_appcode: 00000000000000000000000000000001
 mjweather_timeout: 3
