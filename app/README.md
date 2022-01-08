@@ -139,10 +139,15 @@ Self-explanatory. 开一个[箱子](https://docs.qq.com/sheet/DU05RYmhVd2xCWExM?
     weather (city name)
 从OpenWeather API查询对应城市的天气。
 
+    (city keyword)实时
+从墨迹天气API查询对应城市实时天气。
 ----------------
 
 Changelog
 ===============
+20020108
+- Add: 添加了墨迹天气API
+
 20211014
 - Add: 指令[刷新菜单][刷新事件][刷新箱子]
 

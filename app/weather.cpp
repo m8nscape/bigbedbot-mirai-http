@@ -259,9 +259,8 @@ SQLite db("weatherMJ_cityID.db", "weather_mj");
 // [墨迹天气] 输入城市名，获取城市ID
 std::vector<std::string> getCityId(const std::string& name)
 {
-    // TODO 更新代码进行关键词搜索
-    addLog(LOG_DEBUG, "weather_mj", "Now Selecting ID with name: %s", name.c_str());
-    auto ret = db.query("select id from cityID where dname=?", 1, { name });
+    // Using LIKE as the database files are seperated and the cityID table does not contain sensitive data
+    auto ret = db.query("select id from cityID where dname like ?", 1, { '%' + name + '%' });
     if (ret.empty()) return {};
     std::vector<std::string> idList;
     for (auto& r: ret)
@@ -273,6 +272,7 @@ std::vector<std::string> getCityId(const std::string& name)
 // %%%%%%%%%%%%%% BUILD RES MSG %%%%%%%%%%%%%%
 
 // %%%%%%%%%%%%%% COMMANDS %%%%%%%%%%%%%%
+
 enum class commands : size_t {
     _,
     WEATHER_GLOBAL,
@@ -287,7 +287,8 @@ const std::vector<std::pair<std::regex, commands>> commands_regex
     {std::regex(R"(^(.+) *天氣$)", std::regex::optimize | std::regex::extended), commands::WEATHER_CN},
     {std::regex(R"(^天气 +(.+)$)", std::regex::optimize | std::regex::extended), commands::WEATHER_CN},
     {std::regex(R"(^天氣 +(.+)$)", std::regex::optimize | std::regex::extended), commands::WEATHER_CN},
-    {std::regex(R"(^(.+) *MJ$)", std::regex::optimize | std::regex::extended), commands::WEATHER_MJ},
+    {std::regex(R"(^(.+) *实时$)", std::regex::optimize | std::regex::extended), commands::WEATHER_MJ},
+    {std::regex(R"(^实时 +(.+)$)", std::regex::optimize | std::regex::extended), commands::WEATHER_MJ},
 };
 
 void msgCallback(const json& body)
@@ -538,7 +539,6 @@ void weather_mj(const mirai::MsgMetadata& m, const std::string& city_keyword)
         {
             if (json.contains("data"))
             {
-                // TODO 输出到ss的时候判断，删除重复的secondaryname和name（北京为直辖市）
                 std::string sbuf;
                 std::vector<std::string> args;
 
@@ -552,15 +552,16 @@ void weather_mj(const mirai::MsgMetadata& m, const std::string& city_keyword)
                 args.push_back(json["data"]["condition"]["windLevel"]);
                 args.push_back(json["data"]["condition"]["tips"]);
 
-                if (args[0].compare(args[1]) == 0) {args[1] = "";}
-                if (args[0].compare(args[2]) == 0) {args[2] = "";}
+                // 删除重复的secondaryname和name（例如：北京为直辖市，输出不应为北京市北京市）
+                if (args[0].compare(args[1]) == 0) args[1] = "";
+                if (args[0].compare(args[2]) == 0) args[2] = "";
 
                 std::stringstream ss;
                 ss << args[0] << " " << args[1] << " " << args[2] << " " << args[3] << std::endl <<
                     "实时温度：" << args[4] << "℃" << std::endl <<
                     "湿度：" << args[5] << "%" << std::endl <<
                     "风向：" << args[6] << "@" << args[7] << "级" << std::endl <<
-                    "Tips：" << args[8];
+                    args[8];
 
                 mirai::sendMsgRespStr(m, ss.str().c_str());
                 
