@@ -84,7 +84,7 @@ int auth()
                 {
                     // save sessionKey
                     sessionKey = v.at("session").get<std::string>();
-                    addLog(LOG_INFO, "api", "Got session key [%s]", sessionKey);
+                    addLog(LOG_INFO, "api", "Got session key [%s]", sessionKey.c_str());
                 }
                 else
                 {
