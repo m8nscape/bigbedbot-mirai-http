@@ -302,6 +302,7 @@ enum class commands : size_t {
 const std::vector<std::pair<std::regex, commands>> commands_regex
 {
     {std::regex(R"(^天气帮助$)", std::regex::optimize | std::regex::extended), commands::WEATHER_HELP},
+    {std::regex(R"(^天氣幫助$)", std::regex::optimize | std::regex::extended), commands::WEATHER_HELP},
     
     {std::regex(R"(^weather +(.+)$)", std::regex::optimize | std::regex::extended | std::regex::icase), commands::WEATHER_GLOBAL},
     {std::regex(R"(^(.+) +weather$)", std::regex::optimize | std::regex::extended | std::regex::icase), commands::WEATHER_GLOBAL},
@@ -321,22 +322,34 @@ const std::vector<std::pair<std::regex, commands>> commands_regex
     {std::regex(R"(^實時天氣 +(.+)$)", std::regex::optimize | std::regex::extended), commands::WEATHER_MJ_REALTIME},
 
     {std::regex(R"(^(.+) *空气成分$)", std::regex::optimize | std::regex::extended), commands::WEATHER_MJ_AQI},
+    {std::regex(R"(^(.+) *空氣成分$)", std::regex::optimize | std::regex::extended), commands::WEATHER_MJ_AQI},
     {std::regex(R"(^空气成分 +(.+)$)", std::regex::optimize | std::regex::extended), commands::WEATHER_MJ_AQI},
+    {std::regex(R"(^空氣成分 +(.+)$)", std::regex::optimize | std::regex::extended), commands::WEATHER_MJ_AQI},
 
     {std::regex(R"(^(.+) *生活指数$)", std::regex::optimize | std::regex::extended), commands::WEATHER_MJ_LIFE},
+    {std::regex(R"(^(.+) *生活指數$)", std::regex::optimize | std::regex::extended), commands::WEATHER_MJ_LIFE},
     {std::regex(R"(^生活指数 +(.+)$)", std::regex::optimize | std::regex::extended), commands::WEATHER_MJ_LIFE},
+    {std::regex(R"(^生活指數 +(.+)$)", std::regex::optimize | std::regex::extended), commands::WEATHER_MJ_LIFE},
 
     {std::regex(R"(^(.+) *天气预警$)", std::regex::optimize | std::regex::extended), commands::WEATHER_MJ_WARNING},
+    {std::regex(R"(^(.+) *天氣預警$)", std::regex::optimize | std::regex::extended), commands::WEATHER_MJ_WARNING},
     {std::regex(R"(^天气预警 +(.+)$)", std::regex::optimize | std::regex::extended), commands::WEATHER_MJ_WARNING},
+    {std::regex(R"(^天氣預警 +(.+)$)", std::regex::optimize | std::regex::extended), commands::WEATHER_MJ_WARNING},
 
     {std::regex(R"(^(.+) *天气预报$)", std::regex::optimize | std::regex::extended), commands::WEATHER_MJ_FORECAST24H},
+    {std::regex(R"(^(.+) *天氣預報$)", std::regex::optimize | std::regex::extended), commands::WEATHER_MJ_FORECAST24H},
     {std::regex(R"(^天气预报 +(.+)$)", std::regex::optimize | std::regex::extended), commands::WEATHER_MJ_FORECAST24H},
+    {std::regex(R"(^天氣預報 +(.+)$)", std::regex::optimize | std::regex::extended), commands::WEATHER_MJ_FORECAST24H},
 
     {std::regex(R"(^(.+) *一周预报$)", std::regex::optimize | std::regex::extended), commands::WEATHER_MJ_FORECAST15D},
+    {std::regex(R"(^(.+) *一周預報$)", std::regex::optimize | std::regex::extended), commands::WEATHER_MJ_FORECAST15D},
     {std::regex(R"(^一周预报 +(.+)$)", std::regex::optimize | std::regex::extended), commands::WEATHER_MJ_FORECAST15D},
+    {std::regex(R"(^一周預報 +(.+)$)", std::regex::optimize | std::regex::extended), commands::WEATHER_MJ_FORECAST15D},
 
     {std::regex(R"(^(.+) *空气预报$)", std::regex::optimize | std::regex::extended), commands::WEATHER_MJ_AQI_FORECAST},
+    {std::regex(R"(^(.+) *空氣預報$)", std::regex::optimize | std::regex::extended), commands::WEATHER_MJ_AQI_FORECAST},
     {std::regex(R"(^空气预报 +(.+)$)", std::regex::optimize | std::regex::extended), commands::WEATHER_MJ_AQI_FORECAST},
+    {std::regex(R"(^空氣預報 +(.+)$)", std::regex::optimize | std::regex::extended), commands::WEATHER_MJ_AQI_FORECAST},
 };
 
 void msgCallback(const json& body)
@@ -402,13 +415,13 @@ void weather_help(const mirai::MsgMetadata& m)
 {
     addLog(LOG_INFO, "weather", "Printing Help message for Weather module");
     std::stringstream ss;
-        ss << "目前的天气指令有：" << std::endl
+        ss << "目前的天气指令有: " << std::endl
            << "天气帮助         返回此帮助" << std::endl
            << "[城市]天气       查询中国城市天气" << std::endl
            << "[城市]weather    查询世界城市天气" << std::endl
            << "[城市]实时       查询实时天气" << std::endl
            << "[城市]空气成分   查询城市的空气污染物组成(CO2等)" << std::endl
-           << "[城市]生活指数   查询生活指数(感冒指数、洗车钓鱼)" << std::endl
+           << "[城市]生活指数   [暂不可用]查询生活指数(感冒指数、洗车钓鱼)" << std::endl
            << "[城市]天气预警   查询气象预警信息" << std::endl
            << "[城市]天气预报   查询24小时天气预报" << std::endl
            << "[城市]一周天气   [暂不可用]查询15天(一周)天气预报" << std::endl
@@ -687,7 +700,7 @@ void weather_mj(const mirai::MsgMetadata& m, const std::string& city_keyword, co
             }
             break;
         }
-        case 2: // 生活指数
+        case 2: // TODO 生活指数
         {
             std::string buf;
             
@@ -842,10 +855,10 @@ void weather_mj(const mirai::MsgMetadata& m, const std::string& city_keyword, co
                     std::stringstream ss;
                     ss << args[0] << " " << args[1] << " " << args[2] << std::endl;
 
-                    for (int i = 0; i < 24; ++i) // sorry there should be a better way, use this for early testing
+                    for (nlohmann::json x : json["data"]["hourly"])
                     {
-                        args_temp.push_back(std::atoi(json["data"]["hourly"][i]["temp"].get<std::string>().c_str()));
-                        args_realFeel.push_back(std::atoi(json["data"]["hourly"][i]["realFeel"].get<std::string>().c_str()));
+                        args_temp.push_back(std::atoi(x["temp"].get<std::string>().c_str()));
+                        args_realFeel.push_back(std::atoi(x["realFeel"].get<std::string>().c_str()));
                     }
 
                     int max_temp = *max_element(std::begin(args_temp), std::end(args_temp));
@@ -872,7 +885,7 @@ void weather_mj(const mirai::MsgMetadata& m, const std::string& city_keyword, co
             }
             break;
         }
-        case 5: // 15天预报
+        case 5: // TODO 15天预报
         {
             std::stringstream ss;
             ss << "OMG你查这个干啥呢";
@@ -977,7 +990,7 @@ void weather_mj(const mirai::MsgMetadata& m, const std::string& city_keyword, co
             }
             break;
         }
-        case 7: // 5天AQI预报
+        case 7: // TODO 5天AQI预报
         {
             std::stringstream ss;
             ss << "说真的这个也没用";
