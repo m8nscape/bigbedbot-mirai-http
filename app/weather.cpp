@@ -697,7 +697,7 @@ void weather_mj(const mirai::MsgMetadata &m, const std::string &city_keyword, co
 
                     std::stringstream ss;
                     ss << args[0] << std::endl
-                       << args[1] << std::endl;
+                    << args[1] << std::endl;
 
                     mirai::sendMsgRespStr(m, ss.str().c_str());
 
@@ -708,7 +708,12 @@ void weather_mj(const mirai::MsgMetadata &m, const std::string &city_keyword, co
             }
             catch (...)
             {
-                addLog(LOG_WARNING, "weather_mj", "Response parsing error. Body: \n%s", json.dump().c_str());
+                std::stringstream ss;
+                ss << "暂无任何预警消息！" << std::endl;
+
+                mirai::sendMsgRespStr(m, ss.str().c_str());
+
+                return;
             }
             break;
         }
@@ -775,7 +780,7 @@ void weather_mj(const mirai::MsgMetadata &m, const std::string &city_keyword, co
 
                     std::stringstream ss;
                     ss << args[0] << " " << args[1] << " " << args[2] << " " << args[3] << std::endl
-                       << "实时温度：" << args[4] << "℃, 体感温度：" << args[11] << std::endl
+                       << "实时温度：" << args[4] << "℃, 体感温度：" << args[11] << "℃" << std::endl
                        << "湿度：" << args[5] << "%" << std::endl
                        << "风向：" << args[6] << "@" << args[7] << "级" << std::endl
                        << "AQI: " << args[9];
