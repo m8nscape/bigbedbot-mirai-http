@@ -246,13 +246,6 @@ std::string ENABLE(::int64_t group, ::int64_t qq, std::vector<std::string> args)
             const auto& [keywords, msg] = info;
             if (keywords.find(subcmd) == keywords.end()) continue;
 
-            if (mask == MASK_GAMBOL)
-            {
-                g.setFlag(mask, false);
-                using namespace std::string_literals;
-                return "本群已关闭"s + msg;
-            }
-
             g.setFlag(mask, true);
             using namespace std::string_literals;
             return "本群已开启"s + msg;

@@ -15,25 +15,12 @@ enum class commands : size_t {
     BET,
 
     // flipcoin
+    FAST_FLIPCOIN_START,
     FLIPCOIN_START,
     FLIPCOIN_FRONT,
     FLIPCOIN_BACK,
     ROULETTE_START,
     ROULETTE_CHOOSE,
-};
-
-inline std::map<std::string, commands> commands_str
-{
-    {"开始翻批", commands::FLIPCOIN_START},
-    {"開始翻批", commands::FLIPCOIN_START}, //繁體化
-    {"正", commands::FLIPCOIN_FRONT},       //簡體繁體一樣
-    {"反", commands::FLIPCOIN_BACK},        //簡體繁體一樣
-    {"开始摇号", commands::ROULETTE_START},
-    {"開始搖號", commands::ROULETTE_START}, //繁體化
-    {"摇号", commands::ROULETTE_CHOOSE},
-    {"搖號", commands::ROULETTE_CHOOSE},    //繁體化
-    {"摇", commands::ROULETTE_CHOOSE},
-    {"搖", commands::ROULETTE_CHOOSE}       //繁體化
 };
 
 void msgDispatcher(const nlohmann::json& body);
@@ -48,22 +35,14 @@ struct bet
     int64_t front;
     int64_t back;
 };
-struct game
-{
-    int64_t total = 0, front = 0, back = 0;
-    std::map<int64_t, bet> pee_per_player;
-    time_t startTime = 0;
-};
 
-void roundStart(int64_t group);
+void roundStart(int64_t group, bool fast = false);
 void roundAnnounce(int64_t group);
 void roundEnd(int64_t group);
 void roundCancel(int64_t group);
 void roundCancelAll();
 
-void put(int64_t group, int64_t qq, bet s);
-
-}
+};
 
 ///////////////////////////////////////////////////////////////////////////////
 // roulette
@@ -129,34 +108,13 @@ inline const std::map<std::string, grid> gridTokens
     {"1ST", P1st}, {"2ND", P2nd}, {"3RD", P3rd},
 };
 
-struct bet
-{
-    int64_t amount[GRID_COUNT];
-};
-struct game
-{
-    int64_t total = 0, amount[GRID_COUNT]{ 0 };
-    std::map<int64_t, bet> pee_per_player;
-    time_t startTime = 0;
-};
-
 void roundStart(int64_t group);
 void roundAnnounce(int64_t group);
 void roundEnd(int64_t group);
 void roundCancel(int64_t group);
 void roundCancelAll();
 
-void put(int64_t group, int64_t qq, grid g, int64_t amount);
+void refreshStock(int amount = 49998, bool announce = false);
 }
 
-struct gameData
-{
-	bool flipcoin_running;
-	flipcoin::game flipcoin;
-
-	bool roulette_running;
-	roulette::game roulette;
-};
-
-extern std::map<int64_t, gameData> groupMap;
 }

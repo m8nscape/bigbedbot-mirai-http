@@ -145,7 +145,10 @@ Self-explanatory. 开一个[箱子](https://docs.qq.com/sheet/DU05RYmhVd2xCWExM?
 
 Changelog
 ===============
-20020108
+20220221
+- Add: 指令[快速翻批]
+
+20220108
 - Add: 添加了墨迹天气API
 
 20211014

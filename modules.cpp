@@ -48,6 +48,10 @@ void init_modules()
     playwhat::updateSteamGameList();
     addTimedEvent(playwhat::updateSteamGameList, 0, 0);
 
+    // app: gambol
+    gambol::roulette::refreshStock(49998, false);
+    addTimedEvent([](){ gambol::roulette::refreshStock(49998, true); }, 12, 0);
+
     // announce startup
     // std::string boot_info = help::boot_info();
     // broadcastMsg(boot_info.c_str(), grp::MASK_BOOT_ANNOUNCE);

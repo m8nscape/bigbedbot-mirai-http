@@ -10,7 +10,7 @@
 - ☑ 吃什么
 - ☑ 玩什么
 - ☑ 抽卡
-- ~~☑ 摇号~~
+- ☑ 摇号
 - ☐ 活动开箱
 - ☐ 今天天气
 - ☐ 快递查询
@@ -56,5 +56,5 @@ cmake --build build/Debug
 ```shell
 mkdir -p ~/mirai-console/bbb/config
 cp default/* ~/mirai-console/bbb/config
-cp build/RelWithDebInfo/bbb ~/mirai-console/bbb/
+cp build/Release/bbb ~/mirai-console/bbb/
 ```
