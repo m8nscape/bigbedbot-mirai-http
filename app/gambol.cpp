@@ -160,7 +160,7 @@ void roundAnnounce(int64_t group)
         {
             if (stat.front)
                 ss << grp::groups[group].getMemberName(qq) << "(" << stat.front << "个批) "
-                << "(" << 50.0 * stat.front / r.front << "%)  ";
+                << "(" << std::fixed << 50.0 * stat.front / r.front << "%)  ";
         }
         ss << "\n";
         ss << "反面：";
@@ -168,7 +168,7 @@ void roundAnnounce(int64_t group)
         {
             if (stat.back)
                 ss << grp::groups[group].getMemberName(qq) << "(" << stat.back << "个批) "
-                << "(" << 50.0 * stat.back / r.back << "%)  ";
+                << "(" << std::fixed << 50.0 * stat.back / r.back << "%)  ";
         }
         ss << std::setprecision(6);
     }
@@ -475,8 +475,8 @@ void roundEnd(int64_t group)
     }
 
     int result = randInt(0, 36);
-    std::set<unsigned> red_idx{ 1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36 };
-    std::set<unsigned> blk_idx{ 2, 4, 6, 8, 10, 11, 13, 15, 17, 20, 22, 24, 26, 28, 29, 31, 33, 35 };
+    static const std::set<unsigned> red_idx{ 1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36 };
+    static const std::set<unsigned> blk_idx{ 2, 4, 6, 8, 10, 11, 13, 15, 17, 20, 22, 24, 26, 28, 29, 31, 33, 35 }; 
     bool b_red = red_idx.find(result) != red_idx.end();
     bool b_black = blk_idx.find(result) != blk_idx.end();
     bool b_odd = result % 2 != 0;
@@ -498,7 +498,6 @@ void roundEnd(int64_t group)
         if (b_1st && bet.amount[P1st]) reward_tmp += bet.amount[P1st] * 3;
         if (b_2nd && bet.amount[P2nd]) reward_tmp += bet.amount[P2nd] * 3;
         if (b_3rd && bet.amount[P3rd]) reward_tmp += bet.amount[P3rd] * 3;
-        if (reward_tmp > groupMap[group].stock) reward_tmp = groupMap[group].stock;
         if (reward_tmp)
         {
             addLogDebug("duel", "reward: %ld %ld", qq, reward_tmp);
@@ -587,6 +586,23 @@ void put(int64_t group, int64_t qq, grid g, int64_t amount)
     if (user::plist[qq].getCurrency() < amount)
     {
         mirai::sendGroupMsg(group, not_enough_currency(qq));
+        return;
+    }
+
+    int multiplier = 0;
+    if (g == N0)
+        multiplier = 50;
+    else if (g >= N1 && g <= N36)
+        multiplier = 36;
+    else if (g == P1st || g == P2nd || g == P3rd)
+        multiplier = 3;
+    else if (g == Cblack || g == Cred || g == Aodd || g == Aeven)
+        multiplier = 2;
+    if (groupMap[group].stock < amount * multiplier)
+    {
+        std::stringstream ss;
+        ss << "库存只剩" << groupMap[group].stock << "个批，你[" << gridName[g] << "]还可以⬇" << groupMap[group].stock / multiplier << "个批";
+        mirai::sendGroupMsgStr(group, ss.str());
         return;
     }
 
