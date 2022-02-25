@@ -540,7 +540,7 @@ void drawForever(mirai::MsgMetadata& m)
     {
         if (!smoke::isSmoking(m.qqid, m.groupid))
         {
-            while (!forever_shall_stop && draw1(m))
+            while (!forever_shall_stop && !smoke::isSmoking(m.qqid, m.groupid) && draw1(m))
             {
                 using namespace std::chrono_literals;
                 std::this_thread::sleep_for(1s);
