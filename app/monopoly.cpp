@@ -473,31 +473,20 @@ json not_enough_stamina(int64_t qq, time_t rtime)
     return resp;
 }
 
-void msgCallback(const json& body)
+json silenced(int64_t qq)
 {
-    auto query = mirai::messageChainToArgs(body);
-    if (query.empty()) return;
+    json resp = mirai::MSG_TEMPLATE;
+    resp["messageChain"].push_back(mirai::buildMessageAt(qq));
+    resp["messageChain"].push_back(mirai::buildMessagePlain(", you somehow appears being silenced in my whiteboard. Come back later"));
+    return resp;
+}
 
-    auto m = mirai::parseMsgMetadata(body);
-    if (!grp::groups[m.groupid].getFlag(grp::MASK_P | grp::MASK_MONOPOLY))
-        return;
-
-    if (query[0] == "刷新事件" || query[0] == "重載事件")
-    {
-        if (grp::checkPermission(m.groupid, m.qqid, mirai::group_member_permission::ROOT, true))
-        {
-            loadCfg(cfg_path.c_str());
-            mirai::sendMsgRespStr(m, "好");
-        }
-        return;
-    }
-
-    if (query[0] != "抽卡") return;
-
+bool draw1(mirai::MsgMetadata& m)
+{
     if (user::plist.find(m.qqid) == user::plist.end()) 
     {
         mirai::sendMsgResp(m, not_registered(m.qqid));
-        return;
+        return false;
     }
 
     // stamina check
@@ -518,7 +507,7 @@ void msgCallback(const json& body)
                 mirai::sendMsgResp(m, not_enough_stamina(m.qqid, rtime));
                 starveFloodCtrlExpire[m.groupid][m.qqid] = t + STARVE_FLOOD_CTRL_DURATION;
             }
-            return;
+            return false;
         }
     }
 
@@ -542,67 +531,59 @@ void msgCallback(const json& body)
             }
         }
     }
+    return true;
 }
 
-// draft
-void choukasuoha(const json& body)
+void drawForever(mirai::MsgMetadata& m)
+{
+    std::thread([](mirai::MsgMetadata m)
+    {
+        if (!smoke::isSmoking(m.qqid, m.groupid))
+        {
+            while (!forever_shall_stop && draw1(m))
+            {
+                using namespace std::chrono_literals;
+                std::this_thread::sleep_for(1s);
+            }
+        }
+        else
+        {
+            mirai::sendMsgResp(m, silenced(m.qqid));
+        }
+    }, m).detach();
+}
+
+void msgCallback(const json& body)
 {
     auto query = mirai::messageChainToArgs(body);
     if (query.empty()) return;
-    if (query[0] != "抽卡梭哈") return;
 
     auto m = mirai::parseMsgMetadata(body);
-
     if (!grp::groups[m.groupid].getFlag(grp::MASK_P | grp::MASK_MONOPOLY))
         return;
 
-    if (user::plist.find(m.qqid) == user::plist.end()) 
+    if (query[0] == "刷新事件" || query[0] == "重載事件")
     {
-        mirai::sendMsgResp(m, not_registered(m.qqid));
+        if (grp::checkPermission(m.groupid, m.qqid, mirai::group_member_permission::ROOT, true))
+        {
+            loadCfg(cfg_path.c_str());
+            mirai::sendMsgRespStr(m, "好");
+        }
         return;
     }
 
-    std::thread([&]()
+    if (query[0] == "抽卡")
     {
-        while (user::plist[m.qqid].testStamina(1).enough && !smoke::isSmoking(m.qqid, m.groupid))
-        {
-            time_t t = time(nullptr);
-            bool isInFever = t <= user_stat[m.qqid].fever_expire_time;
-            if (!isInFever)
-            {
-                auto [enough, stamina, rtime] = user::plist[m.qqid].modifyStamina(-1);
-                if (!enough)
-                {
-                    mirai::sendMsgResp(m, not_enough_stamina(m.qqid, rtime));
-                    return;
-                }
-            }
+        draw1(m);
+    }
+    else if (query[0] == "开始抽卡")
+    {
+        drawForever(m);
+    }
+}
 
-            if (user_stat[m.qqid].chaos)
-            {
-                user_stat[m.qqid].chaos = false;
-                size_t idx = randInt(0, chanceList.size() - 1);
-                doChance(m, chanceList[idx], isInFever);
-            }
-            else
-            {
-                auto prob = randReal(0, chance::total_prob);
-                double p = 0.0;
-                for (const auto& c : chanceList)
-                {
-                    p += c.prob;
-                    if (prob < p)
-                    {
-                        doChance(m, c, isInFever);
-                        break;
-                    }
-                }
-            }
-
-            // interval
-            using namespace std::chrono_literals;
-            std::this_thread::sleep_for(200ms);
-        }
-    }).detach();
+void StopDrawing()
+{
+    forever_shall_stop = true;
 }
 }

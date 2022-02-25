@@ -95,8 +95,7 @@ Self-explanatory.
     （私聊bot）接近我
     （私聊bot）解禁我
 消费 (被烟剩余时间/分钟 * 3) 批，解除禁烟。
-被群管手动烟的不能解禁。
-*bot有可能接收不到陌生人的消息。
+*bot有可能接收不到陌生人的消息，开通菠菜后可以添加好友。
 
 ----------------
 
@@ -105,8 +104,12 @@ Self-explanatory.
     抽卡
 消费1点体力，随机返回一张[命运卡](https://docs.qq.com/sheet/DU3p0T3l6SXdrb1di?c=F21C0R0)。立即生效！
 
+    开始抽卡
+抽卡抽到去世，一秒一张
+
     刷新事件/重載事件
 重新加载事件列表，只有超管才可使用
+
 ----------------
 
 csgo开箱模拟
@@ -128,6 +131,7 @@ Self-explanatory. 开一个[箱子](https://docs.qq.com/sheet/DU05RYmhVd2xCWExM?
 
     刷新箱子/重載箱子
 重新加载箱子列表，只有超管才可使用
+
 ----------------
 
 天气查询
@@ -141,6 +145,7 @@ Self-explanatory. 开一个[箱子](https://docs.qq.com/sheet/DU05RYmhVd2xCWExM?
 
     (city keyword)实时
 从墨迹天气API查询对应城市实时天气。
+
 ----------------
 
 Changelog

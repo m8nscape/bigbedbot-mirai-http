@@ -63,6 +63,8 @@ void shutdown_modules()
     gambol::flipcoin::roundCancelAll();
     gambol::roulette::roundCancelAll();
 
+    monopoly::StopDrawing();
+
     eatwhat::db.transactionStop();
 
 }
