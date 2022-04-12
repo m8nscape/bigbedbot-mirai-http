@@ -15,6 +15,7 @@ namespace fs = std::experimental::filesystem;
 
 #include "app/data/user.h"
 #include "app/data/group.h"
+#include "app/api/api.h"
 
 #include "mirai/http_conn.h"
 #include "mirai/ws_conn.h"
@@ -75,11 +76,13 @@ int config()
     rootQQId = cfg["qq_root"].as<int64_t>();
     useWebsocket = cfg["use_ws"].as<bool>();
     gLogLevel = cfg["log_level"].as<int>();
+    bbb::api::inst.set_port(cfg["api_port"].as<short>());
 #else
     botLoginQQId = 888888;
     rootQQId = 12345678;
     useWebsocket = false;
     gLogLevel = LOG_DEBUG;
+    bbb::api::inst.set_port(15555);
 #endif
     return 0;
 }
@@ -108,6 +111,9 @@ int init_app_and_start()
     for (auto it = grp::groups.begin(); it != grp::groups.end(); ++it)
         addTimedEventEveryMin(std::bind(&grp::Group::SaveSumIntoDb, &it->second));
 
+    // app: api
+    bbb::api::inst.start();
+
     init_modules();
     add_timed_events();
     add_msg_callbacks();
@@ -133,6 +139,8 @@ int shutdown()
     if (botStarted)
     {
         addLog(LOG_INFO, "core", "Stopping");
+
+        bbb::api::inst.stop();
 
         for (auto it = grp::groups.begin(); it != grp::groups.end(); ++it)
             it->second.SaveSumIntoDb();
