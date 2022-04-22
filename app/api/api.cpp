@@ -3,6 +3,14 @@
 #include <nlohmann/json.hpp>
 #include <codecvt>
 
+#if __GNUC__ >= 8
+#include <filesystem>
+namespace fs = std::filesystem;
+#else
+#include <experimental/filesystem>
+namespace fs = std::experimental::filesystem;
+#endif
+
 #include "api_user.h"
 
 namespace bbb::api
@@ -12,8 +20,8 @@ ApiHttpWorker::ApiHttpWorker(tcp::acceptor& acceptor) : http_worker(acceptor)
 {
     add_proc_get("/user/info", user::get_info);
     add_proc_get("/user/group_info", user::get_group_info);
-    add_proc_post("user/give_currency", user::post_give_currency);
-    add_proc_post("user/take_currency", user::post_take_currency);
+    add_proc_post("/user/give_currency", user::post_give_currency);
+    add_proc_post("/user/take_currency", user::post_take_currency);
 }
 
 void ApiKeyObject::add(const std::string& ak, AKLevel level)
@@ -281,6 +289,37 @@ void ApiHttpWorker::add_proc(std::string_view path, const ProcProp& prop, ProcNo
     node[std::string(path)] = prop;
 }
 
+int ApiInstance::init(const char* cfgFile)
+{
+    fs::path cfgPath(cfgFile);
+    if (!fs::is_regular_file(cfgPath))
+    {
+        addLog(LOG_ERROR, "bbbapi", "Config file %s not found", fs::absolute(cfgPath).c_str());
+        return -1;
+    }
+    addLog(LOG_INFO, "bbbapi", "Loading aks from %s", fs::absolute(cfgPath).c_str());
+    YAML::Node cfg = YAML::LoadFile(cfgFile);
+    int count = 0;
+    for (auto ak: cfg["ak"])
+    {
+        if (ak.size() == 2)
+        {
+            try
+            {
+                std::string key = ak[0].as<std::string>();
+                int level = ak[1].as<int>();
+                ApiKeyObject::add(key, static_cast<ApiKeyObject::AKLevel>(level));
+                count++;
+            }
+            catch(const std::exception& e)
+            {
+                addLog(LOG_WARNING, "bbbapi", e.what());
+            }
+        }
+    }
+    addLog(LOG_INFO, "bbbapi", "Added %d keys", count);
+    return 0;
+}
 
 void ApiInstance::set_port(unsigned short port)
 {

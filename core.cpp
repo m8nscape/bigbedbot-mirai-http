@@ -111,15 +111,15 @@ int init_app_and_start()
     for (auto it = grp::groups.begin(); it != grp::groups.end(); ++it)
         addTimedEventEveryMin(std::bind(&grp::Group::SaveSumIntoDb, &it->second));
 
-    // app: api
-    bbb::api::inst.start();
-
     init_modules();
     add_timed_events();
     add_msg_callbacks();
 
     // start threads
     startTimedEvent();
+
+    // app: api
+    bbb::api::inst.start();
 
 #ifdef NDEBUG
     // listen events

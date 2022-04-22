@@ -80,6 +80,7 @@ protected:
     bool quit = false;
 
 public:
+    int init(const char* yaml);
     void set_port(unsigned short port);
     void start();
     void stop();

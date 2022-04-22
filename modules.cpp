@@ -13,6 +13,7 @@
 #include "app/gambol.h"
 #include "app/apievent.h"
 #include "app/playwhat.h"
+#include "app/api/api.h"
 
 #include "time_evt.h"
 
@@ -26,6 +27,9 @@ namespace core
 
 void init_modules()
 {
+    // app: api
+    ::bbb::api::inst.init("./config/apikey.yaml");
+
     // app: case
     opencase::init("./config/case.yaml");
 
