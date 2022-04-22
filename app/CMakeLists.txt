@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.8...3.18)
 add_library(app STATIC 
     common/dbconn.cpp common/dbconn.h
     data/group.cpp data/group.h data/user.cpp data/user.h
-    api/api.cpp api/api.h
+    api/api.cpp api/api.h api/api_user.cpp api/api_group.cpp api/api_command.cpp
     case.cpp case.h
     help.cpp help.h
     tools.cpp tools.h

@@ -57,8 +57,9 @@ pdata::resultStamina pdata::getStamina(bool extra) const
     time_t last = stamina_recovery_time;
     int stamina = MAX_STAMINA;
     if (last > t) stamina -= (last - t) / STAMINA_TIME + !!((last - t) % STAMINA_TIME);
+    if (stamina >= MAX_STAMINA) last = t;
     if (extra) stamina += stamina_extra;
-    return { true, stamina, stamina_recovery_time - t};
+    return { true, stamina, last - t};
 }
 
 int pdata::getExtraStamina() const
