@@ -12,6 +12,7 @@ namespace fs = std::experimental::filesystem;
 #endif
 
 #include "api_user.h"
+#include "api_command.h"
 
 namespace bbb::api
 {
@@ -22,6 +23,7 @@ ApiHttpWorker::ApiHttpWorker(tcp::acceptor& acceptor) : http_worker(acceptor)
     add_proc_get("/user/group_info", user::get_group_info);
     add_proc_post("/user/give_currency", user::post_give_currency);
     add_proc_post("/user/take_currency", user::post_take_currency);
+    add_proc_post("/command/send_msg_group", command::post_send_msg_group);
 }
 
 void ApiKeyObject::add(const std::string& ak, AKLevel level)
@@ -241,7 +243,7 @@ bool ApiHttpWorker::process_post(boost::beast::string_view target, const std::st
     addLog(LOG_ERROR, "bbbapi", "POST %s | %s", strTarget.c_str(), body.c_str());
 
     auto [path, params] = get_url_params(std::string_view(target.data(), target.length()));
-    nlohmann::json jsonReq(body);
+    nlohmann::json jsonReq = nlohmann::json::parse(body);
     if (jsonReq.find("ak") == jsonReq.end() || !ApiKeyObject::has_key(jsonReq["ak"].get<std::string>()))
     {
         send_text_response(beast::http::status::forbidden, "");
