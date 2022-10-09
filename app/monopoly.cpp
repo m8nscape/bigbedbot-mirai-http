@@ -576,10 +576,10 @@ void msgCallback(const json& body)
     {
         draw1(m);
     }
-    else if (query[0] == "开始抽卡")
-    {
-        drawForever(m);
-    }
+    // else if (query[0] == "开始抽卡")
+    // {
+    //     drawForever(m);
+    // }
 }
 
 void StopDrawing()

@@ -419,7 +419,7 @@ void msgCallback(const json& body)
 }
 
 std::map<std::string, int64_t> USER_ALIAS;
-int loadUserAlias(const char* yaml)
+int loadUserConfig(const char* yaml)
 {
     fs::path cfgPath(yaml);
     if (!fs::is_regular_file(cfgPath))
@@ -433,11 +433,22 @@ int loadUserAlias(const char* yaml)
     unsigned c = 0;
     for (const auto& u: cfg)
     {
-        int64_t qqid = u.first.as<int64_t>();
-        for (const auto& a: u.second)
+        if (u.first.as<std::string>() == "max_stamina")
         {
-            USER_ALIAS[a.as<std::string>()] = qqid;
-            c++;
+            MAX_STAMINA = u.second.as<int64_t>();
+        }
+        else if (u.first.as<std::string>() == "stamina_recovery_time")
+        {
+            STAMINA_TIME = u.second.as<int64_t>();
+        }
+        else
+        {
+            int64_t qqid = u.first.as<int64_t>();
+            for (const auto& a: u.second)
+            {
+                USER_ALIAS[a.as<std::string>()] = qqid;
+                c++;
+            }
         }
     }
     addLog(LOG_INFO, "user", "Loaded %u entries", c);
@@ -482,10 +493,10 @@ void flushDailyTimep(bool autotriggered)
     //CQ_addLog(ac, CQLOG_DEBUG, "pee", std::to_string(daily_refresh_time).c_str());
 }
 
-void init(const char* user_alias_yml)
+void init(const char* user_config_yml)
 {
     peeCreateTable();
     peeLoadFromDb();
-    loadUserAlias(user_alias_yml);
+    loadUserConfig(user_config_yml);
 }
 }

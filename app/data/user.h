@@ -11,7 +11,7 @@ namespace user {
 
 inline SQLite db("pee.db", "pee");
 
-void init(const char* user_alias_yml);
+void init(const char* user_config_yml);
 
 // %%%%%%%%%%%%%%%% 批相关数据 %%%%%%%%%%%%%%%%
 class pdata
@@ -78,17 +78,17 @@ void msgCallback(const json& body);
 
 // %%%%%%%%%%%%%%%% 体力 %%%%%%%%%%%%%%%%
 #ifdef _DEBUG
-const int MAX_STAMINA = 100;
+inline int MAX_STAMINA = 100;
 #else
-const int MAX_STAMINA = 10;
+inline int MAX_STAMINA = 10;
 #endif
-const int STAMINA_TIME = 30 * 60; // 30min
+inline int STAMINA_TIME = 30 * 60; // 30min
 
 // %%%%%%%%%%%%%%%% 领批 %%%%%%%%%%%%%%%%
-const int FREE_BALANCE_ON_NEW_DAY = 10;
-const int NEW_DAY_TIME_HOUR = 11;
-const int NEW_DAY_TIME_MIN = 0;
-const int DAILY_BONUS = 200;
+inline int NEW_DAY_TIME_HOUR = 11;
+inline int NEW_DAY_TIME_MIN = 0;
+inline int FREE_BALANCE_ON_NEW_DAY = 10;
+inline int DAILY_BONUS = 200;
 
 inline int extra_tomorrow = 0;
 
@@ -100,7 +100,7 @@ inline int remain_daily_bonus;
 void flushDailyTimep(bool autotriggered = false);
 
 // %%%%%%%%%%%%%%%% 昵称 %%%%%%%%%%%%%%%%
-int loadUserAlias(const char* yaml);
+int loadUserConfig(const char* yaml);
 int64_t getUser(const std::string& alias);
 
 // %%%%%%%%%%%%%%%% 盒盒 %%%%%%%%%%%%%%%%
